@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import ProjectModal from "../../components/ProjectModal";
+import EditProjectModal from "../../components/EditProjectModal";
 const FIELD_TYPES = [
     { value: "text", label: "Short text" },
     { value: "textarea", label: "Long text" },
@@ -11,7 +12,12 @@ const FIELD_TYPES = [
 export default function ProjectDetails() {
     const [collapsed, setSidebarCollapsed] = useState(false);
     const [showEntryModal, setShowEntryModal] = useState(false);
-    const [showProjectModal, setShowProjectModal] = useState(false);
+    // ProjectModal now only opens for editing ONE entry's values,
+    // triggered by clicking that entry in the list — not from "Edit Project".
+    const [editingEntry, setEditingEntry] = useState(null);
+    // EditProjectModal handles the project's own name/description/fields —
+    // this is what "Edit Project" now opens.
+    const [showEditProjectModal, setShowEditProjectModal] = useState(false);
     // Replace this with the project entries returned by the backend.
     const [entries, setEntries] = useState([]);
     const navigate = useNavigate();
@@ -43,7 +49,7 @@ export default function ProjectDetails() {
               <IconArchive />
               Archive
             </button>
-            <button className="btn btn-secondary" onClick={() => setShowProjectModal(true)}>
+            <button className="btn btn-secondary" onClick={() => setShowEditProjectModal(true)}>
               <IconEdit />
               Edit Project
             </button>
@@ -94,19 +100,26 @@ export default function ProjectDetails() {
       {/* New Entry Modal */}
       {showEntryModal && (<NewEntryModal onClose={() => setShowEntryModal(false)}/>)}
 
-      {/* Edit Project = choose and edit an existing project entry */}
-      {showProjectModal && (
+      {/* Edit Project: name, description, field list — no entry involved */}
+      {showEditProjectModal && (
+        <EditProjectModal onClose={() => setShowEditProjectModal(false)} />
+      )}
+
+      {/* Edit Entry: opens when an entry in the list is clicked (see the
+          entries-list rendering above once populated — pass the clicked
+          entry in as `entries={[thatEntry]}` or similar) */}
+      {editingEntry && (
         <ProjectModal
           mode="edit"
-          entries={entries}
-          onClose={() => setShowProjectModal(false)}
+          entries={[editingEntry]}
+          onClose={() => setEditingEntry(null)}
           onSave={(result) => {
             if (result?.type === "entry" && result.entry) {
               setEntries((current) =>
                 current.map((entry) => entry.id === result.entry.id ? result.entry : entry)
               );
             }
-            setShowProjectModal(false);
+            setEditingEntry(null);
           }}
         />
       )}
