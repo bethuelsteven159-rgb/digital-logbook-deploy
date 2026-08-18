@@ -356,3 +356,5 @@ The key rule is:
 The existing `Login` folder should be reused as the starting point for authentication work.
 
 The authentication developer should create the necessary `.js` files inside the relevant page folder rather than putting application logic directly into the JSX.
+
+AI Declaration: The preceding document was generated with: ChatGPT [GPT-5.6 Luna].
