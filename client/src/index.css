@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-navy: #1a2340;
+  --color-brand-navy-mid: #242d4a;
+  --color-brand-navy-light: #2e3a5c;
+  --color-brand-indigo: #4f63d2;
+  --color-brand-indigo-hover: #3d50bf;
+  --color-brand-slate: #64748b;
+  --color-brand-muted: #94a3b8;
+  --color-brand-border: #e2e8f0;
+  --color-brand-surface: #f8fafc;
+  --color-brand-white: #ffffff;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+h1, h2, h3 {
+  font-family: 'DM Serif Display', Georgia, serif;
+}
+
+/* Hide scrollbars by default, show on hover/scroll */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+}
