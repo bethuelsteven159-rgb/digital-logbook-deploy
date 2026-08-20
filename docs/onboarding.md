@@ -1,86 +1,72 @@
 # Developer Onboarding
 
-Owner: Sino (Member 6)
+Owner: Sino
 
 Follow these steps to get the Digital Logbook running on your machine.
 
 ## Prerequisites
 
 - Node.js v18 or higher
-- Git
-- npm (comes with Node)
+- Git (for cloning the repository and version control)
+- npm (included with Node.js, for managing dependencies)
 - A code editor (VS Code recommended)
 
 ## 1. Clone the repository
 
 ```bash
-git clone <gitea-repo-link>
-cd digital-logbook
+git clone https://sdp.ms.wits.ac.za/code-cells/digital-notebook_final.git
+cd digital-notebook_final
 ```
-
 ## 2. Install dependencies
 
-The project is one repository with separate frontend and backend folders — install each independently.
+The project currently contains the frontend application in the `client` folder. Install the required dependencies before running the application.
 
 ```bash
 cd client
 npm install
 
-cd ../server
-npm install
-```
-
 ## 3. Environment variables
 
-> **Open question:** exact variables pending Supabase setup confirmation.
+> Exact environment variables are pending final backend/database configuration.
 
-- Copy `.env.example` to `.env` in both `client/` and `server/`.
-- Fill in the Supabase project URL and API key once available.
-- Never commit your real `.env` file — it's excluded via `.gitignore`.
+- Copy `.env.example` to `.env` in the `client/` folder.
+- Add required environment values once the services are confirmed.
+- Never commit real `.env` files — they are excluded through `.gitignore`.
 
 ## 4. Running the project locally
 
 ```bash
-# Terminal 1 — backend
-cd server
-npm run dev
-
-# Terminal 2 — frontend
 cd client
 npm run dev
-```
 
 ## 5. Running tests
 
+Testing setup is currently pending confirmation.
+Once configured, tests can be run using:
 ```bash
 npm test
-```
-
-Uses Vitest — the same command works in both `client/` and `server/`.
 
 ## 6. Running linting and formatting
 
-> **Open question:** exact scripts pending Bethuel's ESLint/Prettier setup.
-
+The project uses ESLint for code quality checks and Prettier for code formatting.
+Run linting:
 ```bash
 npm run lint
-npm run format
-```
 
 ## 7. Project folder structure
-
-```
 digital-logbook/
-├── client/     → React (Vite) frontend
-├── server/     → Node.js + Express backend
-└── docs/       → project documentation (this folder)
-```
+├── client/ → React (Vite) frontend
+├── docs/ → project documentation
+├── .gitea/ → Gitea configuration files (e.g., pull request templates)
+├── .vscode/ → VS Code project settings
+├── eslint.config.js → ESLint configuration
+└── package.json → project scripts and dependencies
 
 For the full architecture breakdown, see [architecture.md](./architecture.md).
 
 ## Where to find more information
 
-- Architecture decisions → [architecture.md](./architecture.md)
-- Git workflow and branching rules → [git-workflow.md](./git-workflow.md)
-- User stories and requirements → [requirements.md](./requirements.md)
-- Tech stack and reasoning → [tech-stack.md](./tech-stack.md)
+- Architecture decisions → [Architecture](./architecture.md)
+- Git workflow and branching rules → [Git Workflow](./git-workflow.md)
+- User stories and requirements → [Requirements](./requirements.md)
+- Technology choices and reasoning → [Tech Stack](./tech-stack.md)

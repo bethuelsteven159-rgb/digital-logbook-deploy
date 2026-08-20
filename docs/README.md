@@ -17,9 +17,9 @@ This folder is the single source of truth for the Digital Logbook project. Each 
 ## How this folder works
 
 - Each file above belongs to one owner. Update your own section directly — don't edit someone else's without asking them first.
-- Push changes following the Git workflow described in [git-workflow.md](./git-workflow.md) (branch + PR, once confirmed).
+- Push changes following the Git workflow described in [git-workflow.md](./git-workflow.md), including the agreed branching and pull request process.
 - If a section is missing information, add a `> **Open question:**` note inline rather than guessing, and raise it at the next team meeting.
-- This structure is maintained by Sino (Member 6). If your section doesn't fit the format, or you're not sure where something goes, ask before creating new files.
+- This structure is maintained by Sino. If your section doesn't fit the format, or you're not sure where something goes, ask before creating new files.
 
 ## Project overview
 
