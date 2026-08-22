@@ -7,6 +7,7 @@ Built by team **Code Cells**.
 📄 Full documentation: [scintillating-fox-638dc1.netlify.app](https://scintillating-fox-638dc1.netlify.app/) — architecture, tech stack, requirements, workflow, and onboarding.
 
 ## Project Structure
+
 digital-notebook_final/
 ├── .gitea/ → Gitea configuration files (e.g., pull request templates)
 ├── .vscode/ → VS Code project settings
@@ -32,16 +33,15 @@ npm run dev
 This starts the client, server, and backend together in one terminal. Then open:
 http://localhost:8443/digital_logbook/
 
-
 See the [full onboarding guide][full onboarding guide](https://polite-pixie-cb045c.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
 
 ## Team — Code Cells
 
-| Section | Owner |
-|---|---|
-| Project Methodology & Sprint Tracking | Tumi |
-| Git Workflow & Development Standards | Bethuel |
-| System Architecture, Backend & API | Inga |
-| Frontend Architecture, UI/UX & Accessibility | Morare |
-| Requirements & User Stories | Simphiwe |
-| Tech Stack & Developer Onboarding | Sino |
+| Section                                      | Owner    |
+| -------------------------------------------- | -------- |
+| Project Methodology & Sprint Tracking        | Tumi     |
+| Git Workflow & Development Standards         | Bethuel  |
+| System Architecture, Backend & API           | Inga     |
+| Frontend Architecture, UI/UX & Accessibility | Morare   |
+| Requirements & User Stories                  | Simphiwe |
+| Tech Stack & Developer Onboarding            | Sino     |

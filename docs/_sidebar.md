@@ -6,4 +6,3 @@
 - [Requirements & User Stories](requirements.md)
 - [Tech Stack](tech-stack.md)
 - [Developer Onboarding](onboarding.md)
-

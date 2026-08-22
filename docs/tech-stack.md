@@ -62,7 +62,6 @@ The database schema uses relational database principles, including:
 
 Database entities include users, projects, project fields, entries, and entry field values.
 
-
 ## API
 
 - **REST API** — used for communication between the frontend and backend.
@@ -107,7 +106,6 @@ The backend verifies incoming JWT tokens before allowing access to protected res
 
 - **One repository (monorepo)** containing separate folders for the frontend and backend, with separate branches for feature development.
 - A monorepo was chosen instead of separate repositories to reduce coordination overhead and simplify collaboration within the 6-person student team.
-
 
 ## External APIs
 

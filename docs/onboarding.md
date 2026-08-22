@@ -23,18 +23,21 @@ cd digital-notebook_final
 The project contains separate frontend and backend applications. Dependencies must be installed separately for each component.
 
 Install client dependencies:
+
 ```bash
 cd client
 npm install
 ```
 
 Install application server dependencies:
+
 ```bash
 cd ../server
 npm install
 ```
 
 Install authentication backend dependencies:
+
 ```bash
 cd ../backend
 npm install
@@ -51,14 +54,14 @@ cp .env.example .env
 
 The `server/.env` file contains:
 
-| Variable | Purpose |
-|---|---|
-| `PORT` | Port the application server runs on (default: 5000) |
-| `FRONTEND_URL` | URL of the running client app, used for CORS (default: `http://localhost:8443`, matching the client's Vite dev server) |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `USE_FAKE_DB` | When `true`, bypasses the real PostgreSQL database with an in-memory fake — useful for local development without setting up Postgres |
-| `DEV_BYPASS_AUTH` | When `true`, skips Google OAuth login for local development |
-| `DEV_USER_ID` / `DEV_USER_EMAIL` | Fake user identity used when `DEV_BYPASS_AUTH` is enabled |
+| Variable                         | Purpose                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`                           | Port the application server runs on (default: 5000)                                                                                  |
+| `FRONTEND_URL`                   | URL of the running client app, used for CORS (default: `http://localhost:8443`, matching the client's Vite dev server)               |
+| `DATABASE_URL`                   | PostgreSQL connection string                                                                                                         |
+| `USE_FAKE_DB`                    | When `true`, bypasses the real PostgreSQL database with an in-memory fake — useful for local development without setting up Postgres |
+| `DEV_BYPASS_AUTH`                | When `true`, skips Google OAuth login for local development                                                                          |
+| `DEV_USER_ID` / `DEV_USER_EMAIL` | Fake user identity used when `DEV_BYPASS_AUTH` is enabled                                                                            |
 
 **For quick local setup**, leave `USE_FAKE_DB=true` and `DEV_BYPASS_AUTH=true` — this lets you run and test the app without a real database or Google credentials.
 
@@ -70,7 +73,6 @@ The `server/.env` file contains:
 
 ## 4. Running the project locally
 
-
 From the project root, run:
 
 ```bash
@@ -80,6 +82,7 @@ npm run dev
 This starts the client, server, and backend together in a single terminal, using `concurrently`. Each service's output is labeled and color-coded (`client`, `server`, `backend`) so you can tell them apart.
 
 > If you ever need to run a component on its own (e.g. to debug just the server), you can still run it individually:
+>
 > ```bash
 > cd server
 > npm run dev
@@ -88,7 +91,6 @@ This starts the client, server, and backend together in a single terminal, using
 ## 5. Confirming it's working
 
 Once all three are running, open: http://localhost:8443/digital_logbook/
-
 
 Note the `/digital_logbook/` path is required — the client is configured with a custom base path, so `http://localhost:8443` alone will not show the app.
 
@@ -113,6 +115,7 @@ npm run format:check
 ```
 
 ## 8. Project folder structure
+
 digital-notebook_final/
 ├── .gitea/ → Gitea configuration files (e.g., pull request templates)
 ├── .vscode/ → VS Code project settings

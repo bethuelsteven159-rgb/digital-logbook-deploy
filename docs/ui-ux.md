@@ -8,21 +8,22 @@ The client is a React (Vite) single-page application. Pages live under `src/page
 
 ## Main Pages / Screens
 
-| Page | Route | Purpose |
-|---|---|---|
-| Login | `/login` | Google Sign-In entry point |
-| Dashboard | `/dashboard` | Main landing page after login; overview of the user's projects, hours logged, and recent activity |
-| Projects | `/projects` | List of the user's projects |
-| Project Details | `/projects/:id` | View/manage a single project's entries and details |
-| Profile | `/profile` | User profile information |
-| Stats | `/stats` | Statistics/summary view of logged work |
-| Settings | `/settings` | Application/user settings |
+| Page            | Route           | Purpose                                                                                           |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| Login           | `/login`        | Google Sign-In entry point                                                                        |
+| Dashboard       | `/dashboard`    | Main landing page after login; overview of the user's projects, hours logged, and recent activity |
+| Projects        | `/projects`     | List of the user's projects                                                                       |
+| Project Details | `/projects/:id` | View/manage a single project's entries and details                                                |
+| Profile         | `/profile`      | User profile information                                                                          |
+| Stats           | `/stats`        | Statistics/summary view of logged work                                                            |
+| Settings        | `/settings`     | Application/user settings                                                                         |
 
 ## Navigation
 
 Routing is handled with `react-router-dom`, using a `BrowserRouter` with a base path of `/digital_logbook`. Visiting the root path (`/`) redirects to `/login`. After signing in, users navigate using a left sidebar with links to Dashboard, Projects, Stats, and Settings, with Profile positioned at the bottom of the sidebar. `Projects` supports a nested dynamic route (`/projects/:id`) for individual project details. All routes share global user/session state via a `UserProvider` context.
 
 ## User Flows
+
 User opens app (/)
 ↓
 Redirected to /login
@@ -38,7 +39,6 @@ Total Entries, This Week, plus Recent Activity and a
 Uses left sidebar to navigate to Projects → selects a project → /projects/:id
 ↓
 Views/edits entries within that project
-
 
 Profile is accessed from the bottom of the left sidebar.
 
