@@ -1,31 +1,108 @@
-// TEMPORARY in-memory store. Data resets every time the server restarts.
-// Replace this file's internals with real database calls once the team
-// decides on a DB (this is flagged as an open question in the requirements
-// doc) — the function signatures below are the "contract" the rest of the
-// auth code relies on, so keep them the same when you swap the DB in.
+const db = require("../db");
 
-let users = [];
-let nextId = 1;
+function mapUser(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    googleId: row.google_id,
+    name: row.name,
+    email: row.email,
+    avatarUrl: row.avatar_url,
+    bio: row.bio,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 module.exports = {
   async findByGoogleId(googleId) {
-    return users.find((u) => u.googleId === googleId) || null;
+    const result = await db.query(
+      `
+        SELECT
+          id,
+          google_id,
+          name,
+          email,
+          avatar_url,
+          bio,
+          created_at,
+          updated_at
+        FROM users
+        WHERE google_id = $1
+        LIMIT 1
+      `,
+      [googleId],
+    );
+
+    return mapUser(result.rows[0]);
   },
 
   async findById(id) {
-    return users.find((u) => u.id === id) || null;
+    const result = await db.query(
+      `
+        SELECT
+          id,
+          google_id,
+          name,
+          email,
+          avatar_url,
+          bio,
+          created_at,
+          updated_at
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [id],
+    );
+
+    return mapUser(result.rows[0]);
   },
 
-  async createUser({ googleId, name, email, avatarUrl }) {
-    const user = {
-      id: nextId++,
-      googleId,
-      name,
-      email,
-      avatarUrl,
-      createdAt: new Date().toISOString(),
-    };
-    users.push(user);
-    return user;
+  async createUser({
+    googleId,
+    name,
+    email,
+    avatarUrl,
+  }) {
+    const result = await db.query(
+      `
+        INSERT INTO users (
+          google_id,
+          name,
+          email,
+          avatar_url
+        )
+        VALUES ($1, $2, $3, $4)
+
+        ON CONFLICT (google_id)
+        DO UPDATE SET
+          name = EXCLUDED.name,
+          email = EXCLUDED.email,
+          avatar_url = EXCLUDED.avatar_url,
+          updated_at = NOW()
+
+        RETURNING
+          id,
+          google_id,
+          name,
+          email,
+          avatar_url,
+          bio,
+          created_at,
+          updated_at
+      `,
+      [
+        googleId,
+        name,
+        email,
+        avatarUrl,
+      ],
+    );
+
+    return mapUser(result.rows[0]);
   },
 };

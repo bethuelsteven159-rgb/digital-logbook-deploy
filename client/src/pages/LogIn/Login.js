@@ -1,137 +1,169 @@
-import { useEffect, useRef, useState } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom";
 
-// Set these in client/.env:
+import { useUser } from "../../context/UserContext.jsx";
 
-// VITE_GOOGLE_CLIENT_ID=<the real Google Client ID>
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-// VITE_API_URL=http://localhost:3000
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"
+const AUTH_API_URL = (
+  import.meta.env.VITE_AUTH_API_URL ||
+  "http://localhost:3000"
+).replace(/\/$/, "");
 
 export function useLogin() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const hiddenBtnRef = useRef(null)
+  const { refreshUser } = useUser();
 
-  const initializedRef = useRef(false)
+  const hiddenBtnRef = useRef(null);
 
-  const [mode, setMode] = useState("login")
+  const initializedRef = useRef(false);
 
-  const [loading, setLoading] = useState(false)
+  const [mode, setMode] =
+    useState("login");
 
-  const [error, setError] = useState(null)
+  const [loading, setLoading] =
+    useState(false);
 
-  const handleCredentialResponse = async (response) => {
-    setLoading(true)
+  const [error, setError] =
+    useState(null);
 
-    setError(null)
+  const handleCredentialResponse =
+    async (response) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const idToken = response.credential
+      try {
+        const idToken =
+          response.credential;
 
-      // Both Sign In and Sign Up use the same backend endpoint.
+        const res = await fetch(
+          `${AUTH_API_URL}/api/auth/google`,
+          {
+            method: "POST",
 
-      // The backend determines whether the user is new or already exists.
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-      const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
-        method: "POST",
+            body: JSON.stringify({
+              idToken,
+            }),
+          },
+        );
 
-        headers: {
-          "Content-Type": "application/json",
-        },
+        const data = await res.json();
 
-        body: JSON.stringify({
-          idToken,
-        }),
-      })
+        if (!res.ok) {
+          throw new Error(
+            data?.error?.message ||
+              "Authentication failed",
+          );
+        }
 
-      const data = await res.json()
+        if (!data.token) {
+          throw new Error(
+            "Authentication succeeded but no session token was returned.",
+          );
+        }
 
-      if (!res.ok) {
-        throw new Error(data?.error?.message || "Authentication failed")
+        /*
+         * Store our application's JWT.
+         */
+        localStorage.setItem(
+          "authToken",
+          data.token,
+        );
+
+        /*
+         * UserProvider originally checked for
+         * a user before we were logged in.
+         *
+         * Now that a JWT exists, force it to
+         * load /api/auth/me again.
+         */
+        await refreshUser();
+
+        navigate("/dashboard");
+      } catch (err) {
+        console.error(
+          "Authentication error:",
+          err,
+        );
+
+        setError(
+          mode === "login"
+            ? "Sign-in failed. Please try again."
+            : "Sign-up failed. Please try again.",
+        );
+      } finally {
+        setLoading(false);
       }
-
-      // Store the application's JWT session token.
-
-      localStorage.setItem("authToken", data.token)
-
-      // Send the user to the dashboard after successful authentication.
-
-      navigate("/dashboard")
-    } catch (err) {
-      console.error("Authentication error:", err)
-
-      setError(
-        mode === "login"
-          ? "Sign-in failed. Please try again."
-          : "Sign-up failed. Please try again.",
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
+    };
 
   useEffect(() => {
-    if (initializedRef.current) return
+    if (initializedRef.current) {
+      return;
+    }
 
     if (!window.google) {
-      console.warn("Google Identity Services has not loaded.")
+      console.warn(
+        "Google Identity Services has not loaded.",
+      );
 
-      return
+      return;
     }
 
     if (!hiddenBtnRef.current) {
-      console.warn("Google login button container is not available.")
+      console.warn(
+        "Google login button container is not available.",
+      );
 
-      return
+      return;
     }
 
     if (!GOOGLE_CLIENT_ID) {
-      console.error("VITE_GOOGLE_CLIENT_ID is not configured.")
+      console.error(
+        "VITE_GOOGLE_CLIENT_ID is not configured.",
+      );
 
-      setError("Google authentication is not configured.")
+      setError(
+        "Google authentication is not configured.",
+      );
 
-      return
+      return;
     }
 
-    initializedRef.current = true
-
-    // Initialize Google Identity Services only once.
+    initializedRef.current = true;
 
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-
-      callback: handleCredentialResponse,
-    })
-
-    // Render the Google button.
+      callback:
+        handleCredentialResponse,
+    });
 
     window.google.accounts.id.renderButton(
       hiddenBtnRef.current,
-
       {
         type: "standard",
-
         theme: "outline",
-
         size: "large",
       },
-    )
-  }, [])
+    );
+  }, []);
 
   return {
     hiddenBtnRef,
-
     mode,
-
     setMode,
-
     loading,
-
     error,
-  }
+  };
 }
