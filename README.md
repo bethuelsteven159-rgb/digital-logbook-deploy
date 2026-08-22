@@ -8,6 +8,7 @@ Built by team **Code Cells**.
 
 ## Project Structure
 
+```
 digital-notebook_final/
 ├── .gitea/ → Gitea configuration files (e.g., pull request templates)
 ├── .vscode/ → VS Code project settings
@@ -22,6 +23,7 @@ digital-notebook_final/
 ├── package-lock.json → Locked dependency versions (root)
 ├── package.json → Root project scripts, ESLint, and Prettier dependencies
 └── README.md → Project overview and setup instructions
+```
 
 ## Getting Started
 
