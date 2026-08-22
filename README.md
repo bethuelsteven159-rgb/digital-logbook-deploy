@@ -33,7 +33,7 @@ This starts the client, server, and backend together in one terminal. Then open:
 http://localhost:8443/digital_logbook/
 
 
-See the [full onboarding guide](https://scintillating-fox-638dc1.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
+See the [full onboarding guide][full onboarding guide](https://polite-pixie-cb045c.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
 
 ## Team — Code Cells
 
