@@ -2,24 +2,28 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const projectRoutes = require('./routes/projects');
-const entryRoutes = require('./routes/entries');
-const externalRoutes = require('./routes/external');
+// Route Imports
+const authRoutes = require('./routes/auth');          // Auth teammate
+const projectRoutes = require('./routes/projects');   // Your work
+const entryRoutes = require('./routes/entries');     // Teammate's entries work
+const statsRoutes = require('./routes/stats');       // Your work
+const externalRoutes = require('./routes/external'); // Your work
+
+const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api/projects', projectRoutes);
-app.use('/api/entries', entryRoutes);
+// Public Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/external', externalRoutes);
 
-// Quick test route to confirm server health
-app.get('/api/test', (req, res) => {
-  res.json({ status: 'ok', message: 'API is working' });
-});
+// Protected Routes
+app.use('/api/projects', authenticateToken, projectRoutes);
+app.use('/api/entries', authenticateToken, entryRoutes);
+app.use('/api/stats', authenticateToken, statsRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
