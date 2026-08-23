@@ -1,8 +1,7 @@
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const users = require('../data/userStore');
-// TODO: swap userStore.js for real database calls once the team picks a DB
-// (see "Open Questions" in the requirements doc — database tech is not yet decided)
+
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
