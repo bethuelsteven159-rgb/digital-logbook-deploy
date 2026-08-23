@@ -9,7 +9,7 @@ const entryRoutes = require('./routes/entries');     // Teammate's entries work
 const statsRoutes = require('./routes/stats');       // Your work
 const externalRoutes = require('./routes/external'); // Your work
 
-// Middleware Imports (Optional fallback check if Auth middleware exists)
+// Middleware Imports (Safe fallback check if Auth middleware is present)
 let authenticateToken = (req, res, next) => next();
 try {
   const authMiddleware = require('./middleware/auth');

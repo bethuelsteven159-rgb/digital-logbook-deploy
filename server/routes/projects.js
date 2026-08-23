@@ -21,7 +21,6 @@ router.get('/', async (req, res) => {
 // POST /api/projects - Create a new project[cite: 2]
 router.post('/', async (req, res) => {
   try {
-    // Uses authenticated user ID or fallback test ID for early dev testing
     const userId = req.user?.id || '00000000-0000-0000-0000-000000000001';
     const { name, description } = req.body;
 
