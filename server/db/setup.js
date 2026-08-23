@@ -8,15 +8,29 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false } // Required for Render SSL
 });
 
+// Strips a leading UTF-8 BOM if present, so files saved by editors/tools
+// that default to "UTF-8 with BOM" don't break Postgres with
+// "syntax error at or near CREATE" on the first statement.
+function readSql(filePath) {
+  return fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
+}
+
 async function runSetup() {
   try {
+    console.log('Resetting schema...');
+    // Drops all tables/constraints/indexes in one shot so schema.sql's
+    // CREATE TABLE IF NOT EXISTS clauses always create fresh, current
+    // tables instead of silently no-op'ing against stale ones.
+    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+    console.log('✅ Schema reset');
+
     console.log('Running schema.sql...');
-    const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+    const schemaSql = readSql(path.join(__dirname, 'schema.sql'));
     await pool.query(schemaSql);
     console.log('✅ Schema tables created successfully!');
 
     console.log('Running seed.sql...');
-    const seedSql = fs.readFileSync(path.join(__dirname, 'seed.sql'), 'utf8');
+    const seedSql = readSql(path.join(__dirname, 'seed.sql'));
     await pool.query(seedSql);
     console.log('✅ Seed data inserted successfully!');
 
@@ -28,3 +42,4 @@ async function runSetup() {
 }
 
 runSetup();
+

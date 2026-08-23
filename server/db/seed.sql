@@ -1,4 +1,4 @@
-﻿INSERT INTO users (id, google_id, name, email)
+INSERT INTO users (id, google_id, name, email)
 VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'google-test-123', 'Test Student', 'student@wits.ac.za')
 ON CONFLICT DO NOTHING;
 
