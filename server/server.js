@@ -2,22 +2,18 @@
 const cors = require("cors");
 require("dotenv").config();
 
-// Route Imports
-const authRoutes = require("./routes/auth");
+const authRoutes = require("./routes/authRoutes");
 const projectRoutes = require("./routes/projects");
-const entryRoutes = require("./routes/entries");
+const projectDetailsRoutes = require("./routes/projectDetails");
+const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
 
-// Middleware Imports
-let authenticateToken = (req, res, next) => next();
+let requireAuth = (_req, _res, next) => next();
 try {
-  const authMiddleware = require("./middleware/auth");
-  if (authMiddleware.authenticateToken) {
-    authenticateToken = authMiddleware.authenticateToken;
-  }
+  requireAuth = require("./middleware/authMiddleware");
 } catch (e) {
-  console.log("⚠️ Auth middleware not found yet. Protected routes running in dev mode.");
+  console.log("⚠️ Auth middleware not found yet, running fallback mode.");
 }
 
 const app = express();
@@ -29,12 +25,37 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/external", externalRoutes);
 
+app.get("/api/health", (_req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Digital Logbook API is running",
+  });
+});
+
 // Protected Routes
-app.use("/api/projects", authenticateToken, projectRoutes);
-app.use("/api/entries", authenticateToken, entryRoutes);
-app.use("/api/stats", authenticateToken, statsRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/projects", requireAuth, projectDetailsRoutes);
+app.use("/api/users", requireAuth, userRoutes);
+app.use("/api/stats", requireAuth, statsRoutes);
+
+// 404 Handler
+app.use((_req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
+});
+
+// Global Error Handler
+app.use((error, _req, res, _next) => {
+  console.error("Unhandled API error:", error);
+  return res.status(error.statusCode || 500).json({
+    success: false,
+    message: error.message || "Internal server error",
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Backend server running on port ${PORT}`);
 });

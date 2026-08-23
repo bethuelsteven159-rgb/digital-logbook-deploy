@@ -2,7 +2,7 @@
 const router = express.Router();
 const db = require("../db");
 
-// GET /api/projects - Get projects for logged-in user or all projects if unauthenticated
+// GET /api/projects - Get projects for logged-in user or all projects
 router.get("/", async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -21,7 +21,10 @@ router.get("/", async (req, res) => {
 // POST /api/projects - Create a new project
 router.post("/", async (req, res) => {
   try {
-    const userId = req.user?.id || "00000000-0000-0000-0000-000000000001";
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized access" });
+    }
     const { name, description } = req.body;
 
     if (!name) {
