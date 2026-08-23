@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
@@ -13,7 +13,7 @@ let requireAuth = (_req, _res, next) => next();
 try {
   requireAuth = require("./middleware/authMiddleware");
 } catch (e) {
-  console.log("⚠️ Auth middleware not found yet, running fallback mode.");
+  console.log("?? Auth middleware not found yet, running fallback mode.");
 }
 
 const app = express();
@@ -33,7 +33,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // Protected Routes
-app.use("/api/projects", projectRoutes);
+app.use("/api/projects", requireAuth, projectRoutes);
 app.use("/api/projects", requireAuth, projectDetailsRoutes);
 app.use("/api/users", requireAuth, userRoutes);
 app.use("/api/stats", requireAuth, statsRoutes);
