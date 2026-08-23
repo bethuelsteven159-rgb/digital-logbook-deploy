@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
@@ -17,7 +17,7 @@ try {
     authenticateToken = authMiddleware.authenticateToken;
   }
 } catch (e) {
-  console.log("?? Auth middleware not found yet. Protected routes running in dev mode.");
+  console.log("⚠️ Auth middleware not found yet. Protected routes running in dev mode.");
 }
 
 const app = express();
@@ -36,5 +36,5 @@ app.use("/api/stats", authenticateToken, statsRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`?? Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
