@@ -20,54 +20,70 @@ cd digital-notebook_final
 
 ## 2. Install dependencies
 
-The project contains separate frontend and backend applications. Dependencies must be installed separately for each component.
+The project contains two applications: a client (frontend) and a server (backend, including authentication).
 
-Install client dependencies:
+You can install everything at once from the project root:
+
+```bash
+npm install
+```
+
+Or install each individually:
 
 ```bash
 cd client
 npm install
 ```
 
-Install application server dependencies:
-
 ```bash
 cd ../server
 npm install
 ```
 
-Install authentication backend dependencies:
+If Google sign-in fails with a `Cannot find module 'google-auth-library'` error, install it explicitly inside `server/`:
 
 ```bash
-cd ../backend
-npm install
+npm install google-auth-library
 ```
 
 ## 3. Environment variables
 
-Copy `.env.example` to `.env` in the `server/` folder:
+Copy `.env.example` to `.env` in `server/`:
 
 ```bash
 cd server
 cp .env.example .env
 ```
 
-The `server/.env` file contains:
+Create `client/.env` manually (no `.env.example` exists yet for `client/`):
 
-| Variable                         | Purpose                                                                                                                              |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`                           | Port the application server runs on (default: 5000)                                                                                  |
-| `FRONTEND_URL`                   | URL of the running client app, used for CORS (default: `http://localhost:8443`, matching the client's Vite dev server)               |
-| `DATABASE_URL`                   | PostgreSQL connection string                                                                                                         |
-| `USE_FAKE_DB`                    | When `true`, bypasses the real PostgreSQL database with an in-memory fake — useful for local development without setting up Postgres |
-| `DEV_BYPASS_AUTH`                | When `true`, skips Google OAuth login for local development                                                                          |
-| `DEV_USER_ID` / `DEV_USER_EMAIL` | Fake user identity used when `DEV_BYPASS_AUTH` is enabled                                                                            |
+```bash
+cd ../client
+```
 
-**For quick local setup**, leave `USE_FAKE_DB=true` and `DEV_BYPASS_AUTH=true` — this lets you run and test the app without a real database or Google credentials.
+**`server/.env` contains:**
 
-**For full setup** against the real database and auth, set `USE_FAKE_DB=false` and `DEV_BYPASS_AUTH=false`, and provide a real `DATABASE_URL` and Google OAuth credentials.
+| Variable | Purpose |
+|---|---|
+| `PORT` | Port the server runs on (default: 5000) |
+| `FRONTEND_URL` | URL of the running client app, used for CORS (default: `http://localhost:8443`) |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `USE_FAKE_DB` | When `true`, bypasses the real PostgreSQL database with an in-memory fake |
+| `DEV_BYPASS_AUTH` | When `true`, skips Google OAuth login for local development |
+| `DEV_USER_ID` / `DEV_USER_EMAIL` | Fake user identity used when `DEV_BYPASS_AUTH` is enabled |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID, used to verify Google sign-in tokens |
+| `JWT_SECRET` | Secret used to sign and verify session tokens |
 
-> **Open question:** `backend/.env.example` does not currently exist in the repo. The authentication backend requires Google OAuth and JWT configuration, but the exact variable names are unconfirmed — raise with the team before relying on `backend/` locally.
+**`client/.env` contains:**
+
+| Variable | Purpose |
+|---|---|
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID used by the frontend sign-in button |
+| `VITE_API_URL` | Base URL of the server API (default: `http://localhost:5000`) |
+
+**For quick local setup**, leave `USE_FAKE_DB=true` and `DEV_BYPASS_AUTH=true` in `server/.env` — this lets you run and test the app without a real database or Google credentials.
+
+**For full setup with real Google sign-in** (confirmed working): set `USE_FAKE_DB=false` and `DEV_BYPASS_AUTH=false`, and provide a real `DATABASE_URL`, `GOOGLE_CLIENT_ID`, and `JWT_SECRET` in both files. Note: `server/` also requires the `google-auth-library` package — if missing, run `npm install google-auth-library` inside `server/`.
 
 - Never commit real `.env` files — they are excluded through `.gitignore`.
 
@@ -79,10 +95,9 @@ From the project root, run:
 npm run dev
 ```
 
-This starts the client, server, and backend together in a single terminal, using `concurrently`. Each service's output is labeled and color-coded (`client`, `server`, `backend`) so you can tell them apart.
+This starts the client and server together in a single terminal, using `concurrently`. Each service's output is labeled and color-coded (`client`, `server`) so you can tell them apart.
 
 > If you ever need to run a component on its own (e.g. to debug just the server), you can still run it individually:
->
 > ```bash
 > cd server
 > npm run dev
@@ -90,11 +105,13 @@ This starts the client, server, and backend together in a single terminal, using
 
 ## 5. Confirming it's working
 
-Once all three are running, open: http://localhost:8443/digital_logbook/
+Once both are running, open:
+http://localhost:8443/digital_logbook/
+
 
 Note the `/digital_logbook/` path is required — the client is configured with a custom base path, so `http://localhost:8443` alone will not show the app.
 
-With `DEV_BYPASS_AUTH=true`, you should be able to reach the app without signing in via Google, using the fake dev user configured in `server/.env`.
+With `DEV_BYPASS_AUTH=true`, you should be able to reach the app without signing in via Google, using the fake dev user configured in `server/.env`. With `DEV_BYPASS_AUTH=false` and real Google credentials configured, you can sign in with a real Google account — confirmed working.
 
 ## 6. Running tests
 
@@ -116,13 +133,13 @@ npm run format:check
 
 ## 8. Project folder structure
 
+```
 digital-notebook_final/
 ├── .gitea/ → Gitea configuration files (e.g., pull request templates)
 ├── .vscode/ → VS Code project settings
-├── backend/ → Authentication backend service (Google OAuth, JWT)
 ├── client/ → React (Vite) frontend application
 ├── docs/ → Project documentation
-├── server/ → Main backend API server (Express.js, PostgreSQL)
+├── server/ → Backend API server (Express.js, PostgreSQL, authentication)
 ├── .gitignore → Files/folders excluded from version control
 ├── .prettierignore → Files/folders excluded from Prettier formatting
 ├── .prettierrc → Prettier configuration
@@ -130,7 +147,7 @@ digital-notebook_final/
 ├── package-lock.json → Locked dependency versions (root)
 ├── package.json → Root project scripts, ESLint, and Prettier dependencies
 └── README.md → Project overview and setup instructions
-
+```
 For the full architecture breakdown, see [architecture.md](./architecture.md).
 
 ## Where to find more information

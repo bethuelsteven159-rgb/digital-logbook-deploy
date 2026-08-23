@@ -6,7 +6,7 @@ This document lists the technologies used in the Digital Logbook and explains wh
 
 ## Design
 
-- **Tool:** Figma
+**Tool:** Figma
 
 Figma was selected as the wireframing and UI/UX design tool for the project. It was chosen because it is a dedicated design platform that allows the team to create, review, and iterate on interfaces before implementation begins.
 
@@ -18,111 +18,69 @@ Note: Figma's default code export generated TypeScript React (`.tsx`) files. Sin
 
 ## Frontend
 
-- **React** — used to build the user interface, including the dashboard, entry forms, and project views.
-- Chosen because it supports a component-based structure, allowing reusable UI components and efficient development.
+React is used to build the user interface, including the dashboard, entry forms, and project views. It was chosen because it supports a component-based structure, allowing reusable UI components and efficient development.
 
-- **Vite** — used as the frontend build tool and development server for running and bundling the React application.
-- Chosen because it provides a faster development environment and is actively maintained compared to Create React App.
+Vite is used as the frontend build tool and development server for running and bundling the React application. It was chosen because it provides a faster development environment and is actively maintained compared to Create React App.
+
+The client will be deployed using Netlify, chosen for its free tier, straightforward hosting for Vite-built static sites, and simple continuous deployment directly from the Git repository.
 
 ## Backend
 
-The backend is built using **Node.js** with the **Express.js** framework. Node.js was chosen because it allows the project to use JavaScript across both frontend and backend development, reducing the need for multiple programming languages. Express.js provides a lightweight and flexible framework for building REST APIs and organizing backend functionality.
+The backend is built as a single Express.js application using **Node.js**. Node.js was chosen because it allows the project to use JavaScript across both frontend and backend development, reducing the need for multiple programming languages. Express.js provides a lightweight and flexible framework for building REST APIs and organizing backend functionality.
 
-- **Node.js** — used as the runtime environment for executing server-side JavaScript.
-- **Express.js** — used to create REST API endpoints, handle HTTP requests and responses, and structure backend routes.
-- **CORS** — used to enable communication between the frontend application and backend services running on different origins.
-- **dotenv** — used to manage environment variables such as database connection details, authentication secrets, and application configuration.
-- **Zod** — used in the application server for schema and input validation, ensuring incoming request data matches expected formats before it reaches business logic.
+**Node.js** is used as the runtime environment for executing server-side JavaScript. **Express.js** is used to create REST API endpoints, handle HTTP requests and responses, and structure backend routes. **CORS** is used to enable communication between the frontend application and the backend running on a different origin. **dotenv** is used to manage environment variables such as database connection details, authentication secrets, and application configuration. **Zod** is used for schema and input validation, ensuring incoming request data matches expected formats before it reaches business logic.
 
-The backend is separated into two server-side components:
+The backend handles all server-side responsibilities in one application: user authentication, Google sign-in verification, JWT session creation, project management, project details, entries, user profiles, validation, and database operations.
 
-- **Authentication backend (`backend/`)** — responsible for user authentication, Google sign-in verification, JWT session creation, and protecting authentication routes.
-- **Application server (`server/`)** — responsible for the main Digital Logbook functionality, including project management, project details, entries, user profiles, validation, and database operations.
+The backend follows a layered architecture consisting of routes, controllers, services, repositories, and database access layers. This separation improves maintainability by keeping API handling, business logic, and database operations separated.
 
-The application server follows a layered architecture consisting of routes, controllers, services, repositories, and database access layers. This separation improves maintainability by keeping API handling, business logic, and database operations separated.
+A **REST API**, implemented using Express.js, is used for communication between the frontend and backend, providing endpoints for user authentication, user profiles, project management, project details, and logbook entries. The API uses JSON as the primary data exchange format between the client and server. The REST structure allows the frontend and backend to communicate independently, making the system easier to maintain and extend.
 
-## Database — Offline (on-device)
+**Google Authentication (OAuth 2.0)** is used for user sign-in and identity verification through Google ID tokens, and the Google Authentication API verifies Google user identities during sign-in. **JSON Web Tokens (JWT)** are used for maintaining authenticated sessions after successful login. Google Authentication was chosen to provide a secure and convenient login process without requiring users to create and manage separate passwords.
 
-No offline database implementation has been confirmed. Pending team decision.
+The authentication flow verifies Google credentials, creates a backend session token, and protects restricted API routes using JWT middleware. The backend verifies incoming JWT tokens before allowing access to protected resources, ensuring that only authenticated users can access user-specific data.
 
-## Database — Online (cloud, shared)
+The server will be deployed using Render, chosen for its free tier for small Node.js services, native support for environment variables, and simple deployment directly from the Git repository.
 
-- **PostgreSQL** — used as the primary relational database for storing users, projects, project fields, entries, and profile information.
+### Authentication
 
-PostgreSQL was chosen because it provides structured data storage, strong relationships between entities, and reliable support for applications that require consistent data management.
-
-- **pg (node-postgres)** — used as the PostgreSQL client library for connecting the Node.js backend to the database.
-
-The database schema uses relational database principles, including:
-
-- UUID primary keys for uniquely identifying records.
-- Foreign key relationships to maintain connections between related data.
-- Constraints to enforce valid data.
-- Indexes to improve query performance.
-
-Database entities include users, projects, project fields, entries, and entry field values.
-
-## API
-
-- **REST API** — used for communication between the frontend and backend.
-
-The API is implemented using Express.js and provides endpoints for:
-
-- User authentication
-- User profiles
-- Project management
-- Project details
-- Logbook entries
-
-The API uses JSON as the primary data exchange format between the client and server. The REST structure allows the frontend and backend to communicate independently, making the system easier to maintain and extend.
-
-## Authentication
-
-- **Google Authentication (OAuth 2.0)** — used for user sign-in and identity verification through Google ID tokens.
-- **JSON Web Tokens (JWT)** — used for maintaining authenticated sessions after successful login.
+**Google Authentication (OAuth 2.0)** is used for user sign-in and identity verification through Google ID tokens. The Google Authentication API verifies Google user identities during sign-in. **JSON Web Tokens (JWT)** are used for maintaining authenticated sessions after successful login.
 
 Google Authentication was chosen to provide a secure and convenient login process without requiring users to create and manage separate passwords.
 
-The authentication flow verifies Google credentials, creates a backend session token, and protects restricted API routes using JWT middleware.
+The authentication flow verifies Google credentials, creates a backend session token, and protects restricted API routes using JWT middleware. The backend verifies incoming JWT tokens before allowing access to protected resources, ensuring that only authenticated users can access user-specific data.
 
-The backend verifies incoming JWT tokens before allowing access to protected resources, ensuring that only authenticated users can access user-specific data.
+The server will be deployed using Render, chosen for its free tier for small Node.js services, native support for environment variables, and simple deployment directly from the Git repository.
+
+## Database
+
+**PostgreSQL** is used as the primary relational database for storing users, projects, project fields, entries, and profile information.
+
+PostgreSQL was chosen because it provides structured data storage, strong relationships between entities, and reliable support for applications that require consistent data management.
+
+**pg (node-postgres)** is used as the PostgreSQL client library for connecting the backend to the database.
+
+The database schema uses relational database principles, including UUID primary keys for uniquely identifying records, foreign key relationships to maintain connections between related data, constraints to enforce valid data, and indexes to improve query performance.
+
+Database entities include users, projects, project fields, entries, and entry field values.
 
 ## Testing
 
-- Unit testing is planned/implemented where necessary.
-- Final test verification is pending.
+**Vitest** is used for unit and integration testing, chosen for its native compatibility with the Vite-based frontend tooling already in use. Test coverage is still being built out, and final verification is pending.
 
 ## CI/CD
 
-- **Gitea Actions** — configured to run automated tests on pull requests.
-
-## Deployment
-
-- **Frontend:** Pending deployment — options include Netlify or Vercel for static hosting.
-- **Backend:** Pending deployment — options include Render or Railway for server hosting.
-- Frontend and backend are deployed separately, allowing each component to use a platform suited to its requirements.
+**Gitea Actions** is configured to run automated tests on pull requests.
 
 ## Repository Structure
 
-- **One repository (monorepo)** containing separate folders for the frontend and backend, with separate branches for feature development.
-- A monorepo was chosen instead of separate repositories to reduce coordination overhead and simplify collaboration within the 6-person student team.
-
-## External APIs
-
-- **Google Authentication API** — used for verifying Google user identities during authentication.
-
-No other external APIs have been confirmed.
+**One repository (monorepo)** contains separate folders for the frontend and backend, with separate branches for feature development. A monorepo was chosen instead of separate repositories to reduce coordination overhead and simplify collaboration within the 6-person student team.
 
 ## Code Quality
 
-- ESLint and Prettier configurations are included to enforce consistent JavaScript code quality and formatting.
-- ESLint uses recommended rules with project-specific adjustments:
-  - Unused variables generate warnings.
-  - Console statements are allowed.
-- Prettier enforces consistent formatting, including single quotes, semicolons, 2-space indentation, and a 100-character line width.
+ESLint and Prettier configurations are included to enforce consistent JavaScript code quality and formatting. ESLint uses recommended rules with project-specific adjustments: unused variables generate warnings, and console statements are allowed. Prettier enforces consistent formatting, including single quotes, semicolons, 2-space indentation, and a 100-character line width.
 
 ## Development Tools
 
-- **Git/Gitea** — used for version control and team collaboration.
-- **Node Package Manager (npm)** — used to install dependencies and run scripts for the frontend, backend, and server components.
-- **VS Code** — used as the development environment.
+**Git/Gitea** is used for version control and team collaboration.
+**Node Package Manager (npm)** is used to install dependencies and run scripts for the frontend and backend. **VS Code** is used as the development environment.
