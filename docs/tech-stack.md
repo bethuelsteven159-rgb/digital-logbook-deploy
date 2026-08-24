@@ -2,127 +2,130 @@
 
 Owner: Sino
 
-This document lists the technologies used in the Digital Logbook and explains why each was chosen. Items marked **pending** are still awaiting group confirmation.
+This document explains the technologies used in the Digital Logbook, the role each technology plays in the system, and the reasons behind the choices made during development. Items marked **pending** are still awaiting final group confirmation.
 
 ## Design
 
-- **Tool:** Figma
+**Tool:** Figma
 
-Figma was selected as the wireframing and UI/UX design tool for the project. It was chosen because it is a dedicated design platform that allows the team to create, review, and iterate on interfaces before implementation begins.
+Figma is used as the main wireframing and UI/UX design tool for the project. It allows the team to design, review, and refine the user interface before development begins.
 
-Unlike AI UI generators such as UX Pilot and Lovable AI, which can quickly generate interfaces from prompts but provide less control over the design process, Figma keeps the design and development phases separate. This allows the frontend/UI-UX team to review and refine the design before converting it into code.
+Figma was chosen because it provides a dedicated environment for designing application interfaces and encourages a clear separation between the design and development stages. This allows the frontend and UI/UX team to discuss changes, test different layouts, and agree on the final design before implementation.
 
-The final designs serve as a blueprint for frontend development. Figma is used for creating wireframes, mockups, and interface layouts, while the actual implementation is done separately using the chosen frontend technologies.
+Unlike AI-based UI generation tools such as UX Pilot and Lovable AI, which can quickly generate interface designs from prompts, Figma provides more control over the design process. The team can manually adjust layouts, components, and user flows instead of relying on generated designs that may require significant modification.
 
-Note: Figma's default code export generated TypeScript React (`.tsx`) files. Since the project uses a JavaScript-based stack, exported code may require conversion to JavaScript React (`.jsx`) before integration. This is considered a minor adjustment rather than a limitation.
+The final Figma designs act as a reference point for frontend development. Wireframes, mockups, and interface layouts are created in Figma, while the implementation of these designs is completed separately using the selected frontend technologies.
+
+Note: Figma's default code export generates TypeScript React (`.tsx`) files. Since the project uses a JavaScript-based stack, exported components may require conversion to JavaScript React (`.jsx`) before being integrated into the application. This is considered a small adjustment rather than a limitation of using Figma.
 
 ## Frontend
 
-- **React** — used to build the user interface, including the dashboard, entry forms, and project views.
-- Chosen because it supports a component-based structure, allowing reusable UI components and efficient development.
+React is used to build the application's user interface, including the dashboard, entry forms, and project views. It was chosen because its component-based structure allows the team to create reusable interface elements and maintain a more organised frontend codebase.
 
-- **Vite** — used as the frontend build tool and development server for running and bundling the React application.
-- Chosen because it provides a faster development environment and is actively maintained compared to Create React App.
+Instead of building each page as a separate piece of code, React allows common elements such as navigation bars, forms, and reusable UI components to be created once and reused throughout the application. This makes the application easier to maintain as additional features are introduced.
+
+Vite is used as the frontend build tool and development server for the React application. It was selected because it provides a faster development experience, quicker startup times, and modern support for React projects compared to older tools such as Create React App.
+
+The frontend will be deployed using Netlify. Netlify was chosen because it provides a simple deployment process for Vite-based static applications, supports continuous deployment directly from the Git repository, and provides a free tier suitable for the project requirements.
 
 ## Backend
 
-The backend is built using **Node.js** with the **Express.js** framework. Node.js was chosen because it allows the project to use JavaScript across both frontend and backend development, reducing the need for multiple programming languages. Express.js provides a lightweight and flexible framework for building REST APIs and organizing backend functionality.
+The backend is implemented as a single Express.js application running on **Node.js**. This approach allows the team to use JavaScript throughout both the frontend and backend, reducing the need to maintain multiple programming languages.
 
-- **Node.js** — used as the runtime environment for executing server-side JavaScript.
-- **Express.js** — used to create REST API endpoints, handle HTTP requests and responses, and structure backend routes.
-- **CORS** — used to enable communication between the frontend application and backend services running on different origins.
-- **dotenv** — used to manage environment variables such as database connection details, authentication secrets, and application configuration.
-- **Zod** — used in the application server for schema and input validation, ensuring incoming request data matches expected formats before it reaches business logic.
+Node.js provides the runtime environment required to execute server-side JavaScript, while Express.js provides the framework used to build REST API endpoints, handle HTTP requests and responses, and organise backend routes.
 
-The backend is separated into two server-side components:
+The backend is responsible for handling server-side operations such as user authentication, Google sign-in verification, JWT session management, project management, project details, user profiles, logbook entries, validation, and database communication.
 
-- **Authentication backend (`backend/`)** — responsible for user authentication, Google sign-in verification, JWT session creation, and protecting authentication routes.
-- **Application server (`server/`)** — responsible for the main Digital Logbook functionality, including project management, project details, entries, user profiles, validation, and database operations.
+The following technologies support the backend:
 
-The application server follows a layered architecture consisting of routes, controllers, services, repositories, and database access layers. This separation improves maintainability by keeping API handling, business logic, and database operations separated.
+- **Node.js** is used as the server-side JavaScript runtime.
+- **Express.js** is used to create API routes and structure backend functionality.
+- **CORS** enables communication between the frontend and backend when they are running on different origins.
+- **dotenv** manages environment variables such as database credentials, authentication configuration, and application settings.
+- **Zod** validates incoming request data to ensure that information received by the backend matches the expected format before processing.
 
-## Database — Offline (on-device)
+The backend follows a layered architecture consisting of routes, controllers, services, repositories, and database access layers. This separation keeps different responsibilities organised, making the system easier to maintain, debug, and extend as new features are added.
 
-No offline database implementation has been confirmed. Pending team decision.
+A **REST API** is used as the communication layer between the frontend and backend. The API provides endpoints for authentication, user profiles, project management, project details, and logbook entries. JSON is used as the primary data format exchanged between the client and server.
 
-## Database — Online (cloud, shared)
-
-- **PostgreSQL** — used as the primary relational database for storing users, projects, project fields, entries, and profile information.
-
-PostgreSQL was chosen because it provides structured data storage, strong relationships between entities, and reliable support for applications that require consistent data management.
-
-- **pg (node-postgres)** — used as the PostgreSQL client library for connecting the Node.js backend to the database.
-
-The database schema uses relational database principles, including:
-
-- UUID primary keys for uniquely identifying records.
-- Foreign key relationships to maintain connections between related data.
-- Constraints to enforce valid data.
-- Indexes to improve query performance.
-
-Database entities include users, projects, project fields, entries, and entry field values.
-
-## API
-
-- **REST API** — used for communication between the frontend and backend.
-
-The API is implemented using Express.js and provides endpoints for:
-
-- User authentication
-- User profiles
-- Project management
-- Project details
-- Logbook entries
-
-The API uses JSON as the primary data exchange format between the client and server. The REST structure allows the frontend and backend to communicate independently, making the system easier to maintain and extend.
+Using a REST-based structure allows the frontend and backend to remain independent. This makes it easier to modify one part of the system without requiring major changes to the other.
 
 ## Authentication
 
-- **Google Authentication (OAuth 2.0)** — used for user sign-in and identity verification through Google ID tokens.
-- **JSON Web Tokens (JWT)** — used for maintaining authenticated sessions after successful login.
+**Google Authentication (OAuth 2.0)** is used for user sign-in and identity verification. Instead of requiring users to create and remember separate passwords, users can authenticate using their existing Google accounts.
 
-Google Authentication was chosen to provide a secure and convenient login process without requiring users to create and manage separate passwords.
+During login, Google provides an ID token that is verified by the backend using the Google Authentication API. Once the user's identity has been confirmed, the backend creates an authenticated session using **JSON Web Tokens (JWT)**.
 
-The authentication flow verifies Google credentials, creates a backend session token, and protects restricted API routes using JWT middleware.
+JWT is used to maintain authenticated sessions after successful login. Protected API routes use JWT middleware to verify incoming requests before allowing access to user-specific resources.
 
-The backend verifies incoming JWT tokens before allowing access to protected resources, ensuring that only authenticated users can access user-specific data.
+The authentication process follows this flow:
+
+1. The user signs in using Google Authentication.
+2. Google provides an identity token.
+3. The backend verifies the token and confirms the user's identity.
+4. The backend creates a JWT session token.
+5. Protected routes verify the JWT before allowing access.
+
+This approach provides a secure authentication process while reducing the complexity of managing passwords and user credentials.
+
+The backend server will be deployed using Render. Render was selected because it provides a free tier suitable for small Node.js services, supports environment variable configuration, and allows simple deployment directly from the Git repository.
+
+## Database
+
+**PostgreSQL** is used as the primary relational database for storing application data, including users, projects, project fields, entries, and profile information.
+
+PostgreSQL was selected because it provides reliable structured data storage and strong support for relationships between different entities. This makes it suitable for an application where users, projects, and logbook entries are connected through multiple relationships.
+
+**pg (node-postgres)** is used as the PostgreSQL client library that allows the backend application to communicate with the database.
+
+The database follows relational database principles, including:
+
+- UUID primary keys for uniquely identifying records.
+- Foreign keys to maintain relationships between connected entities.
+- Constraints to ensure valid data is stored.
+- Indexes to improve query performance.
+
+The main database entities include users, projects, project fields, entries, and entry field values. These entities are connected through relationships that allow users to create projects, define project-specific fields, and store structured logbook entries.
 
 ## Testing
 
-- Unit testing is planned/implemented where necessary.
-- Final test verification is pending.
+**Vitest** is used for unit and integration testing. It was chosen because it integrates well with the Vite-based frontend tooling already used in the project.
+
+Testing coverage is still being developed, with additional tests and final verification pending as more features are completed.
 
 ## CI/CD
 
-- **Gitea Actions** — configured to run automated tests on pull requests.
+**Gitea Actions** is used to automate parts of the development workflow.
 
-## Deployment
-
-- **Frontend:** Pending deployment — options include Netlify or Vercel for static hosting.
-- **Backend:** Pending deployment — options include Render or Railway for server hosting.
-- Frontend and backend are deployed separately, allowing each component to use a platform suited to its requirements.
+The current configuration runs automated tests when pull requests are created. This helps identify issues before changes are merged into the main development branches.
 
 ## Repository Structure
 
-- **One repository (monorepo)** containing separate folders for the frontend and backend, with separate branches for feature development.
-- A monorepo was chosen instead of separate repositories to reduce coordination overhead and simplify collaboration within the 6-person student team.
+The project uses a **single repository (monorepo)** containing separate folders for the frontend and backend applications.
 
-## External APIs
+A monorepo structure was chosen because it simplifies collaboration within the 6-person team by keeping related code in one place. It reduces the overhead of managing multiple repositories while still allowing frontend and backend development to remain separated.
 
-- **Google Authentication API** — used for verifying Google user identities during authentication.
-
-No other external APIs have been confirmed.
+The repository uses separate branches for feature development, allowing team members to work independently before merging completed changes.
 
 ## Code Quality
 
-- ESLint and Prettier configurations are included to enforce consistent JavaScript code quality and formatting.
-- ESLint uses recommended rules with project-specific adjustments:
-  - Unused variables generate warnings.
-  - Console statements are allowed.
-- Prettier enforces consistent formatting, including single quotes, semicolons, 2-space indentation, and a 100-character line width.
+ESLint and Prettier are used to maintain consistent code quality and formatting across the project.
+
+ESLint applies recommended JavaScript rules with project-specific adjustments. For example, unused variables generate warnings rather than blocking development, and console statements are allowed where needed.
+
+Prettier automatically formats code using the project's chosen style rules, including:
+
+- Single quotes
+- Semicolons
+- Two-space indentation
+- A maximum line width of 100 characters
+
+These tools help ensure that code remains consistent and easier for team members to read and maintain.
 
 ## Development Tools
 
-- **Git/Gitea** — used for version control and team collaboration.
-- **Node Package Manager (npm)** — used to install dependencies and run scripts for the frontend, backend, and server components.
-- **VS Code** — used as the development environment.
+**Git/Gitea** is used for version control and team collaboration. It allows team members to manage branches, review changes, and merge completed features.
+
+**Node Package Manager (npm)** is used to install project dependencies and run development scripts for both the frontend and backend applications.
+
+**VS Code** is used as the main development environment because it provides support for JavaScript development, Git integration, extensions, debugging tools, and project management features.
