@@ -8,7 +8,7 @@ const {
 } = require("../validation/entry.validation");
 
 function requireUserId(req) {
-  const userId = req.user?.sub;
+  const userId = req.user?.id;
 
   if (!userId) {
     const error = new Error("Authentication required");
