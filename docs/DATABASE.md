@@ -4,7 +4,75 @@ This document covers the PostgreSQL database design, table relationships, entity
 
 ---
 
-## 1. Entity Relationships
+## 1. Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    USERS ||--o{ PROJECTS : owns
+    PROJECTS ||--o{ PROJECT_FIELDS : contains
+    PROJECTS ||--o{ ENTRIES : contains
+    ENTRIES ||--o{ ENTRY_FIELD_VALUES : contains
+    PROJECT_FIELDS ||--o{ ENTRY_FIELD_VALUES : referenced_by
+    USERS ||--o{ ENTRIES : creates
+
+    USERS {
+        UUID id PK
+        VARCHAR google_id
+        VARCHAR name
+        VARCHAR email
+        TEXT avatar_url
+        TEXT bio
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    PROJECTS {
+        UUID id PK
+        UUID owner_id FK
+        VARCHAR name
+        TEXT description
+        TIMESTAMPTZ archived_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    PROJECT_FIELDS {
+        UUID id PK
+        UUID project_id FK
+        VARCHAR name
+        VARCHAR field_type
+        INTEGER position
+        BOOLEAN required
+        TIMESTAMPTZ archived_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    ENTRIES {
+        UUID id PK
+        UUID project_id FK
+        UUID created_by_id FK
+        VARCHAR name
+        INTEGER duration_minutes
+        TIMESTAMPTZ occurred_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    ENTRY_FIELD_VALUES {
+        UUID id PK
+        UUID entry_id FK
+        UUID field_id FK
+        TEXT value_text
+        NUMERIC value_number
+        DATE value_date
+        TIMESTAMPTZ created_at
+    }
+```
+
+---
+
+## 2. Entity Relationships
 
 The Digital Logbook database consists of five main entities:
 
@@ -31,7 +99,7 @@ The Digital Logbook database consists of five main entities:
 
 ---
 
-## 2. Table Schemas
+## 3. Table Schemas
 
 ### `users`
 
@@ -73,16 +141,16 @@ Defines custom fields that can be added to individual projects.
 Examples include fields such as `Mood`, `Mileage`, `Location`, or `Date`.
 
 | Column        | Type           | Constraints                                                                      | Description                                      |
-| :------------ | :------------- | :------------------------------------------------------------------------------- | :----------------------------------------------- |
-| `id`          | `UUID`         | `PRIMARY KEY`, Default: `gen_random_uuid()`                                      | Unique field identifier                          |
-| `project_id`  | `UUID`         | `NOT NULL`, `REFERENCES projects(id) ON DELETE CASCADE`                          | Project that owns the custom field               |
-| `name`        | `VARCHAR(100)` | `NOT NULL`                                                                       | Name displayed for the custom field              |
-| `field_type`  | `VARCHAR(20)`  | `NOT NULL`, `CHECK(field_type IN ('short_text', 'long_text', 'number', 'date'))` | Data type accepted by the field                  |
-| `position`    | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(position >= 0)`                                 | Position used when displaying fields in the UI   |
-| `required`    | `BOOLEAN`      | `NOT NULL`, Default: `FALSE`                                                     | Indicates whether the field must be completed    |
-| `archived_at` | `TIMESTAMPTZ`  | `NULL`                                                                           | Timestamp indicating when the field was archived |
-| `created_at`  | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                                     | Date and time the field was created              |
-| `updated_at`  | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                                     | Date and time the field was last updated         |
+| :------------ | :------------- | :-------------------------------------------------------------------------------- | :----------------------------------------------- |
+| `id`          | `UUID`         | `PRIMARY KEY`, Default: `gen_random_uuid()`                                       | Unique field identifier                          |
+| `project_id`  | `UUID`         | `NOT NULL`, `REFERENCES projects(id) ON DELETE CASCADE`                           | Project that owns the custom field               |
+| `name`        | `VARCHAR(100)` | `NOT NULL`                                                                         | Name displayed for the custom field              |
+| `field_type`  | `VARCHAR(20)`  | `NOT NULL`, `CHECK(field_type IN ('short_text', 'long_text', 'number', 'date'))`  | Data type accepted by the field                  |
+| `position`    | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(position >= 0)`                                  | Position used when displaying fields in the UI   |
+| `required`    | `BOOLEAN`      | `NOT NULL`, Default: `FALSE`                                                       | Indicates whether the field must be completed    |
+| `archived_at` | `TIMESTAMPTZ`  | `NULL`                                                                             | Timestamp indicating when the field was archived |
+| `created_at`  | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                                       | Date and time the field was created              |
+| `updated_at`  | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                                       | Date and time the field was last updated         |
 
 ---
 
@@ -91,15 +159,15 @@ Examples include fields such as `Mood`, `Mileage`, `Location`, or `Date`.
 Stores individual log events recorded within a project.
 
 | Column             | Type           | Constraints                                                             | Description                                |
-| :----------------- | :------------- | :---------------------------------------------------------------------- | :----------------------------------------- |
-| `id`               | `UUID`         | `PRIMARY KEY`, Default: `gen_random_uuid()`                             | Unique entry identifier                    |
-| `project_id`       | `UUID`         | `NOT NULL`, `REFERENCES projects(id) ON DELETE CASCADE`                 | Project associated with the entry          |
-| `created_by_id`    | `UUID`         | `NOT NULL`, `REFERENCES users(id) ON DELETE RESTRICT`                   | User who created the entry                 |
-| `name`             | `VARCHAR(150)` | `NOT NULL`                                                              | Name or short description of the entry     |
-| `duration_minutes` | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(duration_minutes BETWEEN 0 AND 10080)` | Duration of the logged activity in minutes |
-| `occurred_at`      | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                            | Date and time when the activity occurred   |
-| `created_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                            | Date and time the entry was created        |
-| `updated_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                            | Date and time the entry was last updated   |
+| :----------------- | :------------- | :------------------------------------------------------------------------ | :----------------------------------------- |
+| `id`               | `UUID`         | `PRIMARY KEY`, Default: `gen_random_uuid()`                               | Unique entry identifier                    |
+| `project_id`       | `UUID`         | `NOT NULL`, `REFERENCES projects(id) ON DELETE CASCADE`                   | Project associated with the entry          |
+| `created_by_id`    | `UUID`         | `NOT NULL`, `REFERENCES users(id) ON DELETE RESTRICT`                     | User who created the entry                 |
+| `name`             | `VARCHAR(150)` | `NOT NULL`                                                                 | Name or short description of the entry     |
+| `duration_minutes` | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(duration_minutes BETWEEN 0 AND 10080)`   | Duration of the logged activity in minutes |
+| `occurred_at`      | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                              | Date and time when the activity occurred   |
+| `created_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                              | Date and time the entry was created        |
+| `updated_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                              | Date and time the entry was last updated   |
 
 ---
 
@@ -110,14 +178,14 @@ Stores values entered into the dynamic custom fields defined in `project_fields`
 The table uses sparse storage, meaning only the value type relevant to the field is populated.
 
 | Column         | Type            | Constraints                                                    | Description                                |
-| :------------- | :-------------- | :------------------------------------------------------------- | :----------------------------------------- |
-| `id`           | `UUID`          | `PRIMARY KEY`, Default: `gen_random_uuid()`                    | Unique field value identifier              |
-| `entry_id`     | `UUID`          | `NOT NULL`, `REFERENCES entries(id) ON DELETE CASCADE`         | Entry associated with the value            |
-| `field_id`     | `UUID`          | `NOT NULL`, `REFERENCES project_fields(id) ON DELETE RESTRICT` | Custom field associated with the value     |
-| `value_text`   | `TEXT`          | `NULL`                                                         | Stores `short_text` and `long_text` values |
-| `value_number` | `NUMERIC(18,4)` | `NULL`                                                         | Stores numeric field values                |
-| `value_date`   | `DATE`          | `NULL`                                                         | Stores date field values                   |
-| `created_at`   | `TIMESTAMPTZ`   | `NOT NULL`, Default: `NOW()`                                   | Date and time the value was created        |
+| :------------- | :-------------- | :--------------------------------------------------------------- | :------------------------------------------ |
+| `id`           | `UUID`          | `PRIMARY KEY`, Default: `gen_random_uuid()`                       | Unique field value identifier              |
+| `entry_id`     | `UUID`          | `NOT NULL`, `REFERENCES entries(id) ON DELETE CASCADE`            | Entry associated with the value            |
+| `field_id`     | `UUID`          | `NOT NULL`, `REFERENCES project_fields(id) ON DELETE RESTRICT`    | Custom field associated with the value     |
+| `value_text`   | `TEXT`          | `NULL`                                                             | Stores `short_text` and `long_text` values |
+| `value_number` | `NUMERIC(18,4)` | `NULL`                                                             | Stores numeric field values                |
+| `value_date`   | `DATE`          | `NULL`                                                             | Stores date field values                   |
+| `created_at`   | `TIMESTAMPTZ`   | `NOT NULL`, Default: `NOW()`                                       | Date and time the value was created        |
 
 ### Unique Constraint
 
@@ -129,7 +197,7 @@ uq_entry_field_value (entry_id, field_id)
 
 ---
 
-## 3. Database Indexes
+## 4. Database Indexes
 
 Indexes are created on commonly queried foreign key columns to improve database lookup and join performance.
 
@@ -153,7 +221,7 @@ ON entry_field_values (field_id);
 ### Index Purpose
 
 | Index                 | Column                        | Purpose                                            |
-| :-------------------- | :---------------------------- | :------------------------------------------------- |
+| :--------------------- | :----------------------------- | :--------------------------------------------------- |
 | `idx_projects_owner`  | `projects.owner_id`           | Quickly find projects belonging to a user          |
 | `idx_fields_project`  | `project_fields.project_id`   | Quickly find custom fields belonging to a project  |
 | `idx_entries_project` | `entries.project_id`          | Quickly find entries belonging to a project        |
@@ -162,7 +230,7 @@ ON entry_field_values (field_id);
 
 ---
 
-## 4. Database Constraints
+## 5. Database Constraints
 
 The database uses constraints to maintain data integrity.
 
@@ -239,7 +307,7 @@ CHECK(
 
 ---
 
-## 5. Delete Behaviour
+## 6. Delete Behaviour
 
 The database uses different deletion strategies depending on the relationship.
 
@@ -278,7 +346,7 @@ A project field cannot be deleted while an entry field value still references it
 
 ---
 
-## 6. Setup, Reset & Seed
+## 7. Setup, Reset & Seed
 
 The database can be reset and populated using the database setup script.
 
@@ -311,7 +379,7 @@ This is intended for local development and testing and should **not** be used ag
 
 ---
 
-## 7. Seed Data
+## 8. Seed Data
 
 The database can be populated with sample development data using:
 
@@ -331,7 +399,7 @@ Seed data allows developers to test API endpoints and application functionality 
 
 ---
 
-## 8. In-Memory Development Database
+## 9. In-Memory Development Database
 
 The backend supports an in-memory database mode for development and testing.
 
@@ -359,10 +427,10 @@ For production environments, PostgreSQL should be used instead.
 
 ---
 
-## 9. Database Technology
+## 10. Database Technology
 
 | Component        | Technology                          |
-| :--------------- | :---------------------------------- |
+| :---------------- | :------------------------------------ |
 | Database         | PostgreSQL                          |
 | Database Driver  | `pg`                                |
 | Primary Key Type | UUID                                |
@@ -372,7 +440,7 @@ For production environments, PostgreSQL should be used instead.
 
 ---
 
-## 10. Data Layer Overview
+## 11. Data Layer Overview
 
 The data layer separates database operations from the rest of the application.
 
@@ -395,7 +463,3 @@ PostgreSQL          In-Memory DB
 ```
 
 This structure allows the application to use either PostgreSQL or the in-memory database without changing the API layer.
-
----
-
-
