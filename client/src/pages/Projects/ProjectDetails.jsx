@@ -18,6 +18,11 @@ import {
   fetchProjectDetails,
 } from "../../api/projectDetailsApi";
 
+import {
+  setProjectArchived,
+  updateProject,
+} from "../../api/projectsApi";
+
 export default function ProjectDetails() {
   const { id } = useParams();
 
@@ -35,13 +40,9 @@ export default function ProjectDetails() {
   const [showEntryModal, setShowEntryModal] =
     useState(false);
 
-  /*
-   * Project editing belongs to the teammate
-   * responsible for project management.
-   *
-   * We preserve their existing modal connection
-   * without implementing or replacing their API.
-   */
+  const [projectActionSaving, setProjectActionSaving] =
+    useState(false);
+
   const [
     showEditProjectModal,
     setShowEditProjectModal,
@@ -107,6 +108,52 @@ export default function ProjectDetails() {
       );
 
       throw requestError;
+    }
+  }
+
+  async function handleUpdateProject(payload) {
+    try {
+      await updateProject(id, payload);
+
+      setShowEditProjectModal(false);
+      await loadProject();
+    } catch (requestError) {
+      console.error(
+        "Failed to update project:",
+        requestError,
+      );
+
+      throw requestError;
+    }
+  }
+
+  async function handleToggleArchive() {
+    const project = details?.project || {};
+    const shouldArchive = !project.archivedAt;
+
+    try {
+      setProjectActionSaving(true);
+      setError("");
+
+      await setProjectArchived(id, shouldArchive);
+
+      navigate(
+        shouldArchive
+          ? "/projects?tab=archived"
+          : "/projects",
+      );
+    } catch (requestError) {
+      console.error(
+        "Failed to change archive status:",
+        requestError,
+      );
+
+      setError(
+        requestError.message ||
+          "Failed to update project archive status.",
+      );
+    } finally {
+      setProjectActionSaving(false);
     }
   }
 
@@ -237,6 +284,25 @@ export default function ProjectDetails() {
     ? details.entries
     : [];
 
+  const usedFieldIds = new Set(
+    entries.flatMap((entry) =>
+      (Array.isArray(entry.values) ? entry.values : [])
+        .map((value) => value.fieldId)
+        .filter(Boolean),
+    ),
+  );
+
+  const editableProject = {
+    name: project.name || "",
+    description: project.description || "",
+    fields: fields.map((field) => ({
+      id: field.id,
+      label: field.name,
+      type: field.fieldType,
+      usedByEntries: usedFieldIds.has(field.id),
+    })),
+  };
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -299,37 +365,38 @@ export default function ProjectDetails() {
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => {}}
+              onClick={handleToggleArchive}
+              disabled={projectActionSaving}
             >
               <IconArchive />
-              Archive
+              {project.archivedAt ? "Restore" : "Archive"}
             </button>
 
-            {/*
-             * Preserve the teammate's Edit Project
-             * modal connection.
-             */}
             <button
               type="button"
               className="btn btn-secondary"
               onClick={() =>
                 setShowEditProjectModal(true)
               }
+              disabled={projectActionSaving}
             >
               <IconEdit />
               Edit Project
             </button>
 
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() =>
-                setShowEntryModal(true)
-              }
-            >
-              <IconPlus />
-              Add New Entry
-            </button>
+            {!project.archivedAt && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() =>
+                  setShowEntryModal(true)
+                }
+                disabled={projectActionSaving}
+              >
+                <IconPlus />
+                Add New Entry
+              </button>
+            )}
           </div>
         </header>
 
@@ -414,16 +481,18 @@ export default function ProjectDetails() {
                   piece of your work.
                 </p>
 
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() =>
-                    setShowEntryModal(true)
-                  }
-                >
-                  <IconPlus />
-                  Add New Entry
-                </button>
+                {!project.archivedAt && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() =>
+                      setShowEntryModal(true)
+                    }
+                  >
+                    <IconPlus />
+                    Add New Entry
+                  </button>
+                )}
               </div>
             ) : (
               <div className="entries-list">
@@ -500,7 +569,7 @@ export default function ProjectDetails() {
       </main>
 
       {/* Your responsibility: create entries */}
-      {showEntryModal && (
+      {showEntryModal && !project.archivedAt && (
         <NewEntryModal
           fields={fields}
           onClose={() =>
@@ -513,9 +582,11 @@ export default function ProjectDetails() {
       {/* Teammate responsibility: project editing */}
       {showEditProjectModal && (
         <EditProjectModal
+          project={editableProject}
           onClose={() =>
             setShowEditProjectModal(false)
           }
+          onSave={handleUpdateProject}
         />
       )}
 
@@ -749,6 +820,11 @@ function ProjectDetailsStyles() {
       .btn:focus-visible {
         outline: 2px solid #4f63d2;
         outline-offset: 2px;
+      }
+
+      .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
       }
 
       /* Content */

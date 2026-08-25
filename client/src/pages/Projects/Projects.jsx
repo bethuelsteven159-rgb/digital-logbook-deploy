@@ -1,10 +1,34 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+import {
+    useNavigate,
+    useSearchParams,
+} from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import CreateProjectModal from "../../components/CreateProjectModal";
+import {
+    createProject,
+    fetchProjects,
+} from "../../api/projectsApi";
+
 export default function Projects() {
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const [collapsed, setCollapsed] = useState(false);
-    const [tab, setTab] = useState("active");
+    const [tab, setTab] = useState(
+        searchParams.get("tab") === "archived"
+            ? "archived"
+            : "active",
+    );
+
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
     const [searchValue, setSearchValue] = useState("");
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showHoursFilter, setShowHoursFilter] = useState(false);
@@ -13,19 +37,73 @@ export default function Projects() {
     const [hoursMin, setHoursMin] = useState("");
     const [hoursMax, setHoursMax] = useState("");
     const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
-    const navigate = useNavigate();
+
     const hasDateFilter = dateFrom || dateTo;
     const hasHoursFilter = hoursMin || hoursMax;
+
+    const loadProjects = useCallback(async (status) => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const data = await fetchProjects(status);
+            setProjects(Array.isArray(data) ? data : []);
+        } catch (requestError) {
+            console.error("Failed to load projects:", requestError);
+            setProjects([]);
+            setError(
+                requestError.message ||
+                "Failed to load projects.",
+            );
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadProjects(tab);
+    }, [tab, loadProjects]);
+
+    function switchTab(nextTab) {
+        setTab(nextTab);
+
+        if (nextTab === "archived") {
+            setSearchParams({ tab: "archived" });
+        } else {
+            setSearchParams({});
+        }
+    }
+
+    async function handleCreateProject(payload) {
+        const created = await createProject(payload);
+
+        setShowCreateProjectModal(false);
+
+        if (tab !== "active") {
+            switchTab("active");
+            return;
+        }
+
+        setProjects((current) => [
+            created,
+            ...current.filter(
+                (project) => project.id !== created.id,
+            ),
+        ]);
+    }
+
     function clearDateFilter() {
         setDateFrom("");
         setDateTo("");
         setShowDatePicker(false);
     }
+
     function clearHoursFilter() {
         setHoursMin("");
         setHoursMax("");
         setShowHoursFilter(false);
     }
+
     return (<div className="app-shell">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)}/>
 
@@ -134,19 +212,44 @@ export default function Projects() {
           {/* Tabs + count */}
           <div className="projects-tabs-row">
             <div className="projects-tabs">
-              <button className={`projects-tab ${tab === "active" ? "projects-tab--active" : ""}`} onClick={() => setTab("active")}>
+              <button className={`projects-tab ${tab === "active" ? "projects-tab--active" : ""}`} onClick={() => switchTab("active")}>
                 Active
               </button>
-              <button className={`projects-tab ${tab === "archived" ? "projects-tab--active" : ""}`} onClick={() => setTab("archived")}>
+              <button className={`projects-tab ${tab === "archived" ? "projects-tab--active" : ""}`} onClick={() => switchTab("archived")}>
                 Archived
               </button>
             </div>
-            <span className="projects-count">0 projects</span>
+            <span className="projects-count">
+              {loading ? "Loading..." : `${projects.length} ${projects.length === 1 ? "project" : "projects"}`}
+            </span>
           </div>
 
           {/* Project list */}
           <div className="projects-list">
-            {tab === "active" ? (<ActiveEmptyState onNew={() => setShowCreateProjectModal(true)}/>) : (<ArchivedEmptyState />)}
+            {error ? (
+              <div className="projects-error" role="alert">
+                <span>{error}</span>
+                <button type="button" onClick={() => loadProjects(tab)}>
+                  Try again
+                </button>
+              </div>
+            ) : loading ? (
+              <div className="projects-loading">Loading projects...</div>
+            ) : projects.length > 0 ? (
+              <div className="project-card-grid">
+                {projects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onOpen={() => navigate(`/projects/${project.id}`)}
+                  />
+                ))}
+              </div>
+            ) : tab === "active" ? (
+              <ActiveEmptyState onNew={() => setShowCreateProjectModal(true)}/>
+            ) : (
+              <ArchivedEmptyState />
+            )}
           </div>
         </div>
       </main>
@@ -154,7 +257,7 @@ export default function Projects() {
       {showCreateProjectModal && (
         <CreateProjectModal
           onClose={() => setShowCreateProjectModal(false)}
-          onSave={() => setShowCreateProjectModal(false)}
+          onSave={handleCreateProject}
         />
       )}
 
@@ -468,6 +571,123 @@ export default function Projects() {
           min-height: 320px;
         }
 
+        .projects-loading {
+          display: flex;
+          min-height: 280px;
+          align-items: center;
+          justify-content: center;
+          color: #94a3b8;
+          font-size: 14px;
+        }
+
+        .projects-error {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 14px 16px;
+          border: 1px solid #fecaca;
+          border-radius: 10px;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-size: 13px;
+        }
+
+        .projects-error button {
+          border: none;
+          background: transparent;
+          color: #4f63d2;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .project-card-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 14px;
+        }
+
+        .project-card {
+          width: 100%;
+          min-height: 170px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          padding: 20px;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          background: #ffffff;
+          text-align: left;
+          cursor: pointer;
+          transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease,
+            transform 0.15s ease;
+        }
+
+        .project-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+          transform: translateY(-1px);
+        }
+
+        .project-card:focus-visible {
+          outline: 2px solid #4f63d2;
+          outline-offset: 2px;
+        }
+
+        .project-card-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .project-card-title {
+          margin: 0;
+          font-family: 'DM Serif Display', Georgia, serif;
+          font-size: 20px;
+          font-weight: 400;
+          color: #1a2340;
+        }
+
+        .project-card-badge {
+          flex-shrink: 0;
+          padding: 4px 7px;
+          border-radius: 999px;
+          background: #f1f5f9;
+          color: #64748b;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+
+        .project-card-description {
+          min-height: 40px;
+          margin: 0;
+          color: #64748b;
+          font-size: 13px;
+          line-height: 1.55;
+        }
+
+        .project-card-stats {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px 16px;
+          margin-top: auto;
+          padding-top: 12px;
+          border-top: 1px solid #f1f5f9;
+          color: #94a3b8;
+          font-size: 11px;
+          font-weight: 500;
+        }
+
+        .project-card-stat strong {
+          color: #475569;
+          font-weight: 600;
+        }
+
         /* Empty states */
         .empty-state-full {
           display: flex;
@@ -531,6 +751,93 @@ export default function Projects() {
       `}</style>
     </div>);
 }
+
+function ProjectCard({ project, onOpen }) {
+    const formatDate = (value) => {
+        if (!value) {
+            return null;
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return null;
+        }
+
+        return new Intl.DateTimeFormat("en-ZA", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        }).format(date);
+    };
+
+    const formatDuration = (minutes) => {
+        const total = Number(minutes) || 0;
+
+        if (total === 0) {
+            return "0 hrs";
+        }
+
+        const hours = Math.floor(total / 60);
+        const remainder = total % 60;
+
+        if (hours === 0) {
+            return `${remainder} min`;
+        }
+
+        if (remainder === 0) {
+            return `${hours} hrs`;
+        }
+
+        return `${hours}h ${remainder}m`;
+    };
+
+    const start = formatDate(project.startDate);
+    const end = formatDate(project.endDate);
+
+    return (
+      <button
+        type="button"
+        className="project-card"
+        onClick={onOpen}
+      >
+        <div className="project-card-top">
+          <h2 className="project-card-title">
+            {project.name || "Untitled Project"}
+          </h2>
+
+          {project.archivedAt && (
+            <span className="project-card-badge">
+              Archived
+            </span>
+          )}
+        </div>
+
+        <p className="project-card-description">
+          {project.description ||
+            "No description has been added yet."}
+        </p>
+
+        <div className="project-card-stats">
+          <span className="project-card-stat">
+            <strong>{project.totalEntries || 0}</strong>{" "}
+            {project.totalEntries === 1 ? "entry" : "entries"}
+          </span>
+
+          <span className="project-card-stat">
+            <strong>{formatDuration(project.loggedMinutes)}</strong>
+          </span>
+
+          {(start || end) && (
+            <span className="project-card-stat">
+              {start || "No start"} → {end || "No end"}
+            </span>
+          )}
+        </div>
+      </button>
+    );
+}
+
 function ActiveEmptyState({ onNew }) {
     return (<div className="empty-state-full">
       <div className="empty-state-illustration">

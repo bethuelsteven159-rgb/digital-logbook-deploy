@@ -1,23 +1,44 @@
 import { useState } from "react";
 
 const FIELD_TYPES = [
-  { value: "text", label: "Short text" },
-  { value: "textarea", label: "Long text" },
+  { value: "short_text", label: "Short text" },
+  { value: "long_text", label: "Long text" },
   { value: "number", label: "Number" },
   { value: "date", label: "Date" },
 ];
 
-export default function EditProjectModal({ project, onClose }) {
+export default function EditProjectModal({
+  project,
+  onClose,
+  onSave,
+}) {
   const [name, setName] = useState(project?.name ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [fields, setFields] = useState(project?.fields ?? []);
   const [newFieldLabel, setNewFieldLabel] = useState("");
-  const [newFieldType, setNewFieldType] = useState("text");
+  const [newFieldType, setNewFieldType] = useState("short_text");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   function addField() {
     const label = newFieldLabel.trim();
 
-    if (!label) return;
+    if (!label) {
+      setError("Enter a field name first.");
+      return;
+    }
+
+    const duplicate = fields.some(
+      (field) =>
+        String(field.label ?? field.name ?? "")
+          .trim()
+          .toLowerCase() === label.toLowerCase(),
+    );
+
+    if (duplicate) {
+      setError(`A field named "${label}" already exists.`);
+      return;
+    }
 
     setFields((prev) => [
       ...prev,
@@ -26,15 +47,67 @@ export default function EditProjectModal({ project, onClose }) {
         label,
         type: newFieldType,
         usedByEntries: false,
+        isNew: true,
       },
     ]);
 
     setNewFieldLabel("");
-    setNewFieldType("text");
+    setNewFieldType("short_text");
+    setError("");
   }
 
   function removeField(id) {
-    setFields((prev) => prev.filter((f) => f.id !== id));
+    setFields((prev) =>
+      prev.filter((field) => {
+        if (field.id !== id) {
+          return true;
+        }
+
+        if (field.usedByEntries) {
+          return true;
+        }
+
+        return false;
+      }),
+    );
+  }
+
+  async function saveProject() {
+    const cleanName = name.trim();
+
+    if (!cleanName) {
+      setError("Project name is required.");
+      return;
+    }
+
+    const payload = {
+      name: cleanName,
+      description: description.trim(),
+      fields: fields.map((field) =>
+        field.isNew
+          ? {
+              clientId: field.id,
+              name: field.label,
+              fieldType: field.type,
+            }
+          : {
+              id: field.id,
+            },
+      ),
+    };
+
+    try {
+      setSaving(true);
+      setError("");
+      await onSave?.(payload);
+    } catch (saveError) {
+      setError(
+        saveError.message ||
+          "Failed to update project.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   const hasAnyLockedField = fields.some((f) => f.usedByEntries);
@@ -43,7 +116,7 @@ export default function EditProjectModal({ project, onClose }) {
     <div
       className="modal-overlay"
       onClick={(e) => {
-        if (e.target === e.currentTarget) {
+        if (e.target === e.currentTarget && !saving) {
           onClose();
         }
       }}
@@ -64,6 +137,7 @@ export default function EditProjectModal({ project, onClose }) {
             onClick={onClose}
             aria-label="Close"
             type="button"
+            disabled={saving}
           >
             <IconXSmall />
           </button>
@@ -243,21 +317,29 @@ export default function EditProjectModal({ project, onClose }) {
           </div>
         </div>
 
+        {error && (
+          <p className="edit-project-error" role="alert">
+            {error}
+          </p>
+        )}
+
         <div className="modal-footer">
           <button
             className="btn-cancel"
             onClick={onClose}
             type="button"
+            disabled={saving}
           >
             Cancel
           </button>
 
           <button
             className="btn-save"
-            onClick={onClose}
+            onClick={saveProject}
             type="button"
+            disabled={saving}
           >
-            Save Changes
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
@@ -545,6 +627,17 @@ export default function EditProjectModal({ project, onClose }) {
           background: rgba(79, 99, 210, 0.04);
         }
 
+        .edit-project-error {
+          margin: 0 24px 4px;
+          padding: 10px 12px;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
         .modal-footer {
           display: flex;
           align-items: center;
@@ -587,10 +680,17 @@ export default function EditProjectModal({ project, onClose }) {
             box-shadow 0.15s ease;
         }
 
-        .btn-save:hover {
+        .btn-save:hover:not(:disabled) {
           background: #3d50bf;
           box-shadow:
             0 2px 10px rgba(79, 99, 210, 0.3);
+        }
+
+        .btn-save:disabled,
+        .btn-cancel:disabled,
+        .modal-close:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
         }
 
         @media (max-width: 600px) {

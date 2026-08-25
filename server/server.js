@@ -9,11 +9,17 @@ const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
 
+// Dashboard route
+const dashboardRoutes = require("./routes/dashboard");
+
 let requireAuth = (_req, _res, next) => next();
+
 try {
   requireAuth = require("./middleware/authMiddleware");
 } catch (e) {
-  console.log("?? Auth middleware not found yet, running fallback mode.");
+  console.log(
+    "Auth middleware not found yet, running fallback mode.",
+  );
 }
 
 const app = express();
@@ -21,8 +27,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
+// ==========================
 // Public Routes
+// ==========================
+
 app.use("/api/auth", authRoutes);
+
 app.use("/api/external", externalRoutes);
 
 app.get("/api/health", (_req, res) => {
@@ -32,13 +43,47 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// Protected Routes
-app.use("/api/projects", requireAuth, projectRoutes);
-app.use("/api/projects", requireAuth, projectDetailsRoutes);
-app.use("/api/users", requireAuth, userRoutes);
-app.use("/api/stats", requireAuth, statsRoutes);
 
+// ==========================
+// Protected Routes
+// ==========================
+
+app.use(
+  "/api/projects",
+  requireAuth,
+  projectRoutes,
+);
+
+app.use(
+  "/api/projects",
+  requireAuth,
+  projectDetailsRoutes,
+);
+
+app.use(
+  "/api/users",
+  requireAuth,
+  userRoutes,
+);
+
+app.use(
+  "/api/stats",
+  requireAuth,
+  statsRoutes,
+);
+
+// Dashboard API
+app.use(
+  "/api/dashboard",
+  requireAuth,
+  dashboardRoutes,
+);
+
+
+// ==========================
 // 404 Handler
+// ==========================
+
 app.use((_req, res) => {
   return res.status(404).json({
     success: false,
@@ -46,16 +91,37 @@ app.use((_req, res) => {
   });
 });
 
+
+// ==========================
 // Global Error Handler
+// ==========================
+
 app.use((error, _req, res, _next) => {
-  console.error("Unhandled API error:", error);
-  return res.status(error.statusCode || 500).json({
-    success: false,
-    message: error.message || "Internal server error",
-  });
+  console.error(
+    "Unhandled API error:",
+    error,
+  );
+
+  return res
+    .status(error.statusCode || 500)
+    .json({
+      success: false,
+      message:
+        error.message ||
+        "Internal server error",
+    });
 });
 
-const PORT = process.env.PORT || 5000;
+
+// ==========================
+// Start Server
+// ==========================
+
+const PORT =
+  process.env.PORT || 5000;
+
 app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
+  console.log(
+    `Backend server running on port ${PORT}`,
+  );
 });

@@ -3,8 +3,12 @@ import { Plus, X } from "lucide-react";
 
 const FIELD_TYPES = [
   {
-    value: "text",
-    label: "Text",
+    value: "short_text",
+    label: "Short text",
+  },
+  {
+    value: "long_text",
+    label: "Long text",
   },
   {
     value: "number",
@@ -13,14 +17,6 @@ const FIELD_TYPES = [
   {
     value: "date",
     label: "Date",
-  },
-  {
-    value: "boolean",
-    label: "Yes / No",
-  },
-  {
-    value: "tag",
-    label: "Tag",
   },
 ];
 
@@ -35,7 +31,7 @@ export default function NewEntryModal({
   const [values, setValues] = useState({});
   const [newFields, setNewFields] = useState([]);
   const [fieldName, setFieldName] = useState("");
-  const [fieldType, setFieldType] = useState("text");
+  const [fieldType, setFieldType] = useState("short_text");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -92,15 +88,12 @@ export default function NewEntryModal({
         clientId: crypto.randomUUID(),
         name: cleanName,
         type: fieldType,
-        value:
-          fieldType === "boolean"
-            ? false
-            : "",
+        value: "",
       },
     ]);
 
     setFieldName("");
-    setFieldType("text");
+    setFieldType("short_text");
     setError("");
   }
 
@@ -149,42 +142,11 @@ export default function NewEntryModal({
       );
     }
 
-    if (type === "boolean") {
+    if (type === "long_text") {
       return (
-        <label
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            minHeight: "38px",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={
-              value === true ||
-              value === "true"
-            }
-            onChange={(event) =>
-              onChange(event.target.checked)
-            }
-          />
-          <span>
-            {value === true ||
-            value === "true"
-              ? "Yes"
-              : "No"}
-          </span>
-        </label>
-      );
-    }
-
-    if (type === "tag") {
-      return (
-        <input
+        <textarea
           className="form-input"
-          type="text"
-          placeholder="Enter tag"
+          rows={4}
           value={value ?? ""}
           onChange={(event) =>
             onChange(event.target.value)

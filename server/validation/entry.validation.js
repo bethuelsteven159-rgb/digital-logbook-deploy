@@ -1,11 +1,12 @@
 const { z } = require("zod");
 
+// These values match the LIVE PostgreSQL
+// project_fields_field_type_check constraint.
 const fieldTypeSchema = z.enum([
-  "text",
+  "short_text",
+  "long_text",
   "number",
   "date",
-  "boolean",
-  "tag",
 ]);
 
 const customValueSchema = z.union([
@@ -26,10 +27,7 @@ const createEntrySchema = z.object({
     .number()
     .int()
     .min(0, "Duration cannot be negative")
-    .max(
-      10080,
-      "Duration is too large",
-    ),
+    .max(10080, "Duration is too large"),
 
   values: z
     .array(
@@ -44,14 +42,9 @@ const createEntrySchema = z.object({
     .array(
       z.object({
         clientId: z.string().min(1),
-        name: z
-          .string()
-          .trim()
-          .min(1)
-          .max(100),
+        name: z.string().trim().min(1).max(100),
         type: fieldTypeSchema,
-        value:
-          customValueSchema.optional(),
+        value: customValueSchema.optional(),
       }),
     )
     .default([]),

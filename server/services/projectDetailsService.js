@@ -25,10 +25,6 @@ function serializeEntry(entry) {
 function serializeFieldValue(value) {
   const fieldType = value.field?.fieldType;
 
-  if (fieldType === "boolean") {
-    return value.valueText === "true";
-  }
-
   if (
     value.valueNumber !== null &&
     value.valueNumber !== undefined
@@ -56,27 +52,15 @@ function convertValue(field, rawValue) {
     return null;
   }
 
-  if (
-    rawValue === "" &&
-    field.fieldType !== "boolean"
-  ) {
+  if (rawValue === "") {
     return null;
   }
 
   switch (field.fieldType) {
-    case "text":
-    case "tag":
+    case "short_text":
+    case "long_text":
       return {
         valueText: String(rawValue),
-      };
-
-    case "boolean":
-      return {
-        valueText:
-          rawValue === true ||
-          rawValue === "true"
-            ? "true"
-            : "false",
       };
 
     case "number": {
@@ -137,6 +121,7 @@ async function getProjectDetailsService({ projectId, userId }) {
       id: project.id,
       name: project.name,
       description: project.description,
+      archivedAt: project.archivedAt,
       createdAt: project.createdAt,
     },
 
