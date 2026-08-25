@@ -15,7 +15,7 @@ As of now, the team has completed **Sprint 1** only. The status below reflects r
 | Stage | Focus | Status | Sprint(s) |
 | --- | --- | --- | --- |
 | 1 | Project Setup | 🟢 Mostly complete | Sprint 1 |
-| 2 | Core Functionality (Basic Features) | ⚪ Not yet started | Planned from Sprint 2 |
+| 2 | Core Functionality (Basic Features) | 🟢 Implemented | Sprint 1 |
 | 3 | Authentication & User Management | 🟢 Implemented, tested locally | Sprint 1 |
 | 4 | Feature Development (Intermediate/Advanced) | ⚪ Not started | Planned, later sprints |
 | 5 | Testing & Integration | ⚪ Not started (CI/CD scaffolded) | Planned from Sprint 2 |
@@ -36,7 +36,7 @@ The technical foundation has been confirmed: a **React (Vite)** frontend and a *
 
 This stage corresponds to the **Basic Features** tier in the requirements: authentication, projects (create/view/edit/archive), log entries (create, customise fields, quick capture), time tracking, entry history, search, filter, and basic statistics.
 
-**Status:** not yet implemented. Authentication (Stage 3) was prioritised first in Sprint 1 since the rest of Stage 2 depends on a working, authenticated API. With authentication now tested locally, project and logbook functionality is the next planned focus.
+**Progress in Sprint 1:** the core Basic Feature set has been implemented ahead of the original plan, alongside authentication. This includes user profile management, project creation, editing and archiving, log entry creation, search and filtering of entries, time tracking, and basic statistics on the dashboard. Formal testing and stakeholder acceptance of these features is still to be confirmed and carried out in Stage 5.
 
 ## Stage 3 – Authentication and User Management
 
@@ -75,4 +75,4 @@ This stage corresponds to the **Intermediate** tier (tags, checklists, entry lin
 
 ## Why the Roadmap Is Structured This Way
 
-The stages are ordered so that foundational work (setup, architecture, authentication) is completed before building out core and secondary features, testing, and finalisation. Authentication was pulled forward into Stage 3 during Sprint 1 because the Basic Features in Stage 2 (projects, entries, statistics) all depend on a working, authenticated user session — this reflects an intentional Agile adjustment rather than a deviation from the plan. This reduces the risk of building features on an unstable foundation and gives the team clear checkpoints to review progress against at each sprint review and retrospective.
+The stages are ordered so that foundational work (setup, architecture, authentication) is completed before building out secondary features, testing, and finalisation. In practice, Sprint 1 moved faster than the original stage-by-stage plan assumed — authentication (Stage 3) and the full Basic Feature set (Stage 2) were both implemented in the same sprint, since a working authenticated session was needed before project and entry functionality could be built and tested end-to-end anyway. This reflects an intentional Agile adjustment rather than a deviation from the plan, and gives the team a stable foundation to move into Intermediate/Advanced features (Stage 4) and formal testing (Stage 5) from Sprint 2 onward.
