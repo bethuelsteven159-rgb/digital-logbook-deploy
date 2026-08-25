@@ -1,51 +1,295 @@
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
+import { fetchDashboard } from "../../api/dashboardApi";
+
+const EMPTY_DASHBOARD = {
+  stats: {
+    loggedMinutes: 0,
+    activeProjects: 0,
+    totalEntries: 0,
+    thisWeekMinutes: 0,
+  },
+  overview: {
+    projectsCreated: 0,
+    projectsArchived: 0,
+    entriesLogged: 0,
+    averageSessionMinutes: 0,
+  },
+  recentActivity: [],
+};
+
 export default function Dashboard() {
-    const [collapsed, setCollapsed] = useState(false);
-    const navigate = useNavigate();
-    return (<div className="app-shell">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)}/>
+  const [collapsed, setCollapsed] =
+    useState(false);
+  const [dashboard, setDashboard] =
+    useState(EMPTY_DASHBOARD);
+  const [loading, setLoading] =
+    useState(true);
+  const [error, setError] =
+    useState("");
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDashboard() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data =
+          await fetchDashboard();
+
+        if (!cancelled) {
+          setDashboard({
+            stats: {
+              ...EMPTY_DASHBOARD.stats,
+              ...(data?.stats || {}),
+            },
+            overview: {
+              ...EMPTY_DASHBOARD.overview,
+              ...(data?.overview || {}),
+            },
+            recentActivity:
+              Array.isArray(
+                data?.recentActivity,
+              )
+                ? data.recentActivity
+                : [],
+          });
+        }
+      } catch (requestError) {
+        console.error(
+          "Failed to load dashboard:",
+          requestError,
+        );
+
+        if (!cancelled) {
+          setError(
+            requestError.message ||
+              "Failed to load dashboard.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const { stats, overview, recentActivity } =
+    dashboard;
+
+  const hasNoProjects =
+    overview.projectsCreated === 0;
+
+  return (
+    <div className="app-shell">
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() =>
+          setCollapsed((c) => !c)
+        }
+      />
 
       <main className="app-main">
         {/* Page header */}
         <header className="page-header">
           <div>
-            <p className="page-header-eyebrow">Dashboard</p>
-            <h1 className="page-header-title">Welcome back</h1>
+            <p className="page-header-eyebrow">
+              Dashboard
+            </p>
+            <h1 className="page-header-title">
+              Welcome back
+            </h1>
           </div>
-          <button className="btn btn-primary" onClick={() => navigate("/projects")}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+
+          <button
+            className="btn btn-primary"
+            onClick={() =>
+              navigate("/projects")
+            }
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line
+                x1="12"
+                y1="5"
+                x2="12"
+                y2="19"
+              />
+              <line
+                x1="5"
+                y1="12"
+                x2="19"
+                y2="12"
+              />
             </svg>
             New Project
           </button>
         </header>
 
         <div className="dashboard-content">
+          {error && (
+            <div
+              className="dashboard-error"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
           {/* Stat cards */}
           <section className="stat-grid">
-            <StatCard label="Hours Logged" value="0" unit="hrs" icon={<IconClock />} empty/>
-            <StatCard label="Active Projects" value="0" icon={<IconFolder />} empty/>
-            <StatCard label="Total Entries" value="0" icon={<IconEntry />} empty/>
-            <StatCard label="This Week" value="0" unit="hrs" icon={<IconCalendar />} empty/>
+            <StatCard
+              label="Hours Logged"
+              value={
+                loading
+                  ? "—"
+                  : formatHours(
+                      stats.loggedMinutes,
+                    )
+              }
+              unit="hrs"
+              icon={<IconClock />}
+              empty={
+                !loading &&
+                stats.loggedMinutes === 0
+              }
+            />
+
+            <StatCard
+              label="Active Projects"
+              value={
+                loading
+                  ? "—"
+                  : stats.activeProjects
+              }
+              icon={<IconFolder />}
+              empty={
+                !loading &&
+                stats.activeProjects === 0
+              }
+            />
+
+            <StatCard
+              label="Total Entries"
+              value={
+                loading
+                  ? "—"
+                  : stats.totalEntries
+              }
+              icon={<IconEntry />}
+              empty={
+                !loading &&
+                stats.totalEntries === 0
+              }
+            />
+
+            <StatCard
+              label="This Week"
+              value={
+                loading
+                  ? "—"
+                  : formatHours(
+                      stats.thisWeekMinutes,
+                    )
+              }
+              unit="hrs"
+              icon={<IconCalendar />}
+              empty={
+                !loading &&
+                stats.thisWeekMinutes === 0
+              }
+            />
           </section>
 
           <div className="dashboard-columns">
             {/* Recent Activity */}
             <section className="dash-card dash-activity">
               <div className="dash-card-header">
-                <h2 className="dash-card-title">Recent Activity</h2>
+                <h2 className="dash-card-title">
+                  Recent Activity
+                </h2>
               </div>
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <IconActivity />
+
+              {loading ? (
+                <div className="empty-state">
+                  <p className="empty-heading">
+                    Loading activity...
+                  </p>
                 </div>
-                <p className="empty-heading">No activity to show yet.</p>
-                <p className="empty-body">
-                  Your recent project entries and updates will appear here once you start logging work.
-                </p>
-              </div>
+              ) : recentActivity.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">
+                    <IconActivity />
+                  </div>
+                  <p className="empty-heading">
+                    No activity to show yet.
+                  </p>
+                  <p className="empty-body">
+                    Your recent project entries and
+                    updates will appear here once you
+                    start logging work.
+                  </p>
+                </div>
+              ) : (
+                <div className="activity-list">
+                  {recentActivity.map(
+                    (activity) => (
+                      <div
+                        className="activity-row"
+                        key={activity.entryId}
+                      >
+                        <div className="activity-icon">
+                          <IconEntry />
+                        </div>
+
+                        <div className="activity-main">
+                          <p className="activity-title">
+                            {activity.entryName ||
+                              "Logbook Entry"}
+                          </p>
+                          <p className="activity-meta">
+                            {activity.projectName ||
+                              "Project"}
+                            {" · "}
+                            {formatDateTime(
+                              activity.occurredAt,
+                            )}
+                          </p>
+                        </div>
+
+                        <span className="activity-duration">
+                          {formatDuration(
+                            activity.durationMinutes,
+                          )}
+                        </span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
             </section>
 
             {/* Right column */}
@@ -53,18 +297,37 @@ export default function Dashboard() {
               {/* Get started */}
               <section className="dash-card dash-get-started">
                 <div className="dash-card-header">
-                  <h2 className="dash-card-title">Get Started</h2>
+                  <h2 className="dash-card-title">
+                    Get Started
+                  </h2>
                 </div>
+
                 <div className="get-started-body">
                   <div className="get-started-icon">
                     <IconRocket />
                   </div>
-                  <p className="get-started-heading">Start your journey.</p>
-                  <p className="get-started-body-text">
-                    You haven't started a project yet. Organise your work and track your growth by creating your first digital logbook entry.
+
+                  <p className="get-started-heading">
+                    {hasNoProjects
+                      ? "Start your journey."
+                      : "Keep your logbook moving."}
                   </p>
-                  <button className="btn btn-primary btn-full" onClick={() => navigate("/projects")}>
-                    Create First Project
+
+                  <p className="get-started-body-text">
+                    {hasNoProjects
+                      ? "You haven't started a project yet. Organise your work and track your growth by creating your first digital logbook entry."
+                      : "Open your projects to continue logging work and building your project record."}
+                  </p>
+
+                  <button
+                    className="btn btn-primary btn-full"
+                    onClick={() =>
+                      navigate("/projects")
+                    }
+                  >
+                    {hasNoProjects
+                      ? "Create First Project"
+                      : "View Projects"}
                   </button>
                 </div>
               </section>
@@ -72,16 +335,58 @@ export default function Dashboard() {
               {/* Quick stats */}
               <section className="dash-card">
                 <div className="dash-card-header">
-                  <h2 className="dash-card-title">Overview</h2>
-                  <button className="dash-link" onClick={() => navigate("/stats")}>
+                  <h2 className="dash-card-title">
+                    Overview
+                  </h2>
+
+                  <button
+                    className="dash-link"
+                    onClick={() =>
+                      navigate("/stats")
+                    }
+                  >
                     View all stats
                   </button>
                 </div>
+
                 <div className="overview-list">
-                  <OverviewRow label="Projects created" value="—"/>
-                  <OverviewRow label="Projects archived" value="—"/>
-                  <OverviewRow label="Entries logged" value="—"/>
-                  <OverviewRow label="Average session" value="—"/>
+                  <OverviewRow
+                    label="Projects created"
+                    value={
+                      loading
+                        ? "—"
+                        : overview.projectsCreated
+                    }
+                  />
+
+                  <OverviewRow
+                    label="Projects archived"
+                    value={
+                      loading
+                        ? "—"
+                        : overview.projectsArchived
+                    }
+                  />
+
+                  <OverviewRow
+                    label="Entries logged"
+                    value={
+                      loading
+                        ? "—"
+                        : overview.entriesLogged
+                    }
+                  />
+
+                  <OverviewRow
+                    label="Average session"
+                    value={
+                      loading
+                        ? "—"
+                        : formatDuration(
+                            overview.averageSessionMinutes,
+                          )
+                    }
+                  />
                 </div>
               </section>
             </div>
@@ -166,6 +471,15 @@ export default function Dashboard() {
           display: flex;
           flex-direction: column;
           gap: 24px;
+        }
+
+        .dashboard-error {
+          padding: 11px 14px;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-size: 13px;
         }
 
         /* Stat grid */
@@ -275,6 +589,59 @@ export default function Dashboard() {
           min-height: 340px;
           display: flex;
           flex-direction: column;
+        }
+
+        .activity-list {
+          display: flex;
+          flex-direction: column;
+        }
+        .activity-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 22px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .activity-row:last-child {
+          border-bottom: none;
+        }
+        .activity-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
+          background: #f1f5f9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #64748b;
+          flex-shrink: 0;
+        }
+        .activity-main {
+          flex: 1;
+          min-width: 0;
+        }
+        .activity-title {
+          font-size: 13px;
+          font-weight: 600;
+          color: #1a2340;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .activity-meta {
+          font-size: 12px;
+          color: #94a3b8;
+          margin: 4px 0 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .activity-duration {
+          font-size: 12px;
+          font-weight: 500;
+          color: #64748b;
+          white-space: nowrap;
         }
 
         /* Empty state */
@@ -408,58 +775,264 @@ export default function Dashboard() {
           }
         }
       `}</style>
-    </div>);
+    </div>
+  );
 }
-function StatCard({ label, value, unit, icon, empty, }) {
-    return (<div className="stat-card">
+
+function StatCard({
+  label,
+  value,
+  unit,
+  icon,
+  empty,
+}) {
+  return (
+    <div className="stat-card">
       <div className="stat-card-top">
-        <span className="stat-card-label">{label}</span>
-        <div className="stat-card-icon">{icon}</div>
+        <span className="stat-card-label">
+          {label}
+        </span>
+        <div className="stat-card-icon">
+          {icon}
+        </div>
       </div>
+
       <div className="stat-card-value">
-        <span className="stat-card-number">{value}</span>
-        {unit && <span className="stat-card-unit">{unit}</span>}
+        <span className="stat-card-number">
+          {value}
+        </span>
+        {unit && (
+          <span className="stat-card-unit">
+            {unit}
+          </span>
+        )}
       </div>
-      {empty && <span className="stat-card-empty-note">Nothing logged yet</span>}
-    </div>);
+
+      {empty && (
+        <span className="stat-card-empty-note">
+          Nothing logged yet
+        </span>
+      )}
+    </div>
+  );
 }
-function OverviewRow({ label, value }) {
-    return (<div className="overview-row">
-      <span className="overview-row-label">{label}</span>
-      <span className="overview-row-value">{value}</span>
-    </div>);
+
+function OverviewRow({
+  label,
+  value,
+}) {
+  return (
+    <div className="overview-row">
+      <span className="overview-row-label">
+        {label}
+      </span>
+      <span className="overview-row-value">
+        {value}
+      </span>
+    </div>
+  );
 }
+
+function formatHours(minutes = 0) {
+  const hours =
+    (Number(minutes) || 0) / 60;
+
+  if (Number.isInteger(hours)) {
+    return String(hours);
+  }
+
+  return hours.toFixed(1);
+}
+
+function formatDuration(minutes = 0) {
+  const safeMinutes =
+    Number(minutes) || 0;
+
+  if (safeMinutes === 0) {
+    return "0 min";
+  }
+
+  const hours =
+    Math.floor(safeMinutes / 60);
+  const remainingMinutes =
+    safeMinutes % 60;
+
+  if (hours === 0) {
+    return `${remainingMinutes} min`;
+  }
+
+  if (remainingMinutes === 0) {
+    return `${hours} hrs`;
+  }
+
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown time";
+  }
+
+  return new Intl.DateTimeFormat(
+    "en-ZA",
+    {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  ).format(date);
+}
+
 function IconClock() {
-    return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-    </svg>);
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
 }
+
 function IconFolder() {
-    return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 7a2 2 0 0 1 2-2h4l2 3h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z"/>
-    </svg>);
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 7a2 2 0 0 1 2-2h4l2 3h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z" />
+    </svg>
+  );
 }
+
 function IconEntry() {
-    return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-      <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
-    </svg>);
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line
+        x1="9"
+        y1="13"
+        x2="15"
+        y2="13"
+      />
+      <line
+        x1="9"
+        y1="17"
+        x2="13"
+        y2="17"
+      />
+    </svg>
+  );
 }
+
 function IconCalendar() {
-    return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-    </svg>);
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect
+        x="3"
+        y="4"
+        width="18"
+        height="18"
+        rx="2"
+      />
+      <line
+        x1="16"
+        y1="2"
+        x2="16"
+        y2="6"
+      />
+      <line
+        x1="8"
+        y1="2"
+        x2="8"
+        y2="6"
+      />
+      <line
+        x1="3"
+        y1="10"
+        x2="21"
+        y2="10"
+      />
+    </svg>
+  );
 }
+
 function IconActivity() {
-    return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-    </svg>);
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
 }
+
 function IconRocket() {
-    return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
-      <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
-      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
-      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
-    </svg>);
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+      <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+    </svg>
+  );
 }

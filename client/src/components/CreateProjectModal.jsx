@@ -6,12 +6,13 @@ export default function CreateProjectModal({ onClose, onSave }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setError("");
   }, []);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const trimmedName = name.trim();
 
@@ -25,19 +26,31 @@ export default function CreateProjectModal({ onClose, onSave }) {
       return;
     }
 
-    onSave?.({
-      name: trimmedName,
-      description: description.trim(),
-      startDate,
-      endDate,
-    });
+    try {
+      setSaving(true);
+      setError("");
+
+      await onSave?.({
+        name: trimmedName,
+        description: description.trim(),
+        startDate,
+        endDate,
+      });
+    } catch (saveError) {
+      setError(
+        saveError.message ||
+          "Failed to create project.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div
       className="create-project-modal-overlay"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !saving) onClose();
       }}
     >
       <div className="create-project-modal" role="dialog" aria-modal="true" aria-labelledby="create-project-modal-title">
@@ -48,7 +61,7 @@ export default function CreateProjectModal({ onClose, onSave }) {
               Create New Project
             </h2>
           </div>
-          <button className="create-project-modal-close" onClick={onClose} aria-label="Close" type="button">
+          <button className="create-project-modal-close" onClick={onClose} aria-label="Close" type="button" disabled={saving}>
             <IconX />
           </button>
         </div>
@@ -119,11 +132,11 @@ export default function CreateProjectModal({ onClose, onSave }) {
           </div>
 
           <div className="create-project-modal-footer">
-            <button type="button" className="create-project-modal-cancel" onClick={onClose}>
+            <button type="button" className="create-project-modal-cancel" onClick={onClose} disabled={saving}>
               Cancel
             </button>
-            <button type="submit" className="create-project-modal-save">
-              Create Project
+            <button type="submit" className="create-project-modal-save" disabled={saving}>
+              {saving ? "Creating..." : "Create Project"}
             </button>
           </div>
         </form>
@@ -243,7 +256,10 @@ export default function CreateProjectModal({ onClose, onSave }) {
         .create-project-modal-cancel { color: #64748b; background: #fff; border: 1.5px solid #e2e8f0; }
         .create-project-modal-cancel:hover { background: #f8fafc; border-color: #cbd5e1; }
         .create-project-modal-save { color: #fff; background: #4f63d2; border: 1.5px solid #4f63d2; }
-        .create-project-modal-save:hover { background: #3d50bf; border-color: #3d50bf; box-shadow: 0 2px 10px rgba(79, 99, 210, 0.25); }
+        .create-project-modal-save:hover:not(:disabled) { background: #3d50bf; border-color: #3d50bf; box-shadow: 0 2px 10px rgba(79, 99, 210, 0.25); }
+        .create-project-modal-save:disabled,
+        .create-project-modal-cancel:disabled,
+        .create-project-modal-close:disabled { opacity: 0.65; cursor: not-allowed; }
         .create-project-modal-cancel:focus-visible,
         .create-project-modal-save:focus-visible,
         .create-project-modal-close:focus-visible { outline: 2px solid #4f63d2; outline-offset: 2px; }
