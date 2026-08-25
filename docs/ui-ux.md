@@ -400,7 +400,7 @@ The UI/UX design is represented in the implementation through the following fron
 - `src/context/UserContext.jsx` — shared user state used by the client.
 - `src/api/` — frontend API integration separated from presentation components.
 
-The final Figma-based designs and other UI/UX design material are stored in `docs/pdf/`.
+The final Figma-based designs and other UI/UX design material are stored in `docs/ui-ux_pdfs/`.
 
 ## Summary
 
