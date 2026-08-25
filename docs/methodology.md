@@ -2,8 +2,6 @@
 
 Owner: Tumi
 
-> # Project Methodology, Sprint Planning & Work Tracker
-
 ## 1. Agile/Scrum Methodology
 
 Our project will follow an **Agile/Scrum methodology** because the project is being developed incrementally and requires regular feedback and adaptation. Instead of attempting to complete the entire system at once, the project will be divided into smaller features and tasks that can be implemented, tested, reviewed, and improved over multiple sprints.
@@ -53,7 +51,7 @@ Tasks that are not completed during a sprint will be reviewed during the next pl
 
 ## 4. Work Tracker
 
-The work tracker will be used to provide a shared view of the project's progress.
+The work tracker will be used to provide a shared view of the project's progress. The team's Taiga board can be found here: [Taiga – Madhingadi Digital Logbook Backlog](https://tree.taiga.io/project/madhingadi-digital-logbook/backlog).
 
 Each task should contain enough information for another team member to understand what needs to be done. Where appropriate, tasks should include:
 
@@ -78,22 +76,7 @@ Tasks will move through the tracker as development progresses:
 
 The tracker will help the team identify unfinished work and prevent tasks from being forgotten.
 
-## 5. Meetings and Check-ins
-
-The team will use regular check-ins to maintain communication and identify problems early.
-
-During check-ins, each member should briefly communicate:
-
-* What they completed since the previous check-in.
-* What they are currently working on.
-* What they plan to work on next.
-* Whether they have encountered any blockers.
-
-Sprint planning will take place at the beginning of each sprint. At the end of the sprint, the team will review the completed work and reflect on the development process.
-
-Meetings will be kept focused on project progress so that they do not unnecessarily reduce development time.
-
-## 6. Blocker Handling
+## 5. Blocker Handling
 
 A blocker is an issue that prevents a team member from continuing with their assigned work.
 
@@ -111,7 +94,7 @@ The team will then determine whether another member can assist, whether the task
 
 Blocked tasks will be clearly marked in the work tracker so that the rest of the team is aware of the issue.
 
-## 7. Definition of Done
+## 6. Definition of Done
 
 A task will be considered **Done** when:
 
@@ -128,7 +111,7 @@ A task will be considered **Done** when:
 
 A task should not be marked as Done simply because the code has been written. It must be sufficiently tested and integrated to be considered complete.
 
-## 8. Sprint Planning
+## 7. Sprint Planning
 
 Sprint planning will determine the goals and workload for each sprint.
 
@@ -146,56 +129,130 @@ The selected tasks will form the Sprint Backlog, and the team will agree on a cl
 
 The Sprint Goal provides a shared objective for the sprint and helps the team decide which work should take priority if unexpected issues arise.
 
-## 9. Development Roadmap
+## 8. Sprints
 
-The project will be developed incrementally. The roadmap will broadly follow these stages:
+This section summarises the meetings held throughout each sprint, including client meetings, sprint planning sessions, and daily standups, along with screenshots as proof of each meeting.
 
-### Stage 1 – Project Setup
+### 8.1 Sprint 1
 
-* Establish the development environment.
-* Set up the repository and branching strategy.
-* Establish the frontend and backend structure.
-* Define the initial database and application architecture.
+#### Client Meeting 1
 
-### Stage 2 – Core Functionality
+The client set out several expectations and constraints for how the project should be run:
 
-* Implement the main user functionality.
-* Implement project creation and management.
-* Implement logbook functionality.
-* Establish the main application workflow.
+* A development methodology must be chosen and followed consistently for the whole project.
+* The system architecture should avoid a monolithic design.
+* Gitea will be used for repository management throughout the project.
+* Every feature must be merged through a reviewed pull request, developed on its own branch and only merged once approved.
+* The team must prepare for group presentations of the project.
+* The client will act as a mentor, offering guidance and feedback rather than dictating solutions.
+* Sprint planning must happen before each sprint — planning tasks, assigning responsibilities, and setting sprint goals.
+* Requirements and product direction should be discussed directly with the client.
+* Client meetings will generally take place on Mondays, Tuesdays, and Saturdays.
+* UX Pilot will be used to create UI prototypes.
+* Lovable will be used to design the web frontend.
+* Browser Local Storage will be used for temporary data storage.
 
-### Stage 3 – Authentication and User Management
+![Client Meeting 1 Screenshot](./screenshots/sprint1-client-meeting-1.jpeg)
 
-* Implement user authentication.
-* Integrate Google authentication.
-* Implement user profiles and account-related functionality.
-* Secure authenticated backend routes.
+#### Client Meeting 2
 
-### Stage 4 – Feature Development
+This meeting focused more heavily on documentation and technical planning:
 
-* Implement additional project and logbook features.
-* Develop statistics and supporting functionality.
-* Improve the user interface and overall user experience.
+* **Documentation** should cover the architecture, and the frontend/backend deployment approach needs to be discussed.
+* The repository will be shared with the client, and the team still needs to decide on a project management tool.
+* A README file will be used for project tracking, covering the tech stack and product backlog.
+* **Methodology**: planning happens through the product backlog; daily standups will be done via voice notes or calls; sprint retrospectives will be held; Bethuel will act as Scrum Master.
+* **Bug tracking**: bugs will be tracked and documented on the same platform used for project management. Things like merge conflicts and similar issues are also treated as bugs.
+* **Database**: the team will produce ERD diagrams, and still needs to define the Git workflow and CI/CD approach. Testing will begin in Sprint 2.
+* **User stories** discussed:
+  * Authentication via a third-party provider (Google), including register, login, profile, and edit profile.
+  * Dashboard showing total number of projects (active and archived), total log entries, recent log entries, and active entries.
+  * Project management features: create, archive, add, view details, edit, search, and filter projects.
 
-### Stage 5 – Testing and Integration
+![Client Meeting 2 Screenshot](./screenshots/sprint1-client-meeting-2.jpeg)
 
-* Test individual features.
-* Perform integration testing.
-* Fix bugs and regressions.
-* Review code quality.
-* Ensure acceptance criteria are satisfied.
+#### Sprint Planning
 
-### Stage 6 – Finalisation
+The team agreed on how they'd work together, assigned ownership of each area, and prioritised the first user stories for Sprint 1.
 
-* Complete remaining backlog items.
-* Perform final system testing.
-* Improve documentation.
-* Resolve remaining defects.
-* Prepare the system for final demonstration and submission.
+**Working rules:** the team is building one system together, not separate pieces stitched together at the end. Documentation must reflect actual group decisions, not solo assumptions — anything undiscussed gets raised with the group first. AI use is encouraged but never replaces understanding. Work is broken into small chunks with short deadlines, blockers are raised early, and major decisions (architecture, tech, structure) are made as a team. The agreed process: **Discuss → Decide → Document → Implement → Review → Integrate**.
 
-The roadmap is intentionally flexible because Agile development allows priorities to change based on feedback, technical issues, and the progress of the team.
+**Ownership areas:** six areas were split one per member — owning an area means tracking and documenting it, not deciding it alone.
 
-## 10. Why This Approach Suits Our Project
+* **Member 1** – Methodology, sprint planning & work tracker
+* **Member 2** – Git workflow & development standards
+* **Member 3** – System architecture, backend & API. Also where the earlier Local Storage assumption from Client Meeting 1 was corrected: browser storage is not the primary database — it may later support offline capture/caching, but the backend/database stays the authoritative source once synced.
+* **Member 4** – Frontend architecture, UI/UX, responsiveness & accessibility
+* **Member 5** – Requirements, user stories & stakeholder interaction
+* **Member 6** – Tech stack, documentation website & developer onboarding
+
+**Working pairs:** Member 1+2, Member 3+4, Member 5+6, each pair being first point of contact for help/review.
+
+**Sprint 1 user stories prioritised** (a small first selection): Authentication (Google sign-in), Profile (view/edit), Dashboard (project & entry overview), Create a project, and Custom entry format  (scoped to text/number/date-time fields for Sprint 1).
+
+
+![Sprint Planning Team Photo](./screenshots/sprint1-sprint-planning-team-photo.jpeg)
+
+#### Daily Standup 1
+
+* **Morare** worked on the UI design.
+* **Tumi** created a pull request template for the repository.
+* **Bethuel** set up ESLint and Prettier for the project.
+
+The team also gave a brief update on their assigned ownership areas from sprint planning, confirming that early drafts were underway on the methodology and Git workflow documentation.
+
+![Daily Standup 1 Screenshot](./screenshots/sprint1-standup-1.jpeg)
+
+#### Daily Standup 2
+
+* **Sinoyolo** set up the documentation website and asked everyone to start documenting their assigned section and placing it under their assigned file on Gitea.
+* **Inga** started working on the database and API together with Bethuel.
+
+![Daily Standup 2 Screenshot](./screenshots/sprint1-standup-2.jpeg)
+
+#### Daily Standup 3
+
+Each member gave a short update on the ownership area assigned to them during sprint planning. Early drafts were reported as underway on the methodology, Git workflow, and architecture documentation, and the team flagged a couple of open questions to confirm with the client before finalising those sections — including the local storage vs backend "source of truth" point, and the exact field-type scope for the custom entry format.
+
+![Daily Standup 3 Screenshot](./screenshots/sprint1-standup-3.jpeg)
+
+#### Daily Standup 4
+
+* **Tumi** and **Simphiwe** gave an update on the authentication work.
+* **Morare** confirmed the UI design work was complete.
+* **Bethuel** was still working on the database and API together with **Inga**.
+
+![Daily Standup 4 Screenshot](./screenshots/sprint1-standup-4.jpeg)
+
+#### Client Meeting 3 – Progress Demo
+
+The team demoed the current state of the project to the client, showing that a number of the user stories prioritised during sprint planning had been implemented. The client reviewed the demo and gave feedback on the progress made so far and on areas to focus on going into the sprint review.
+
+![Client Meeting 3 Screenshot](./screenshots/sprint1-client-meeting-3.jpeg)
+
+#### Sprint Review
+
+To close out Sprint 1, the team held a sprint review with the client to walk through the completed work, confirm what met the Definition of Done, and discuss what still needed attention.
+
+The client acknowledged the progress made on process and setup — including the pull request template, the ESLint/Prettier configuration, and the documentation website structure — and gave feedback on the implemented user stories. At the same time, the client flagged a few gaps to carry into the next sprint, including work still outstanding on authentication, the database/API integration, and demonstrating how offline-captured data (local storage) will sync back to the backend as the source of truth. These points were noted as priorities for the Sprint 2 backlog.
+
+![Sprint Review Screenshot](./screenshots/sprint1-sprint-review.jpeg)
+
+#### Sprint Retrospective
+
+*Content pending — to be added after the retrospective meeting. This section will summarise what went well during Sprint 1, what didn't go well, and what the team agreed to change or carry forward into Sprint 2.*
+
+![Sprint Retrospective Screenshot](./screenshots/sprint1-sprint-retrospective.png)
+
+### 8.2 Sprint 2
+
+*To be added.*
+
+### 8.3 Sprint 3
+
+*To be added.*
+
+## 9. Why This Approach Suits Our Project
 
 Scrum is appropriate for our project because development is collaborative and features can be developed independently and integrated progressively. Working in sprints allows us to identify problems early, receive feedback regularly, and adapt the project as requirements become clearer.
 
