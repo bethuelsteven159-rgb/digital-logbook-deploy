@@ -236,7 +236,7 @@ To close out Sprint 1, the team held a sprint review with the client to walk thr
 
 The client acknowledged the progress made on process and setup — including the pull request template, the ESLint/Prettier configuration, and the documentation website structure — and gave feedback on the implemented user stories. At the same time, the client flagged a few gaps to carry into the next sprint, including work still outstanding on authentication, the database/API integration, and demonstrating how offline-captured data (local storage) will sync back to the backend as the source of truth. These points were noted as priorities for the Sprint 2 backlog.
 
-![Sprint Review Screenshot](./screenshots/sprint1-sprint-review.jpeg)
+![Sprint Review Screenshot](./screenshots/sprint1-sprint-retrospective.png.png)
 
 #### Sprint Retrospective
 
