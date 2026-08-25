@@ -290,7 +290,7 @@ The Settings screen provides the application settings area. The current implemen
 
 The UI was developed through an iterative process that moved from **basic designs**, to **Figma designs**, and finally to the **implemented application**.
 
-The design material for this process is stored in the `docs/ui-ux_pdf/` folder of the repository. This folder contains the project's UI/UX design evidence, including the basic designs and the final Figma-based desktop and mobile designs.
+The design material for this process is stored in the `docs/ui-ux_pdf/ ` folder of the repository. This folder contains the project's UI/UX design evidence, including the basic designs and the final Figma-based desktop and mobile designs in screenshot form.
 
 ### Design-to-Implementation Flow
 
