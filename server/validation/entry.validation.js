@@ -38,6 +38,10 @@ const createEntrySchema = z.object({
     )
     .default([]),
 
+  linkedEntryIds: z
+    .array(z.string().uuid())
+    .default([]),
+
   newFields: z
     .array(
       z.object({

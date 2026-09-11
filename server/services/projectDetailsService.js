@@ -6,6 +6,26 @@ function createHttpError(statusCode, message) {
   return error;
 }
 
+
+function buildLinkedEntriesMap(entries, links) {
+  const linkedByEntryId = new Map(
+    entries.map((entry) => [entry.id, []]),
+  );
+
+  for (const link of links) {
+    linkedByEntryId.get(link.sourceEntryId)?.push({
+      id: link.targetEntryId,
+      name: link.targetName,
+    });
+    linkedByEntryId.get(link.targetEntryId)?.push({
+      id: link.sourceEntryId,
+      name: link.sourceName,
+    });
+  }
+
+  return linkedByEntryId;
+}
+
 function serializeEntry(entry) {
   return {
     id: entry.id,
@@ -19,6 +39,9 @@ function serializeEntry(entry) {
       type: value.field?.fieldType || null,
       value: serializeFieldValue(value),
     })),
+    linkedEntries: Array.isArray(entry.linkedEntries)
+      ? entry.linkedEntries
+      : [],
   };
 }
 
@@ -110,11 +133,18 @@ async function getProjectDetailsService({ projectId, userId }) {
     throw createHttpError(404, "Project not found");
   }
 
-  const [fields, stats, entries] = await Promise.all([
+  const [fields, stats, entries, links] = await Promise.all([
     repository.getProjectFields(projectId),
     repository.getProjectStats(projectId),
     repository.getProjectEntries(projectId),
+    repository.getProjectEntryLinks(projectId),
   ]);
+
+  const linkedByEntryId = buildLinkedEntriesMap(entries, links);
+
+  for (const entry of entries) {
+    entry.linkedEntries = linkedByEntryId.get(entry.id) || [];
+  }
 
   return {
     project: {
@@ -195,12 +225,29 @@ async function createEntryService({ projectId, userId, data }) {
       });
     }
 
+    const linkedEntryIds = [...new Set(data.linkedEntryIds || [])];
+    const linkedEntries = await tx.getEntriesByIdsForProject(
+      projectId,
+      linkedEntryIds,
+    );
+
+    if (linkedEntries.length !== linkedEntryIds.length) {
+      throw createHttpError(
+        400,
+        "One or more linked entries do not belong to this project",
+      );
+    }
+
     const entry = await tx.createEntry({
       projectId,
       createdById: userId,
       name: data.name.trim(),
       durationMinutes: data.durationMinutes,
     });
+
+    if (linkedEntryIds.length > 0) {
+      await tx.createEntryLinks(entry.id, linkedEntryIds);
+    }
 
     const valuesToCreate = [];
 
@@ -238,6 +285,7 @@ async function createEntryService({ projectId, userId, data }) {
     }
 
     const completeEntry = await tx.getEntryById(entry.id);
+    completeEntry.linkedEntries = linkedEntries;
 
     return serializeEntry(completeEntry);
   });
@@ -246,4 +294,5 @@ async function createEntryService({ projectId, userId, data }) {
 module.exports = {
   getProjectDetailsService,
   createEntryService,
+  buildLinkedEntriesMap,
 };
