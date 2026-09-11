@@ -24,7 +24,11 @@ try {
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://whimsical-faloodeh-9c4095.netlify.app",
+  }),
+);
 app.use(express.json());
 
 
