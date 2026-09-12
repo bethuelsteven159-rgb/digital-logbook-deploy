@@ -24,6 +24,7 @@ export default function NewEntryModal({
   const [checklistText, setChecklistText] = useState("");
   const [referenceProjectIds, setReferenceProjectIds] = useState([]);
   const [referenceEntryIds, setReferenceEntryIds] = useState([]);
+  const [linkedEntryIds, setLinkedEntryIds] = useState([]);
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState("short_text");
   const [error, setError] = useState("");
@@ -39,9 +40,7 @@ export default function NewEntryModal({
   function updateNewFieldValue(clientId, value) {
     setNewFields((current) =>
       current.map((field) =>
-        field.clientId === clientId
-          ? { ...field, value }
-          : field,
+        field.clientId === clientId ? { ...field, value } : field,
       ),
     );
   }
@@ -130,6 +129,14 @@ export default function NewEntryModal({
 
   function toggleEntryReference(entryId) {
     setReferenceEntryIds((current) =>
+      current.includes(entryId)
+        ? current.filter((id) => id !== entryId)
+        : [...current, entryId],
+    );
+  }
+
+  function toggleLinkedEntry(entryId) {
+    setLinkedEntryIds((current) =>
       current.includes(entryId)
         ? current.filter((id) => id !== entryId)
         : [...current, entryId],
@@ -235,6 +242,8 @@ export default function NewEntryModal({
       referenceProjectIds,
 
       referenceEntryIds,
+
+      linkedEntryIds,
     };
 
     try {
@@ -256,11 +265,6 @@ export default function NewEntryModal({
     (project) => project.id !== currentProjectId,
   );
 
-  /*
-   * Prevent the new entry from referencing itself.
-   * Existing entries are safe because the new entry does not
-   * have an ID yet, but filtering here also makes the intent clear.
-   */
   const referenceEntryOptions = entries.filter(
     (entry) => entry.id,
   );
@@ -388,6 +392,39 @@ export default function NewEntryModal({
               </div>
             )}
 
+            {entries.length > 0 && (
+              <div className="fields-block">
+                <p className="fields-section-label">
+                  Link related entries
+                </p>
+
+                <p className="form-help">
+                  Select existing entries that are related to this work.
+                </p>
+
+                <div className="entry-link-options">
+                  {entries.map((entry) => (
+                    <label
+                      className="entry-link-option"
+                      key={entry.id}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={linkedEntryIds.includes(entry.id)}
+                        onChange={() =>
+                          toggleLinkedEntry(entry.id)
+                        }
+                      />
+
+                      <span>
+                        {entry.name || "Logbook Entry"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="fields-block">
               <p className="fields-section-label">
                 Checklist
@@ -456,30 +493,28 @@ export default function NewEntryModal({
                 </p>
 
                 <div className="person4-reference-list">
-                  {referenceProjectOptions.map(
-                    (project) => (
-                      <label
-                        className="person4-reference-option"
-                        key={project.id}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={referenceProjectIds.includes(
+                  {referenceProjectOptions.map((project) => (
+                    <label
+                      className="person4-reference-option"
+                      key={project.id}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={referenceProjectIds.includes(
+                          project.id,
+                        )}
+                        onChange={() =>
+                          toggleProjectReference(
                             project.id,
-                          )}
-                          onChange={() =>
-                            toggleProjectReference(
-                              project.id,
-                            )
-                          }
-                        />
+                          )
+                        }
+                      />
 
-                        <span>
-                          {project.name}
-                        </span>
-                      </label>
-                    ),
-                  )}
+                      <span>
+                        {project.name}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
             )}
@@ -492,37 +527,35 @@ export default function NewEntryModal({
                 </p>
 
                 <div className="person4-reference-list">
-                  {referenceEntryOptions.map(
-                    (entry) => (
-                      <label
-                        className="person4-reference-option"
-                        key={entry.id}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={referenceEntryIds.includes(
+                  {referenceEntryOptions.map((entry) => (
+                    <label
+                      className="person4-reference-option"
+                      key={entry.id}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={referenceEntryIds.includes(
+                          entry.id,
+                        )}
+                        onChange={() =>
+                          toggleEntryReference(
                             entry.id,
-                          )}
-                          onChange={() =>
-                            toggleEntryReference(
-                              entry.id,
-                            )
-                          }
-                        />
+                          )
+                        }
+                      />
 
-                        <span>
-                          {entry.name}
+                      <span>
+                        {entry.name}
 
-                          {entry.projectName && (
-                            <small>
-                              {" "}
-                              · {entry.projectName}
-                            </small>
-                          )}
-                        </span>
-                      </label>
-                    ),
-                  )}
+                        {entry.projectName && (
+                          <small>
+                            {" "}
+                            · {entry.projectName}
+                          </small>
+                        )}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
             )}
@@ -682,6 +715,34 @@ export default function NewEntryModal({
             </button>
           </div>
         </form>
+
+        <style>{`
+          .form-help {
+            margin: -4px 0 10px;
+            font-size: 12px;
+            color: #64748b;
+          }
+
+          .entry-link-options {
+            display: grid;
+            gap: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 4px 2px;
+          }
+
+          .entry-link-option {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #334155;
+            background: #fff;
+          }
+        `}</style>
       </div>
     </div>
   );

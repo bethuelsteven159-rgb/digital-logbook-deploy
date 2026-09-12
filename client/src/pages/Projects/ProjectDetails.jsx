@@ -13,6 +13,8 @@ import Sidebar from "../../components/Sidebar";
 import EditProjectModal from "../../components/EditProjectModal";
 import NewEntryModal from "./NewEntryModal";
 import EditEntryModal from "./EditEntryModal";
+import CalendarView from "./CalendarView";
+import BoardView from "./BoardView";
 
 import {
   createProjectEntry,
@@ -77,6 +79,9 @@ export default function ProjectDetails() {
 
   const [selectedEntryForEdit, setSelectedEntryForEdit] =
     useState(null);
+
+  const [entryView, setEntryView] =
+    useState("list");
 
   const [projectActionSaving, setProjectActionSaving] =
     useState(false);
@@ -749,57 +754,56 @@ export default function ProjectDetails() {
 
           {/* Entries */}
           <section className="entries-section">
-            <div className="entries-header">
-              <h2 className="entries-title">
-                Entries
-              </h2>
+            <div className="entries-header entries-header-with-views">
+              <div>
+                <h2 className="entries-title">Entries</h2>
+                <span className="entries-count">
+                  {entries.length} {entries.length === 1 ? "entry" : "entries"}
+                </span>
+              </div>
 
-              <span className="entries-count">
-                {entries.length}{" "}
-                {entries.length === 1
-                  ? "entry"
-                  : "entries"}
-              </span>
+              {entries.length > 0 && (
+                <div className="entry-view-switcher" aria-label="Entry view">
+                  {[
+                    ["list", "List"],
+                    ["calendar", "Calendar"],
+                    ["board", "Board"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`view-btn ${entryView === value ? "view-btn-active" : ""}`}
+                      onClick={() => setEntryView(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {entries.length === 0 ? (
               <div className="entries-empty">
-                <div className="empty-icon-wrap">
-                  <IconEntryLarge />
-                </div>
-
-                <p className="empty-heading">
-                  No entries yet.
-                </p>
-
+                <div className="empty-icon-wrap"><IconEntryLarge /></div>
+                <p className="empty-heading">No entries yet.</p>
                 <p className="empty-body">
-                  Add your first entry to start
-                  building a record for this
-                  project. Each entry captures a
-                  piece of your work.
+                  Add your first entry to start building a record for this project. Each entry captures a piece of your work.
                 </p>
-
                 {!project.archivedAt && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() =>
-                      setShowEntryModal(true)
-                    }
-                  >
-                    <IconPlus />
-                    Add New Entry
+                  <button type="button" className="btn btn-primary" onClick={() => setShowEntryModal(true)}>
+                    <IconPlus /> Add New Entry
                   </button>
                 )}
               </div>
+            ) : entryView === "calendar" ? (
+              <CalendarView entries={entries} formatLoggedTime={formatLoggedTime} />
+            ) : entryView === "board" ? (
+              <BoardView entries={entries} fields={fields} formatLoggedTime={formatLoggedTime} />
             ) : (
               <div className="entries-list">
                 {entries.map((entry) => {
-                  const values = Array.isArray(
-                    entry.values,
-                  )
-                    ? entry.values
-                    : [];
+                  const values = Array.isArray(entry.values) ? entry.values : [];
+                  const linkedEntries = Array.isArray(entry.linkedEntries) ? entry.linkedEntries : [];
 
                   return (
                     <article
@@ -809,53 +813,29 @@ export default function ProjectDetails() {
                     >
                       <div className="entry-row-header">
                         <div>
-                          <h3 className="entry-row-title">
-                            {entry.name ||
-                              "Logbook Entry"}
-                          </h3>
-
-                          <p className="entry-row-date">
-                            {formatDate(
-                              entry.occurredAt ||
-                                entry.createdAt,
-                            )}
-                          </p>
+                          <h3 className="entry-row-title">{entry.name || "Logbook Entry"}</h3>
+                          <p className="entry-row-date">{formatDate(entry.occurredAt || entry.createdAt)}</p>
                         </div>
-
-                        <span className="entry-duration">
-                          <IconClockSmall />
-
-                          {formatLoggedTime(
-                            entry.durationMinutes,
-                          )}
-                        </span>
+                        <span className="entry-duration"><IconClockSmall />{formatLoggedTime(entry.durationMinutes)}</span>
                       </div>
+
+                      {linkedEntries.length > 0 && (
+                        <div className="entry-links">
+                          <span className="entry-links-label">Linked entries:</span>
+                          {linkedEntries.map((linked) => (
+                            <span className="entry-link-chip" key={linked.id}>{linked.name}</span>
+                          ))}
+                        </div>
+                      )}
 
                       {values.length > 0 && (
                         <div className="entry-values">
-                          {values.map(
-                            (field, index) => (
-                              <div
-                                className="entry-value"
-                                key={
-                                  field.fieldId ||
-                                  field.id ||
-                                  index
-                                }
-                              >
-                                <span className="entry-value-name">
-                                  {field.name ||
-                                    "Field"}
-                                </span>
-
-                                <span className="entry-value-content">
-                                  <FormattedFieldValue
-                                    field={field}
-                                  />
-                                </span>
-                              </div>
-                            ),
-                          )}
+                          {values.map((field, index) => (
+                            <div className="entry-value" key={field.fieldId || field.id || index}>
+                              <span className="entry-value-name">{field.name || "Field"}</span>
+                              <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
@@ -2079,6 +2059,112 @@ function ProjectDetailsStyles() {
 
       /* Responsive */
 
+
+      .entries-header-with-views {
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .entry-view-switcher {
+        display: flex;
+        gap: 6px;
+        padding: 4px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+
+      .view-btn {
+        border: 0;
+        border-radius: 7px;
+        padding: 8px 12px;
+        background: transparent;
+        color: #64748b;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .view-btn-active {
+        background: #ffffff;
+        color: #1a2340;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+      }
+
+      .entry-links {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .entry-links-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+      }
+
+      .entry-link-chip {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3949ab;
+        font-size: 11px;
+      }
+
+      .calendar-toolbar,
+      .board-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 14px 0;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        border-left: 1px solid #e2e8f0;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .calendar-weekdays {
+        border: 0;
+      }
+
+      .calendar-weekdays > div {
+        padding: 8px;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+      }
+
+      .calendar-cell {
+        min-height: 112px;
+        padding: 8px;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        background: #fff;
+      }
+
+      .calendar-cell-empty { background: #f8fafc; }
+      .calendar-day-number { font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+      .calendar-entry { display: grid; gap: 2px; margin-bottom: 6px; padding: 6px; border-radius: 7px; background: #eef2ff; font-size: 10px; color: #334155; }
+      .calendar-entry strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .calendar-entry span, .calendar-entry small { color: #64748b; }
+
+      .board-toolbar { justify-content: flex-start; }
+      .board-toolbar label { font-size: 12px; font-weight: 600; color: #475569; }
+      .board-select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+      .board-columns { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 12px; }
+      .board-column { flex: 0 0 260px; padding: 10px; border-radius: 10px; background: #f1f5f9; }
+      .board-column-header { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: #334155; font-size: 12px; }
+      .board-card { display: grid; gap: 5px; padding: 10px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 12px; }
+      .board-card span, .board-card small { color: #64748b; }
+      .view-empty { padding: 28px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 10px; }
+
       @media (max-width: 900px) {
         .breadcrumb-bar,
         .page-header,
@@ -2829,6 +2915,5 @@ function IconGrip() {
       />
     </svg>
   );
-
-
 }
+

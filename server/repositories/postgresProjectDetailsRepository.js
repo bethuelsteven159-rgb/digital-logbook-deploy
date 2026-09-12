@@ -134,9 +134,7 @@ async function attachEntryFeatures(queryable, entries) {
     return entries;
   }
 
-  const entryIds = entries.map(
-    (entry) => entry.id,
-  );
+  const entryIds = entries.map((entry) => entry.id);
 
   const [
     checklists,
@@ -192,19 +190,14 @@ async function attachEntryFeatures(queryable, entries) {
       checklistByEntry.set(row.entry_id, []);
     }
 
-    checklistByEntry
-      .get(row.entry_id)
-      .push(mapChecklist(row));
+    checklistByEntry.get(row.entry_id).push(mapChecklist(row));
   }
 
   const projectReferencesByEntry = new Map();
 
   for (const row of projectReferences.rows) {
     if (!projectReferencesByEntry.has(row.entry_id)) {
-      projectReferencesByEntry.set(
-        row.entry_id,
-        [],
-      );
+      projectReferencesByEntry.set(row.entry_id, []);
     }
 
     projectReferencesByEntry
@@ -216,10 +209,7 @@ async function attachEntryFeatures(queryable, entries) {
 
   for (const row of entryReferences.rows) {
     if (!entryReferencesByEntry.has(row.entry_id)) {
-      entryReferencesByEntry.set(
-        row.entry_id,
-        [],
-      );
+      entryReferencesByEntry.set(row.entry_id, []);
     }
 
     entryReferencesByEntry
@@ -346,9 +336,7 @@ function createRepository(queryable) {
         [projectId],
       );
 
-      const entries = groupEntries(
-        result.rows,
-      );
+      const entries = groupEntries(result.rows);
 
       return attachEntryFeatures(
         queryable,
@@ -371,9 +359,7 @@ function createRepository(queryable) {
         [projectId],
       );
 
-      return result.rows.map(
-        mapProjectReference,
-      );
+      return result.rows.map(mapProjectReference);
     },
 
     async createProjectReferences(
@@ -407,15 +393,89 @@ function createRepository(queryable) {
       const result = await queryable.query(
         `DELETE FROM project_project_references
          WHERE project_id = $1
-           AND referenced_project_id =
-             ANY($2::uuid[])`,
+           AND referenced_project_id = ANY($2::uuid[])`,
         [projectId, projectIds],
       );
 
       return result.rowCount;
     },
 
-    async createEntryEntryReferences(
+    async getEntryProjectReferences(entryId) {
+      const result = await queryable.query(
+        `SELECT r.id,
+                r.entry_id,
+                r.referenced_project_id,
+                r.created_at,
+                p.name AS project_name
+         FROM entry_project_references r
+         JOIN projects p
+           ON p.id = r.referenced_project_id
+         WHERE r.entry_id = $1
+         ORDER BY r.created_at`,
+        [entryId],
+      );
+
+      return result.rows.map(mapEntryProjectReference);
+    },
+
+    async createEntryProjectReferences(
+      entryId,
+      projectIds,
+    ) {
+      for (const projectId of projectIds) {
+        await queryable.query(
+          `INSERT INTO entry_project_references
+             (entry_id, referenced_project_id)
+           VALUES ($1, $2)
+           ON CONFLICT
+             (entry_id, referenced_project_id)
+           DO NOTHING`,
+          [entryId, projectId],
+        );
+      }
+
+      return projectIds.length;
+    },
+
+    async removeEntryProjectReferences(
+      entryId,
+      projectIds,
+    ) {
+      if (!projectIds.length) return 0;
+
+      const result = await queryable.query(
+        `DELETE FROM entry_project_references
+         WHERE entry_id = $1
+           AND referenced_project_id = ANY($2::uuid[])`,
+        [entryId, projectIds],
+      );
+
+      return result.rowCount;
+    },
+
+    async getEntryReferences(entryId) {
+      const result = await queryable.query(
+        `SELECT r.id,
+                r.entry_id,
+                r.referenced_entry_id,
+                r.created_at,
+                e.name AS referenced_entry_name,
+                e.project_id AS referenced_project_id,
+                p.name AS referenced_project_name
+         FROM entry_entry_references r
+         JOIN entries e
+           ON e.id = r.referenced_entry_id
+         JOIN projects p
+           ON p.id = e.project_id
+         WHERE r.entry_id = $1
+         ORDER BY r.created_at`,
+        [entryId],
+      );
+
+      return result.rows.map(mapEntryReference);
+    },
+
+    async createEntryReferences(
       entryId,
       entryIds,
     ) {
@@ -427,17 +487,14 @@ function createRepository(queryable) {
            ON CONFLICT
              (entry_id, referenced_entry_id)
            DO NOTHING`,
-          [
-            entryId,
-            referencedEntryId,
-          ],
+          [entryId, referencedEntryId],
         );
       }
 
       return entryIds.length;
     },
 
-    async removeEntryEntryReferences(
+    async removeEntryReferences(
       entryId,
       entryIds,
     ) {
@@ -446,12 +503,79 @@ function createRepository(queryable) {
       const result = await queryable.query(
         `DELETE FROM entry_entry_references
          WHERE entry_id = $1
-           AND referenced_entry_id =
-             ANY($2::uuid[])`,
+           AND referenced_entry_id = ANY($2::uuid[])`,
         [entryId, entryIds],
       );
 
       return result.rowCount;
+    },
+
+    async getEntriesByIdsForProject(
+      entryIds,
+      projectId,
+    ) {
+      if (!entryIds.length) return [];
+
+      const result = await queryable.query(
+        `SELECT e.id,
+                e.project_id,
+                e.name,
+                e.duration_minutes,
+                e.occurred_at,
+                e.created_at,
+                e.updated_at
+         FROM entries e
+         WHERE e.id = ANY($1::uuid[])
+           AND e.project_id = $2`,
+        [entryIds, projectId],
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        projectId: row.project_id,
+        name: row.name,
+        durationMinutes: row.duration_minutes,
+        occurredAt: row.occurred_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    },
+
+    async getProjectEntryLinks(projectId) {
+      const result = await queryable.query(
+        `SELECT l.id,
+                l.source_entry_id,
+                l.target_entry_id
+         FROM entry_links l
+         JOIN entries source_entry
+           ON source_entry.id = l.source_entry_id
+         JOIN entries target_entry
+           ON target_entry.id = l.target_entry_id
+         WHERE source_entry.project_id = $1
+           AND target_entry.project_id = $1`,
+        [projectId],
+      );
+
+      return result.rows;
+    },
+
+    async createEntryLinks(
+      entryId,
+      linkedEntryIds,
+    ) {
+      for (const linkedEntryId of linkedEntryIds) {
+        await queryable.query(
+          `
+            INSERT INTO entry_links
+              (source_entry_id, target_entry_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+          `,
+          [entryId, linkedEntryId],
+        );
+      }
+
+      return linkedEntryIds.length;
     },
 
     async createProjectField(data) {
@@ -555,58 +679,6 @@ function createRepository(queryable) {
       return items.length;
     },
 
-    async getEntryProjectReferences(entryId) {
-      const result = await queryable.query(
-        `SELECT r.id,
-                r.entry_id,
-                r.referenced_project_id,
-                r.created_at,
-                p.name AS project_name
-         FROM entry_project_references r
-         JOIN projects p
-           ON p.id = r.referenced_project_id
-         WHERE r.entry_id = $1
-         ORDER BY r.created_at`,
-        [entryId],
-      );
-      return result.rows.map(mapEntryProjectReference);
-    },
-
-    async createEntryProjectReferences(
-      entryId,
-      projectIds,
-    ) {
-      for (const projectId of projectIds) {
-        await queryable.query(
-          `INSERT INTO entry_project_references
-             (entry_id, referenced_project_id)
-           VALUES ($1, $2)
-           ON CONFLICT
-             (entry_id, referenced_project_id)
-           DO NOTHING`,
-          [entryId, projectId],
-        );
-      }
-
-      return projectIds.length;
-    },
-
-    async removeEntryProjectReferences(
-      entryId,
-      projectIds,
-    ) {
-      if (!projectIds.length) return 0;
-
-      const result = await queryable.query(
-        `DELETE FROM entry_project_references
-         WHERE entry_id = $1
-           AND referenced_project_id = ANY($2::uuid[])`,
-        [entryId, projectIds],
-      );
-
-      return result.rowCount;
-    },
-
     async getEntryById(entryId) {
       const result = await queryable.query(
         `SELECT e.id AS entry_id,
@@ -695,7 +767,11 @@ function createRepository(queryable) {
          RETURNING id, project_id, created_by_id, name,
                    duration_minutes, occurred_at,
                    created_at, updated_at`,
-        [entryId, data.name, data.durationMinutes],
+        [
+          entryId,
+          data.name,
+          data.durationMinutes,
+        ],
       );
 
       return result.rows[0] || null;
@@ -710,44 +786,70 @@ function createRepository(queryable) {
          ORDER BY created_at ASC`,
         [entryId],
       );
+
       return result.rows;
     },
 
-    async replaceEntryFieldValues(entryId, values) {
+    async replaceEntryFieldValues(
+      entryId,
+      values,
+    ) {
       await queryable.query(
-        `DELETE FROM entry_field_values WHERE entry_id = $1`,
+        `DELETE FROM entry_field_values
+         WHERE entry_id = $1`,
         [entryId],
       );
+
       for (const value of values) {
         await queryable.query(
           `INSERT INTO entry_field_values
-             (entry_id, field_id, value_text, value_number, value_date)
+             (entry_id, field_id,
+              value_text, value_number,
+              value_date)
            VALUES ($1, $2, $3, $4, $5)`,
-          [entryId, value.fieldId, value.valueText ?? null, value.valueNumber ?? null, value.valueDate ?? null],
+          [
+            entryId,
+            value.fieldId,
+            value.valueText ?? null,
+            value.valueNumber ?? null,
+            value.valueDate ?? null,
+          ],
         );
       }
+
       return values.length;
     },
 
     async archiveProjectFields(fieldIds) {
       if (!fieldIds.length) return 0;
+
       const result = await queryable.query(
         `UPDATE project_fields
-         SET archived_at = NOW(), updated_at = NOW()
+         SET archived_at = NOW(),
+             updated_at = NOW()
          WHERE id = ANY($1::uuid[])
            AND archived_at IS NULL`,
         [fieldIds],
       );
+
       return result.rowCount;
     },
 
     async reorderProjectFields(fieldIds) {
-      for (let index = 0; index < fieldIds.length; index += 1) {
+      for (
+        let index = 0;
+        index < fieldIds.length;
+        index += 1
+      ) {
         await queryable.query(
           `UPDATE project_fields
-           SET position = $2, updated_at = NOW()
+           SET position = $2,
+               updated_at = NOW()
            WHERE id = $1`,
-          [fieldIds[index], index],
+          [
+            fieldIds[index],
+            index,
+          ],
         );
       }
     },
@@ -758,20 +860,29 @@ function createRepository(queryable) {
       changes,
     ) {
       const sets = [];
-      const values = [entryId, itemId];
+      const values = [
+        entryId,
+        itemId,
+      ];
 
       if (changes.text !== undefined) {
         values.push(changes.text);
-        sets.push(`text = $${values.length}`);
+        sets.push(
+          `text = $${values.length}`,
+        );
       }
 
       if (changes.completed !== undefined) {
         values.push(changes.completed);
-        sets.push(`completed = $${values.length}`);
+        sets.push(
+          `completed = $${values.length}`,
+        );
       }
 
       values.push(new Date());
-      sets.push(`updated_at = $${values.length}`);
+      sets.push(
+        `updated_at = $${values.length}`,
+      );
 
       const result = await queryable.query(
         `UPDATE entry_checklist_items
@@ -798,7 +909,10 @@ function createRepository(queryable) {
          WHERE id = $2
            AND entry_id = $1
          RETURNING id`,
-        [entryId, itemId],
+        [
+          entryId,
+          itemId,
+        ],
       );
 
       return result.rows[0] || null;
