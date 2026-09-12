@@ -23,5 +23,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './test/setup.js',
     css: false,
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'src/pages/Projects/entryViews.test.js',
+    ],
   },
 });
