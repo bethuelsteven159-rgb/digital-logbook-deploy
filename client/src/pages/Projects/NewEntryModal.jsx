@@ -1,35 +1,29 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { CheckSquare, Plus, X, Link2 } from "lucide-react";
 
 const FIELD_TYPES = [
-  {
-    value: "short_text",
-    label: "Short text",
-  },
-  {
-    value: "long_text",
-    label: "Long text",
-  },
-  {
-    value: "number",
-    label: "Number",
-  },
-  {
-    value: "date",
-    label: "Date",
-  },
+  { value: "short_text", label: "Short text" },
+  { value: "long_text", label: "Long text" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
 ];
 
 export default function NewEntryModal({
   fields,
+  projects = [],
+  entries = [],
+  currentProjectId,
   onClose,
   onCreate,
 }) {
   const [entryName, setEntryName] = useState("");
-  const [durationMinutes, setDurationMinutes] =
-    useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
   const [values, setValues] = useState({});
   const [newFields, setNewFields] = useState([]);
+  const [checklist, setChecklist] = useState([]);
+  const [checklistText, setChecklistText] = useState("");
+  const [referenceProjectIds, setReferenceProjectIds] = useState([]);
+  const [referenceEntryIds, setReferenceEntryIds] = useState([]);
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState("short_text");
   const [error, setError] = useState("");
@@ -46,10 +40,7 @@ export default function NewEntryModal({
     setNewFields((current) =>
       current.map((field) =>
         field.clientId === clientId
-          ? {
-              ...field,
-              value,
-            }
+          ? { ...field, value }
           : field,
       ),
     );
@@ -65,20 +56,16 @@ export default function NewEntryModal({
 
     const duplicateExisting = fields.some(
       (field) =>
-        field.name?.trim().toLowerCase() ===
-        cleanName.toLowerCase(),
+        field.name?.trim().toLowerCase() === cleanName.toLowerCase(),
     );
 
     const duplicateNew = newFields.some(
       (field) =>
-        field.name.trim().toLowerCase() ===
-        cleanName.toLowerCase(),
+        field.name.trim().toLowerCase() === cleanName.toLowerCase(),
     );
 
     if (duplicateExisting || duplicateNew) {
-      setError(
-        `A field named "${cleanName}" already exists.`,
-      );
+      setError(`A field named "${cleanName}" already exists.`);
       return;
     }
 
@@ -99,17 +86,60 @@ export default function NewEntryModal({
 
   function removeNewField(clientId) {
     setNewFields((current) =>
-      current.filter(
-        (field) => field.clientId !== clientId,
-      ),
+      current.filter((field) => field.clientId !== clientId),
+    );
+  }
+
+  function addChecklistItem() {
+    const text = checklistText.trim();
+
+    if (!text) return;
+
+    if (checklist.length >= 100) {
+      setError("A checklist can contain at most 100 items.");
+      return;
+    }
+
+    if (text.length > 300) {
+      setError("Checklist items cannot exceed 300 characters.");
+      return;
+    }
+
+    setChecklist((current) => [
+      ...current,
+      { text },
+    ]);
+
+    setChecklistText("");
+    setError("");
+  }
+
+  function removeChecklistItem(index) {
+    setChecklist((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index),
+    );
+  }
+
+  function toggleProjectReference(projectId) {
+    setReferenceProjectIds((current) =>
+      current.includes(projectId)
+        ? current.filter((id) => id !== projectId)
+        : [...current, projectId],
+    );
+  }
+
+  function toggleEntryReference(entryId) {
+    setReferenceEntryIds((current) =>
+      current.includes(entryId)
+        ? current.filter((id) => id !== entryId)
+        : [...current, entryId],
     );
   }
 
   function fieldTypeLabel(type) {
     return (
-      FIELD_TYPES.find(
-        (option) => option.value === type,
-      )?.label || type
+      FIELD_TYPES.find((option) => option.value === type)?.label ||
+      type
     );
   }
 
@@ -122,9 +152,7 @@ export default function NewEntryModal({
           className="form-input"
           type="number"
           value={value ?? ""}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
+          onChange={(event) => onChange(event.target.value)}
         />
       );
     }
@@ -135,9 +163,7 @@ export default function NewEntryModal({
           className="form-input"
           type="date"
           value={value ?? ""}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
+          onChange={(event) => onChange(event.target.value)}
         />
       );
     }
@@ -148,9 +174,7 @@ export default function NewEntryModal({
           className="form-input"
           rows={4}
           value={value ?? ""}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
+          onChange={(event) => onChange(event.target.value)}
         />
       );
     }
@@ -160,9 +184,7 @@ export default function NewEntryModal({
         className="form-input"
         type="text"
         value={value ?? ""}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
+        onChange={(event) => onChange(event.target.value)}
       />
     );
   }
@@ -182,41 +204,43 @@ export default function NewEntryModal({
         ? 0
         : Number(durationMinutes);
 
-    if (
-      !Number.isInteger(duration) ||
-      duration < 0
-    ) {
-      setError(
-        "Time spent must be a valid number of minutes.",
-      );
+    if (!Number.isInteger(duration) || duration < 0) {
+      setError("Time spent must be a valid number of minutes.");
       return;
     }
 
     if (duration > 10080) {
-      setError(
-        "Time spent cannot exceed 10080 minutes.",
-      );
+      setError("Time spent cannot exceed 10080 minutes.");
       return;
     }
 
     const payload = {
       name: cleanName,
       durationMinutes: duration,
+
       values: fields.map((field) => ({
         fieldId: field.id,
         value: values[field.id] ?? "",
       })),
+
       newFields: newFields.map((field) => ({
         clientId: field.clientId,
         name: field.name,
         type: field.type,
         value: field.value,
       })),
+
+      checklist,
+
+      referenceProjectIds,
+
+      referenceEntryIds,
     };
 
     try {
       setSaving(true);
       setError("");
+
       await onCreate(payload);
     } catch (submitError) {
       setError(
@@ -227,6 +251,19 @@ export default function NewEntryModal({
       setSaving(false);
     }
   }
+
+  const referenceProjectOptions = projects.filter(
+    (project) => project.id !== currentProjectId,
+  );
+
+  /*
+   * Prevent the new entry from referencing itself.
+   * Existing entries are safe because the new entry does not
+   * have an ID yet, but filtering here also makes the intent clear.
+   */
+  const referenceEntryOptions = entries.filter(
+    (entry) => entry.id,
+  );
 
   return (
     <div
@@ -310,9 +347,7 @@ export default function NewEntryModal({
                 placeholder="e.g. 45"
                 value={durationMinutes}
                 onChange={(event) =>
-                  setDurationMinutes(
-                    event.target.value,
-                  )
+                  setDurationMinutes(event.target.value)
                 }
               />
             </div>
@@ -330,6 +365,7 @@ export default function NewEntryModal({
                   >
                     <label className="form-label">
                       {field.name}
+
                       {field.required && (
                         <span className="required">
                           {" "}
@@ -349,6 +385,145 @@ export default function NewEntryModal({
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+
+            <div className="fields-block">
+              <p className="fields-section-label">
+                Checklist
+              </p>
+
+              {checklist.length > 0 && (
+                <div className="person4-list">
+                  {checklist.map((item, index) => (
+                    <div
+                      className="person4-list-row"
+                      key={`${item.text}-${index}`}
+                    >
+                      <CheckSquare size={15} />
+
+                      <span>{item.text}</span>
+
+                      <button
+                        type="button"
+                        className="field-row-remove"
+                        onClick={() =>
+                          removeChecklistItem(index)
+                        }
+                        aria-label={`Remove checklist item ${item.text}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="person4-add-row">
+                <input
+                  className="form-input"
+                  type="text"
+                  maxLength={300}
+                  placeholder="e.g. Write introduction"
+                  value={checklistText}
+                  onChange={(event) =>
+                    setChecklistText(event.target.value)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addChecklistItem();
+                    }
+                  }}
+                />
+
+                <button
+                  type="button"
+                  className="btn-add-field"
+                  onClick={addChecklistItem}
+                >
+                  <Plus size={14} />
+                  Add item
+                </button>
+              </div>
+            </div>
+
+            {referenceProjectOptions.length > 0 && (
+              <div className="fields-block">
+                <p className="fields-section-label">
+                  <Link2 size={14} />
+                  Reference other projects
+                </p>
+
+                <div className="person4-reference-list">
+                  {referenceProjectOptions.map(
+                    (project) => (
+                      <label
+                        className="person4-reference-option"
+                        key={project.id}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={referenceProjectIds.includes(
+                            project.id,
+                          )}
+                          onChange={() =>
+                            toggleProjectReference(
+                              project.id,
+                            )
+                          }
+                        />
+
+                        <span>
+                          {project.name}
+                        </span>
+                      </label>
+                    ),
+                  )}
+                </div>
+              </div>
+            )}
+
+            {referenceEntryOptions.length > 0 && (
+              <div className="fields-block">
+                <p className="fields-section-label">
+                  <Link2 size={14} />
+                  Reference other entries
+                </p>
+
+                <div className="person4-reference-list">
+                  {referenceEntryOptions.map(
+                    (entry) => (
+                      <label
+                        className="person4-reference-option"
+                        key={entry.id}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={referenceEntryIds.includes(
+                            entry.id,
+                          )}
+                          onChange={() =>
+                            toggleEntryReference(
+                              entry.id,
+                            )
+                          }
+                        />
+
+                        <span>
+                          {entry.name}
+
+                          {entry.projectName && (
+                            <small>
+                              {" "}
+                              · {entry.projectName}
+                            </small>
+                          )}
+                        </span>
+                      </label>
+                    ),
+                  )}
+                </div>
               </div>
             )}
 
@@ -431,9 +606,7 @@ export default function NewEntryModal({
                       )
                     }
                     onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter"
-                      ) {
+                      if (event.key === "Enter") {
                         event.preventDefault();
                         handleAddField();
                       }
@@ -459,16 +632,14 @@ export default function NewEntryModal({
                       )
                     }
                   >
-                    {FIELD_TYPES.map(
-                      (type) => (
-                        <option
-                          key={type.value}
-                          value={type.value}
-                        >
-                          {type.label}
-                        </option>
-                      ),
-                    )}
+                    {FIELD_TYPES.map((type) => (
+                      <option
+                        key={type.value}
+                        value={type.value}
+                      >
+                        {type.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

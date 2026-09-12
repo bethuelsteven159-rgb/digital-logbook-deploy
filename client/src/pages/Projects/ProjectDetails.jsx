@@ -12,6 +12,7 @@ import {
 import Sidebar from "../../components/Sidebar";
 import EditProjectModal from "../../components/EditProjectModal";
 import NewEntryModal from "./NewEntryModal";
+import EditEntryModal from "./EditEntryModal";
 
 import {
   createProjectEntry,
@@ -19,9 +20,19 @@ import {
 } from "../../api/projectDetailsApi";
 
 import {
+  fetchProjects,
   setProjectArchived,
   updateProject,
 } from "../../api/projectsApi";
+
+import {
+  updateChecklistItem,
+  deleteChecklistItem,
+  updateProjectReferences,
+  updateEntryProjectReferences,
+  updateEntryReferences,
+  updateEntry,
+} from "../../api/entryFeaturesApi";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -33,12 +44,39 @@ export default function ProjectDetails() {
 
   const [details, setDetails] = useState(null);
 
+  const [projects, setProjects] = useState([]);
+
+  const [checklistSaving, setChecklistSaving] = useState({});
+  const [checklistEditing, setChecklistEditing] = useState({});
+  const [checklistDrafts, setChecklistDrafts] = useState({});
+
+  const [projectReferenceSaving, setProjectReferenceSaving] =
+    useState(false);
+
+  const [entryReferenceSaving, setEntryReferenceSaving] =
+    useState({});
+
+  const [showProjectReferenceModal, setShowProjectReferenceModal] =
+    useState(false);
+
+  const [showEntryReferenceModal, setShowEntryReferenceModal] =
+    useState(false);
+
+  const [selectedEntryForReferences, setSelectedEntryForReferences] =
+    useState(null);
+
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
 
   const [showEntryModal, setShowEntryModal] =
     useState(false);
+
+  const [showEditEntryModal, setShowEditEntryModal] =
+    useState(false);
+
+  const [selectedEntryForEdit, setSelectedEntryForEdit] =
+    useState(null);
 
   const [projectActionSaving, setProjectActionSaving] =
     useState(false);
@@ -60,8 +98,15 @@ export default function ProjectDetails() {
       setError("");
 
       const data = await fetchProjectDetails(id);
-
       setDetails(data);
+
+      try {
+        const allProjects = await fetchProjects("all");
+        setProjects(Array.isArray(allProjects) ? allProjects : []);
+      } catch (projectsError) {
+        console.error("Failed to load projects for references:", projectsError);
+        setProjects([]);
+      }
     } catch (requestError) {
       console.error(
         "Failed to load project:",
@@ -80,6 +125,37 @@ export default function ProjectDetails() {
   useEffect(() => {
     loadProject();
   }, [loadProject]);
+
+  useEffect(() => {
+    if (!details || !window.location.hash) return;
+    const targetId = window.location.hash.slice(1);
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [details]);
+
+  function openEditEntryModal(entry) {
+    setSelectedEntryForEdit(entry);
+    setShowEditEntryModal(true);
+  }
+
+  async function handleUpdateEntry(entryId, payload) {
+    try {
+      await updateEntry(id, entryId, payload);
+      await updateEntryProjectReferences(id, entryId, payload.referenceProjectIds || []);
+      await updateEntryReferences(id, entryId, payload.referenceEntryIds || []);
+      setShowEditEntryModal(false);
+      setSelectedEntryForEdit(null);
+      await loadProject();
+    } catch (requestError) {
+      console.error("Failed to update entry:", requestError);
+      throw requestError;
+    }
+  }
 
   async function handleCreateEntry(payload) {
     try {
@@ -109,6 +185,187 @@ export default function ProjectDetails() {
 
       throw requestError;
     }
+  }
+
+  async function handleChecklistToggle(entryId, itemId, completed) {
+    const key = `${entryId}:${itemId}`;
+
+    try {
+      setChecklistSaving((current) => ({ ...current, [key]: true }));
+      await updateChecklistItem(id, entryId, itemId, completed);
+      setDetails((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          entries: current.entries.map((entry) =>
+            entry.id !== entryId
+              ? entry
+              : {
+                  ...entry,
+                  checklist: (entry.checklist || []).map((item) =>
+                    item.id === itemId ? { ...item, completed } : item,
+                  ),
+                },
+          ),
+        };
+      });
+    } catch (requestError) {
+      setError(requestError.message || "Failed to update checklist item.");
+    } finally {
+      setChecklistSaving((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  function startChecklistEdit(entryId, item) {
+    const key = `${entryId}:${item.id}`;
+    setChecklistEditing((current) => ({ ...current, [key]: true }));
+    setChecklistDrafts((current) => ({ ...current, [key]: item.text }));
+  }
+
+  function cancelChecklistEdit(entryId, itemId) {
+    const key = `${entryId}:${itemId}`;
+    setChecklistEditing((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+    setChecklistDrafts((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function saveChecklistText(entryId, itemId) {
+    const key = `${entryId}:${itemId}`;
+    const text = (checklistDrafts[key] || "").trim();
+    if (!text) {
+      setError("Checklist item text cannot be empty.");
+      return;
+    }
+
+    try {
+      setChecklistSaving((current) => ({ ...current, [key]: true }));
+      setError("");
+      const updated = await updateChecklistItem(id, entryId, itemId, { text });
+      setDetails((current) => current ? ({
+        ...current,
+        entries: current.entries.map((entry) => entry.id !== entryId ? entry : {
+          ...entry,
+          checklist: (entry.checklist || []).map((item) => item.id === itemId ? { ...item, text: updated.text } : item),
+        }),
+      }) : current);
+      cancelChecklistEdit(entryId, itemId);
+    } catch (requestError) {
+      setError(requestError.message || "Failed to update checklist item.");
+    } finally {
+      setChecklistSaving((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  async function handleDeleteChecklistItem(entryId, itemId) {
+    const key = `${entryId}:${itemId}`;
+    if (!window.confirm("Remove this checklist item?")) return;
+
+    try {
+      setChecklistSaving((current) => ({ ...current, [key]: true }));
+      setError("");
+      await deleteChecklistItem(id, entryId, itemId);
+      setDetails((current) => current ? ({
+        ...current,
+        entries: current.entries.map((entry) => entry.id !== entryId ? entry : {
+          ...entry,
+          checklist: (entry.checklist || []).filter((item) => item.id !== itemId),
+        }),
+      }) : current);
+    } catch (requestError) {
+      setError(requestError.message || "Failed to remove checklist item.");
+    } finally {
+      setChecklistSaving((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  async function handleUpdateProjectReferences(referencedProjectIds) {
+    try {
+      setProjectReferenceSaving(true);
+      setError("");
+
+      await updateProjectReferences(id, referencedProjectIds);
+
+      setShowProjectReferenceModal(false);
+      await loadProject();
+    } catch (requestError) {
+      console.error(
+        "Failed to update project references:",
+        requestError,
+      );
+
+      setError(
+        requestError.message ||
+          "Failed to update project references.",
+      );
+    } finally {
+      setProjectReferenceSaving(false);
+    }
+  }
+
+  async function handleUpdateEntryReferences(
+    entryId,
+    referencedEntryIds,
+  ) {
+    const key = `references:${entryId}`;
+
+    try {
+      setEntryReferenceSaving((current) => ({
+        ...current,
+        [key]: true,
+      }));
+
+      setError("");
+
+      await updateEntryReferences(
+        id,
+        entryId,
+        referencedEntryIds,
+      );
+
+      setShowEntryReferenceModal(false);
+      setSelectedEntryForReferences(null);
+      await loadProject();
+    } catch (requestError) {
+      console.error(
+        "Failed to update entry references:",
+        requestError,
+      );
+
+      setError(
+        requestError.message ||
+          "Failed to update entry references.",
+      );
+    } finally {
+      setEntryReferenceSaving((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  function openEntryReferenceModal(entry) {
+    setSelectedEntryForReferences(entry);
+    setShowEntryReferenceModal(true);
   }
 
   async function handleUpdateProject(payload) {
@@ -449,6 +706,47 @@ export default function ProjectDetails() {
             />
           </div>
 
+          {/* Project references */}
+          <section className="references-section">
+            <div className="references-section-header">
+              <div>
+                <h2 className="entries-title">Project references</h2>
+                <p className="references-description">
+                  Projects related to this project.
+                </p>
+              </div>
+
+              {!project.archivedAt && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => setShowProjectReferenceModal(true)}
+                  disabled={projectReferenceSaving}
+                >
+                  <IconLink />
+                  Manage references
+                </button>
+              )}
+            </div>
+
+            {Array.isArray(details.references) && details.references.length > 0 ? (
+              <div className="entry-reference-list project-reference-list">
+                {details.references.map((reference) => (
+                  <button
+                    type="button"
+                    className="entry-reference-link"
+                    key={reference.id}
+                    onClick={() => navigate(`/projects/${reference.referencedProjectId}`)}
+                  >
+                    {reference.referencedProjectName}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="references-empty">No project references.</p>
+            )}
+          </section>
+
           {/* Entries */}
           <section className="entries-section">
             <div className="entries-header">
@@ -506,6 +804,7 @@ export default function ProjectDetails() {
                   return (
                     <article
                       className="entry-row"
+                      id={`entry-${entry.id}`}
                       key={entry.id}
                     >
                       <div className="entry-row-header">
@@ -559,6 +858,134 @@ export default function ProjectDetails() {
                           )}
                         </div>
                       )}
+
+                      {Array.isArray(entry.checklist) && entry.checklist.length > 0 && (
+                        <div className="entry-feature-block">
+                          <div className="entry-feature-heading">
+                            <CheckSquare size={15} />
+                            Checklist
+                          </div>
+                          <div className="entry-checklist">
+                            {entry.checklist.map((item) => {
+                              const key = `${entry.id}:${item.id}`;
+                              const isEditing = Boolean(checklistEditing[key]);
+                              const isSaving = Boolean(checklistSaving[key]);
+                              return (
+                                <div className={`entry-checklist-row ${item.completed ? "entry-checklist-item--done" : ""}`} key={item.id}>
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(item.completed)}
+                                    disabled={isSaving || isEditing || Boolean(project.archivedAt)}
+                                    onChange={(event) => handleChecklistToggle(entry.id, item.id, event.target.checked)}
+                                  />
+                                  {isEditing ? (
+                                    <input
+                                      className="entry-checklist-edit-input"
+                                      type="text"
+                                      maxLength={300}
+                                      value={checklistDrafts[key] ?? item.text}
+                                      onChange={(event) => setChecklistDrafts((current) => ({ ...current, [key]: event.target.value }))}
+                                      disabled={isSaving}
+                                    />
+                                  ) : (
+                                    <span>{item.text}</span>
+                                  )}
+                                  {!project.archivedAt && (
+                                    <div className="entry-checklist-actions">
+                                      {isEditing ? (
+                                        <>
+                                          <button type="button" className="entry-checklist-action" onClick={() => saveChecklistText(entry.id, item.id)} disabled={isSaving}>Save</button>
+                                          <button type="button" className="entry-checklist-action" onClick={() => cancelChecklistEdit(entry.id, item.id)} disabled={isSaving}>Cancel</button>
+                                        </>
+                                      ) : (
+                                        <button type="button" className="entry-checklist-action" onClick={() => startChecklistEdit(entry.id, item)} disabled={isSaving}>Edit</button>
+                                      )}
+                                      <button type="button" className="entry-checklist-action entry-checklist-delete" onClick={() => handleDeleteChecklistItem(entry.id, item.id)} disabled={isSaving || isEditing}>Remove</button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {Array.isArray(entry.references) && entry.references.length > 0 && (
+                        <div className="entry-feature-block">
+                          <div className="entry-feature-heading">
+                            <IconLink />
+                            Referenced projects
+                          </div>
+                          <div className="entry-reference-list">
+                            {entry.references.map((reference) => (
+                              <button
+                                type="button"
+                                className="entry-reference-link"
+                                key={reference.id}
+                                onClick={() => navigate(`/projects/${reference.projectId}`)}
+                              >
+                                {reference.projectName}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {Array.isArray(entry.entryReferences) && entry.entryReferences.length > 0 && (
+                        <div className="entry-feature-block">
+                          <div className="entry-feature-heading">
+                            <IconLink />
+                            Referenced entries
+                          </div>
+                          <div className="entry-reference-list">
+                            {entry.entryReferences.map((reference) => (
+                              <button
+                                type="button"
+                                className="entry-reference-link"
+                                key={reference.id}
+                                onClick={() => {
+                                  const target = document.getElementById(
+                                    `entry-${reference.referencedEntryId}`,
+                                  );
+                                  target?.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "center",
+                                  });
+                                }}
+                              >
+                                {reference.referencedEntryName}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="entry-action-row">
+                        {!project.archivedAt && (
+                          <button
+                            type="button"
+                            className="entry-edit-button"
+                            onClick={() => openEditEntryModal(entry)}
+                          >
+                            <IconEdit />
+                            Edit entry
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="entry-reference-manage">
+                        <button
+                          type="button"
+                          className="entry-reference-manage-button"
+                          onClick={() => openEntryReferenceModal(entry)}
+                          disabled={Boolean(
+                            entryReferenceSaving[`references:${entry.id}`],
+                          )}
+                        >
+                          <IconLink />
+                          Manage entry references
+                        </button>
+                      </div>
                     </article>
                   );
                 })}
@@ -568,14 +995,87 @@ export default function ProjectDetails() {
         </div>
       </main>
 
+      {showEditEntryModal && selectedEntryForEdit && !project.archivedAt && (
+        <EditEntryModal
+          entry={selectedEntryForEdit}
+          fields={fields}
+          projects={projects}
+          entries={entries}
+          onClose={() => {
+            setShowEditEntryModal(false);
+            setSelectedEntryForEdit(null);
+          }}
+          onSave={(payload) =>
+            handleUpdateEntry(selectedEntryForEdit.id, payload)
+          }
+        />
+      )}
+
       {/* Your responsibility: create entries */}
       {showEntryModal && !project.archivedAt && (
         <NewEntryModal
           fields={fields}
+          projects={projects}
+          entries={entries}
+          currentProjectId={project.id}
           onClose={() =>
             setShowEntryModal(false)
           }
           onCreate={handleCreateEntry}
+        />
+      )}
+
+      {showProjectReferenceModal && (
+        <ReferenceSelectionModal
+          title="Project references"
+          description="Select the projects that this project should reference."
+          options={projects.filter((candidate) => candidate.id !== project.id)}
+          selectedIds={
+            Array.isArray(details.references)
+              ? details.references.map(
+                  (reference) => reference.referencedProjectId,
+                )
+              : []
+          }
+          getOptionId={(option) => option.id}
+          getOptionLabel={(option) => option.name || "Untitled Project"}
+          onClose={() => setShowProjectReferenceModal(false)}
+          onSave={handleUpdateProjectReferences}
+          saving={projectReferenceSaving}
+        />
+      )}
+
+      {showEntryReferenceModal && selectedEntryForReferences && (
+        <ReferenceSelectionModal
+          title="Entry references"
+          description="Select the entries that this entry should reference."
+          options={entries.filter(
+            (candidate) => candidate.id !== selectedEntryForReferences.id,
+          )}
+          selectedIds={
+            Array.isArray(selectedEntryForReferences.entryReferences)
+              ? selectedEntryForReferences.entryReferences.map(
+                  (reference) => reference.referencedEntryId,
+                )
+              : []
+          }
+          getOptionId={(option) => option.id}
+          getOptionLabel={(option) => option.name || "Logbook Entry"}
+          onClose={() => {
+            setShowEntryReferenceModal(false);
+            setSelectedEntryForReferences(null);
+          }}
+          onSave={(referencedEntryIds) =>
+            handleUpdateEntryReferences(
+              selectedEntryForReferences.id,
+              referencedEntryIds,
+            )
+          }
+          saving={Boolean(
+            entryReferenceSaving[
+              `references:${selectedEntryForReferences.id}`
+            ],
+          )}
         />
       )}
 
@@ -591,6 +1091,123 @@ export default function ProjectDetails() {
       )}
 
       <ProjectDetailsStyles />
+    </div>
+  );
+}
+
+function ReferenceSelectionModal({
+  title,
+  description,
+  options,
+  selectedIds,
+  getOptionId,
+  getOptionLabel,
+  onClose,
+  onSave,
+  saving = false,
+}) {
+  const [selected, setSelected] = useState(
+    Array.isArray(selectedIds) ? selectedIds : [],
+  );
+
+  function toggle(id) {
+    setSelected((current) =>
+      current.includes(id)
+        ? current.filter((currentId) => currentId !== id)
+        : [...current, id],
+    );
+  }
+
+  return (
+    <div
+      className="modal-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !saving) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="modal reference-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reference-modal-title"
+      >
+        <div className="modal-header">
+          <div>
+            <h2 className="modal-title" id="reference-modal-title">
+              {title}
+            </h2>
+            {description && (
+              <p className="reference-modal-description">
+                {description}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Close"
+            disabled={saving}
+          >
+            <IconXSmall />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {options.length === 0 ? (
+            <div className="references-empty-modal">
+              No other items are available to reference.
+            </div>
+          ) : (
+            <div className="reference-selection-list">
+              {options.map((option) => {
+                const optionId = getOptionId(option);
+                const checked = selected.includes(optionId);
+
+                return (
+                  <label
+                    className={`reference-selection-option${
+                      checked ? " reference-selection-option--selected" : ""
+                    }`}
+                    key={optionId}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(optionId)}
+                      disabled={saving}
+                    />
+                    <span>{getOptionLabel(option)}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="btn-save"
+            onClick={() => onSave(selected)}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save references"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1505,6 +2122,14 @@ function ProjectDetailsStyles() {
           flex-wrap: wrap;
         }
 
+        .edit-entry-reference-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .edit-entry-new-field-grid {
+          grid-template-columns: 1fr;
+        }
+
         .add-field-type {
           width: 100%;
         }
@@ -1517,6 +2142,296 @@ function ProjectDetailsStyles() {
           flex-direction: column;
         }
       }
+      .entry-feature-block {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .entry-feature-heading {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 8px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .entry-checklist {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .entry-checklist-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #334155;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .entry-checklist-item input {
+        width: 15px;
+        height: 15px;
+        accent-color: #4f63d2;
+      }
+
+      .entry-checklist-item--done span {
+        color: #94a3b8;
+        text-decoration: line-through;
+      }
+
+      .entry-checklist-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #334155;
+        font-size: 13px;
+        min-width: 0;
+      }
+
+      .entry-checklist-row > span {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .entry-checklist-edit-input {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 5px 7px;
+        font: 400 12px 'Inter', sans-serif;
+      }
+
+      .entry-checklist-actions {
+        display: flex;
+        gap: 5px;
+        margin-left: auto;
+      }
+
+      .entry-checklist-action {
+        border: 0;
+        background: transparent;
+        color: #4f63d2;
+        font: 500 11px 'Inter', sans-serif;
+        cursor: pointer;
+        padding: 2px 3px;
+      }
+
+      .entry-checklist-delete {
+        color: #b91c1c;
+      }
+
+      .entry-reference-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .entry-reference-link {
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #4f63d2;
+        border-radius: 7px;
+        padding: 6px 9px;
+        font: 500 12px 'Inter', sans-serif;
+        cursor: pointer;
+      }
+
+      .entry-reference-link:hover {
+        background: #eef2ff;
+        border-color: #c7d2fe;
+      }
+      .edit-entry-add-field {
+        white-space: nowrap;
+      }
+
+      .edit-entry-new-field-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 160px;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .edit-entry-reference-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .edit-entry-reference-section {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+      }
+
+      .edit-entry-section-heading {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 3px;
+      }
+
+      .edit-entry-reference-options {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        max-height: 150px;
+        overflow: auto;
+        margin-top: 10px;
+      }
+
+      .edit-entry-check-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #334155;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .edit-entry-check-option input {
+        accent-color: #4f63d2;
+      }
+
+      .edit-entry-muted {
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .edit-entry-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 14px;
+        color: #64748b;
+        font-size: 11px;
+      }
+
+      .references-section {
+        margin-top: 28px;
+        margin-bottom: 28px;
+        padding: 20px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+      }
+
+      .references-section-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .references-description {
+        margin: 4px 0 0;
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .references-empty {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      .project-reference-list {
+        margin-top: 4px;
+      }
+
+      .btn-small {
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
+      .entry-reference-manage {
+        margin-top: 10px;
+      }
+
+      .entry-reference-manage-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        padding: 0;
+        font: 500 12px 'Inter', sans-serif;
+        cursor: pointer;
+      }
+
+      .entry-reference-manage-button:hover {
+        color: #4f63d2;
+      }
+
+      .entry-reference-manage-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .reference-modal {
+        max-width: 520px;
+      }
+
+      .reference-modal-description {
+        margin: 5px 0 0;
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .reference-selection-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 360px;
+        overflow-y: auto;
+      }
+
+      .reference-selection-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        padding: 9px 11px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        color: #334155;
+        background: #ffffff;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .reference-selection-option:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+
+      .reference-selection-option--selected {
+        background: #f8faff;
+        border-color: #c7d2fe;
+      }
+
+      .reference-selection-option input {
+        width: 15px;
+        height: 15px;
+        accent-color: #4f63d2;
+      }
+
+      .references-empty-modal {
+        padding: 28px 12px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
     `}</style>
   );
 }
@@ -1524,6 +2439,24 @@ function ProjectDetailsStyles() {
 /* =========================================================
  * ICONS
  * ======================================================= */
+
+function IconLink() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function CheckSquare({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="m8 12 2.5 2.5L16 9" />
+    </svg>
+  );
+}
 
 function IconChevronRight() {
   return (
@@ -1896,4 +2829,6 @@ function IconGrip() {
       />
     </svg>
   );
+
+
 }

@@ -17,4 +17,11 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 8443,
   },
+
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './test/setup.js',
+    css: false,
+  },
 });
