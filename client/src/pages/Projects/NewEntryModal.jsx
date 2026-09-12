@@ -26,6 +26,7 @@ const FIELD_TYPES = [
 
 export default function NewEntryModal({
   fields,
+  entries = [],
   onClose,
   onCreate,
 }) {
@@ -35,6 +36,7 @@ export default function NewEntryModal({
   const [dueAt, setDueAt] = useState("");
   const [values, setValues] = useState({});
   const [newFields, setNewFields] = useState([]);
+  const [linkedEntryIds, setLinkedEntryIds] = useState([]);
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState("short_text");
   const [fieldFormula, setFieldFormula] = useState("");
@@ -219,6 +221,7 @@ export default function NewEntryModal({
         fieldId: field.id,
         value: values[field.id] ?? "",
       })),
+      linkedEntryIds,
       newFields: newFields.map((field) => ({
         clientId: field.clientId,
         name: field.name,
@@ -381,6 +384,35 @@ export default function NewEntryModal({
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {entries.length > 0 && (
+              <div className="fields-block">
+                <p className="fields-section-label">
+                  Link related entries
+                </p>
+                <p className="form-help">
+                  Select existing entries that are related to this work.
+                </p>
+                <div className="entry-link-options">
+                  {entries.map((entry) => (
+                    <label className="entry-link-option" key={entry.id}>
+                      <input
+                        type="checkbox"
+                        checked={linkedEntryIds.includes(entry.id)}
+                        onChange={(event) => {
+                          setLinkedEntryIds((current) =>
+                            event.target.checked
+                              ? [...current, entry.id]
+                              : current.filter((id) => id !== entry.id),
+                          );
+                        }}
+                      />
+                      <span>{entry.name || "Logbook Entry"}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -570,6 +602,11 @@ export default function NewEntryModal({
             </button>
           </div>
         </form>
+        <style>{`
+          .form-help { margin: -4px 0 10px; font-size: 12px; color: #64748b; }
+          .entry-link-options { display: grid; gap: 8px; max-height: 150px; overflow-y: auto; padding: 4px 2px; }
+          .entry-link-option { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155; background: #fff; }
+        `}</style>
       </div>
     </div>
   );
