@@ -26,6 +26,7 @@ function mapField(row) {
     projectId: row.project_id,
     name: row.name,
     fieldType: row.field_type,
+    formula: row.formula,
     position: row.position,
     required: row.required,
     archivedAt: row.archived_at,
@@ -42,6 +43,8 @@ function mapEntryRow(row) {
     name: row.entry_name,
     durationMinutes: row.duration_minutes,
     occurredAt: row.occurred_at,
+    dueAt: row.due_at,
+    completedAt: row.completed_at,
     createdAt: row.entry_created_at,
     updatedAt: row.entry_updated_at,
   };
@@ -119,6 +122,7 @@ function createRepository(queryable) {
             project_id,
             name,
             field_type,
+            formula,
             position,
             required,
             archived_at,
@@ -133,7 +137,7 @@ function createRepository(queryable) {
       );
 
       return result.rows.map(mapField);
-    },
+  },
 
     async getProjectStats(projectId) {
       const result = await queryable.query(
@@ -167,6 +171,8 @@ function createRepository(queryable) {
             e.name AS entry_name,
             e.duration_minutes,
             e.occurred_at,
+            e.due_at,
+            e.completed_at,
             e.created_at AS entry_created_at,
             e.updated_at AS entry_updated_at,
             v.id AS value_id,
@@ -193,6 +199,46 @@ function createRepository(queryable) {
 
       return groupEntries(result.rows);
     },
+    async getOutstandingEntries(projectId) {
+      const result = await queryable.query(
+        `
+          SELECT
+            e.id AS entry_id,
+            e.project_id,
+            e.created_by_id,
+            e.name AS entry_name,
+            e.duration_minutes,
+            e.occurred_at,
+            e.due_at,
+            e.completed_at,
+            e.created_at AS entry_created_at,
+            e.updated_at AS entry_updated_at,
+            v.id AS value_id,
+            v.field_id,
+            v.value_text,
+            v.value_number,
+            v.value_date,
+            v.created_at AS value_created_at,
+            f.name AS field_name,
+            f.field_type
+          FROM entries e
+          LEFT JOIN entry_field_values v
+            ON v.entry_id = e.id
+          LEFT JOIN project_fields f
+            ON f.id = v.field_id
+          WHERE e.project_id = $1
+            AND e.due_at IS NOT NULL
+            AND e.due_at < NOW()
+            AND e.completed_at IS NULL
+          ORDER BY
+            e.due_at ASC,
+            v.created_at ASC
+        `,
+        [projectId],
+      );
+
+      return groupEntries(result.rows);
+    },
 
     async createProjectField(data) {
       const result = await queryable.query(
@@ -201,15 +247,17 @@ function createRepository(queryable) {
             project_id,
             name,
             field_type,
+            formula,
             position,
             required
           )
-          VALUES ($1, $2, $3, $4, $5)
+          VALUES ($1, $2, $3, $4, $5, $6)
           RETURNING
             id,
             project_id,
             name,
             field_type,
+            formula,
             position,
             required,
             archived_at,
@@ -220,6 +268,7 @@ function createRepository(queryable) {
           data.projectId,
           data.name,
           data.fieldType,
+          data.formula ?? null,
           data.position,
           data.required ?? false,
         ],
@@ -227,48 +276,53 @@ function createRepository(queryable) {
 
       return mapField(result.rows[0]);
     },
+ async createEntry(data) {
+  const result = await queryable.query(
+    `
+      INSERT INTO entries (
+        project_id,
+        created_by_id,
+        name,
+        duration_minutes,
+        due_at
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING
+        id,
+        project_id,
+        created_by_id,
+        name,
+        duration_minutes,
+        occurred_at,
+        due_at,
+        completed_at,
+        created_at,
+        updated_at
+    `,
+    [
+      data.projectId,
+      data.createdById,
+      data.name,
+      data.durationMinutes,
+      data.dueAt ?? null,
+    ],
+  );
 
-    async createEntry(data) {
-      const result = await queryable.query(
-        `
-          INSERT INTO entries (
-            project_id,
-            created_by_id,
-            name,
-            duration_minutes
-          )
-          VALUES ($1, $2, $3, $4)
-          RETURNING
-            id,
-            project_id,
-            created_by_id,
-            name,
-            duration_minutes,
-            occurred_at,
-            created_at,
-            updated_at
-        `,
-        [
-          data.projectId,
-          data.createdById,
-          data.name,
-          data.durationMinutes,
-        ],
-      );
+  const row = result.rows[0];
 
-      const row = result.rows[0];
-
-      return {
-        id: row.id,
-        projectId: row.project_id,
-        createdById: row.created_by_id,
-        name: row.name,
-        durationMinutes: row.duration_minutes,
-        occurredAt: row.occurred_at,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      };
-    },
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      createdById: row.created_by_id,
+      name: row.name,
+      durationMinutes: row.duration_minutes,
+      occurredAt: row.occurred_at,
+      dueAt: row.due_at,
+      completedAt: row.completed_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  },
 
     async createEntryFieldValues(values) {
       for (const value of values) {
@@ -306,6 +360,8 @@ function createRepository(queryable) {
             e.name AS entry_name,
             e.duration_minutes,
             e.occurred_at,
+            e.due_at,
+            e.completed_at,
             e.created_at AS entry_created_at,
             e.updated_at AS entry_updated_at,
             v.id AS value_id,

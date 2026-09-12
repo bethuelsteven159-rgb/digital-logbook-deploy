@@ -79,3 +79,41 @@ export async function createProjectEntry(
     body: JSON.stringify(payload),
   });
 }
+export async function fetchSavedFilters(projectId) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/filters`);
+}
+
+export async function createSavedFilter(projectId, payload) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/filters`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function applySavedFilter(projectId, filterId) {
+  if (!projectId || !filterId) {
+    throw new Error("Project ID and filter ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/filters/${filterId}/apply`,
+  );
+}
+
+export async function deleteSavedFilter(filterId) {
+  if (!filterId) {
+    throw new Error("Filter ID is required.");
+  }
+
+  return request(`/api/projects/filters/${filterId}`, {
+    method: "DELETE",
+  });
+}

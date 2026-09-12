@@ -8,6 +8,7 @@ const FIELD_TYPES = new Set([
   "long_text",
   "number",
   "date",
+  "computed",
 ]);
 
 function httpError(statusCode, message) {
@@ -242,19 +243,25 @@ async function syncProjectFields(client, projectId, requestedFields) {
 
     activeNames.add(normalizedName);
 
-    await client.query(
-      `
-        INSERT INTO project_fields (
-          project_id,
-          name,
-          field_type,
-          position,
-          required
-        )
-        VALUES ($1, $2, $3, $4, FALSE)
-      `,
-      [projectId, name, fieldType, index],
-    );
+        const formula =
+        fieldType === "computed"
+          ? String(supplied?.formula ?? "").trim() || null
+          : null;
+
+      await client.query(
+        `
+          INSERT INTO project_fields (
+            project_id,
+            name,
+            field_type,
+            formula,
+            position,
+            required
+          )
+          VALUES ($1, $2, $3, $4, $5, FALSE)
+        `,
+        [projectId, name, fieldType, formula, index],
+      );
   }
 }
 
