@@ -19,7 +19,7 @@ import { UserProvider } from "./context/UserContext.jsx";
 
 export default function App() {
   return (
-    <BrowserRouter basename="/digital_logbook">
+    <BrowserRouter>
       <UserProvider>
         <Routes>
           <Route

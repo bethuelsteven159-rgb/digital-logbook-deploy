@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  base: '/digital_logbook/',
-  
+  base: '/',
+
   plugins: [react(), tailwindcss()],
 
   server: {

@@ -17,7 +17,7 @@ import Settings from "./pages/Settings/Settings";
 
 export default function App() {
   return (
-    <BrowserRouter basename="/digital_logbook">
+    <BrowserRouter>
       <Routes>
         <Route
           path="/"
