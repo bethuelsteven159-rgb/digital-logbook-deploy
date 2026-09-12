@@ -1,6 +1,7 @@
 const {
   getProjectDetailsService,
   createEntryService,
+  getOutstandingEntriesService,
 } = require("../services/projectDetailsService");
 
 const {
@@ -67,7 +68,25 @@ async function createProjectEntry(req, res, next) {
   }
 }
 
+async function getOutstandingEntries(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+
+    const data = await getOutstandingEntriesService({
+      projectId: req.params.projectId,
+      userId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
 module.exports = {
   getProjectDetails,
   createProjectEntry,
+  getOutstandingEntries
 };
