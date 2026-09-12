@@ -194,6 +194,68 @@ function createRepository(queryable) {
       return groupEntries(result.rows);
     },
 
+    async getEntriesByIdsForProject(projectId, entryIds) {
+      if (!entryIds || entryIds.length === 0) {
+        return [];
+      }
+
+      const result = await queryable.query(
+        `
+          SELECT id, name
+          FROM entries
+          WHERE project_id = $1
+            AND id = ANY($2::uuid[])
+        `,
+        [projectId, entryIds],
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+      }));
+    },
+
+    async getProjectEntryLinks(projectId) {
+      const result = await queryable.query(
+        `
+          SELECT
+            l.source_entry_id,
+            source.name AS source_name,
+            l.target_entry_id,
+            target.name AS target_name
+          FROM entry_links l
+          JOIN entries source ON source.id = l.source_entry_id
+          JOIN entries target ON target.id = l.target_entry_id
+          WHERE source.project_id = $1
+            AND target.project_id = $1
+          ORDER BY l.created_at ASC
+        `,
+        [projectId],
+      );
+
+      return result.rows.map((row) => ({
+        sourceEntryId: row.source_entry_id,
+        sourceName: row.source_name,
+        targetEntryId: row.target_entry_id,
+        targetName: row.target_name,
+      }));
+    },
+
+    async createEntryLinks(entryId, linkedEntryIds) {
+      for (const linkedEntryId of linkedEntryIds) {
+        await queryable.query(
+          `
+            INSERT INTO entry_links (source_entry_id, target_entry_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+          `,
+          [entryId, linkedEntryId],
+        );
+      }
+
+      return linkedEntryIds.length;
+    },
+
     async createProjectField(data) {
       const result = await queryable.query(
         `
@@ -355,3 +417,4 @@ repository.withTransaction = async function withTransaction(work) {
 };
 
 module.exports = repository;
+
