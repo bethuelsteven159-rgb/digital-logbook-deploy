@@ -40,6 +40,7 @@ function serializeEntry(entry) {
       fieldId: value.fieldId,
       name: value.field?.name || "Field",
       type: value.field?.fieldType || null,
+      archived: Boolean(value.field?.archivedAt),
       value: serializeFieldValue(value),
     })),
     linkedEntries: Array.isArray(entry.linkedEntries)
@@ -50,7 +51,8 @@ function serializeEntry(entry) {
 
 function attachComputedFields(serializedEntry, allFields) {
   const computedFields = allFields.filter(
-    (field) => field.fieldType === "computed",
+    (field) => field.fieldType === 'computed' &&
+      (!field.archivedAt || new Date(serializedEntry.createdAt) <= new Date(field.archivedAt)),
   );
 
   if (computedFields.length === 0) {
@@ -61,6 +63,7 @@ function attachComputedFields(serializedEntry, allFields) {
     fieldId: field.id,
     name: field.name,
     type: "computed",
+    archived: Boolean(field.archivedAt),
     value: evaluateFormula(field.formula, serializedEntry.values),
   }));
 
@@ -162,7 +165,7 @@ async function getProjectDetailsService({ projectId, userId }) {
   }
 
   const [fields, stats, entries, links] = await Promise.all([
-    repository.getProjectFields(projectId),
+    repository.getProjectFields(projectId, { includeArchived: true }),
     repository.getProjectStats(projectId),
     repository.getProjectEntries(projectId),
     repository.getProjectEntryLinks(projectId),
@@ -184,7 +187,7 @@ async function getProjectDetailsService({ projectId, userId }) {
     },
 
     stats,
-    fields,
+    fields: fields.filter((field) => !field.archivedAt),
     entries: entries.map((entry) =>
       attachComputedFields(serializeEntry(entry), fields),
     ),
@@ -193,7 +196,7 @@ async function getProjectDetailsService({ projectId, userId }) {
 
 async function createEntryService({ projectId, userId, data }) {
   return repository.withTransaction(async (tx) => {
-    const project = await tx.getOwnedProject(projectId, userId);
+    const project = await tx.getOwnedProject(projectId, userId, true);
 
     if (!project) {
       throw createHttpError(404, "Project not found");

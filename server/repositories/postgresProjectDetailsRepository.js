@@ -71,6 +71,7 @@ function buildEntryFromRows(rows) {
         id: row.field_id,
         name: row.field_name,
         fieldType: row.field_type,
+        archivedAt: row.field_archived_at,
       },
     }));
 
@@ -93,7 +94,7 @@ function groupEntries(rows) {
 
 function createRepository(queryable) {
   return {
-    async getOwnedProject(projectId, userId) {
+    async getOwnedProject(projectId, userId, lock = false) {
       const result = await queryable.query(
         `
           SELECT
@@ -107,6 +108,7 @@ function createRepository(queryable) {
           FROM projects
           WHERE id = $1 AND owner_id = $2
           LIMIT 1
+          ${lock ? 'FOR UPDATE' : ''}
         `,
         [projectId, userId],
       );
@@ -114,7 +116,7 @@ function createRepository(queryable) {
       return mapProject(result.rows[0]);
     },
 
-    async getProjectFields(projectId) {
+    async getProjectFields(projectId, { includeArchived = false } = {}) {
       const result = await queryable.query(
         `
           SELECT
@@ -130,10 +132,10 @@ function createRepository(queryable) {
             updated_at
           FROM project_fields
           WHERE project_id = $1
-            AND archived_at IS NULL
+            AND ($2::boolean OR archived_at IS NULL)
           ORDER BY position ASC
         `,
-        [projectId],
+        [projectId, includeArchived],
       );
 
       return result.rows.map(mapField);
@@ -182,6 +184,7 @@ function createRepository(queryable) {
             v.value_date,
             v.created_at AS value_created_at,
             f.name AS field_name,
+            f.archived_at AS field_archived_at,
             f.field_type
           FROM entries e
           LEFT JOIN entry_field_values v
@@ -220,6 +223,7 @@ function createRepository(queryable) {
             v.value_date,
             v.created_at AS value_created_at,
             f.name AS field_name,
+            f.archived_at AS field_archived_at,
             f.field_type
           FROM entries e
           LEFT JOIN entry_field_values v
@@ -433,6 +437,7 @@ function createRepository(queryable) {
             v.value_date,
             v.created_at AS value_created_at,
             f.name AS field_name,
+            f.archived_at AS field_archived_at,
             f.field_type
           FROM entries e
           LEFT JOIN entry_field_values v

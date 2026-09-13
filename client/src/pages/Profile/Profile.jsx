@@ -7,6 +7,8 @@ import {
   updateUserProfile,
 } from "../../api/userApi.js";
 import { useUser } from "../../context/UserContext.jsx";
+import ProfileAvatar from '../../components/ProfileAvatar.jsx';
+import { createProfilePatch, readProfilePicture } from './profilePicture.js';
 
 export default function Profile() {
   const [collapsed, setCollapsed] = useState(false);
@@ -27,10 +29,16 @@ export default function Profile() {
 
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [avatarDirty, setAvatarDirty] = useState(false);
+  const [readingPicture, setReadingPicture] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const busy = saving || readingPicture;
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadProfile() {
       if (userLoading) {
         return;
@@ -43,24 +51,34 @@ export default function Profile() {
 
       try {
         setLoadingProfile(true);
-        setError("");
+        setError('');
 
         const data = await getUserProfile();
+        if (cancelled) {
+          return;
+        }
 
         setProfile(data);
+        setAvatarUrl(data?.avatarUrl ?? null);
+        setAvatarDirty(false);
 
         setFormData({
-          name: data?.name || user?.name || "",
-          bio: data?.bio || "",
+          name: data?.name || user?.name || '',
+          bio: data?.bio || '',
         });
       } catch (err) {
-        setError(err.message || "Could not load profile.");
+        if (!cancelled) {
+          setError(err.message || 'Could not load profile.');
+        }
       } finally {
-        setLoadingProfile(false);
+        if (!cancelled) {
+          setLoadingProfile(false);
+        }
       }
     }
 
     loadProfile();
+    return () => { cancelled = true; };
   }, [user, userLoading]);
 
   function handleChange(event) {
@@ -72,31 +90,62 @@ export default function Profile() {
     }));
   }
 
+  async function handlePictureChange(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || busy || !profile) {
+      return;
+    }
+
+    setReadingPicture(true);
+    setError('');
+    setMessage('');
+    try {
+      const picture = await readProfilePicture(file);
+      setAvatarUrl(picture);
+      setAvatarDirty(true);
+    } catch (err) {
+      setError(err.message || 'Could not read this image.');
+    } finally {
+      setReadingPicture(false);
+    }
+  }
+
+  function handleRemovePicture() {
+    setAvatarUrl(null);
+    setAvatarDirty(true);
+    setError('');
+    setMessage('');
+  }
+
   async function handleSave() {
+    if (busy || !profile) {
+      return;
+    }
     setSaving(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
 
     try {
-      const updatedProfile = await updateUserProfile({
-        name: formData.name.trim(),
-        bio: formData.bio.trim(),
-      });
+      const updatedProfile = await updateUserProfile(
+        createProfilePatch(formData, avatarUrl, avatarDirty),
+      );
 
       setProfile(updatedProfile);
+      setAvatarUrl(updatedProfile?.avatarUrl ?? null);
+      setAvatarDirty(false);
 
       setFormData({
-        name: updatedProfile?.name || formData.name,
-        bio: updatedProfile?.bio || formData.bio,
+        name: updatedProfile?.name ?? formData.name,
+        bio: updatedProfile?.bio ?? formData.bio,
       });
 
-      // Refresh the globally stored logged-in user.
-      // This matters when the user's display name changes.
+      // Refresh saved name and picture in every sidebar, never the local preview.
       await refreshUser();
 
-      setMessage("Profile updated successfully.");
+      setMessage('Profile updated successfully.');
     } catch (err) {
-      setError(err.message || "Could not update profile.");
+      setError(err.message || 'Could not update profile.');
     } finally {
       setSaving(false);
     }
@@ -178,25 +227,24 @@ export default function Profile() {
 
         <div className="profile-content">
           {error && (
-            <div className="profile-alert profile-alert-error">
+            <div className="profile-alert profile-alert-error" role="alert">
               {error}
             </div>
           )}
 
           {message && (
-            <div className="profile-alert profile-alert-success">
+            <div className="profile-alert profile-alert-success" role="status">
               {message}
             </div>
           )}
 
           {/* Identity card */}
           <section className="profile-card profile-identity-card">
-            <div
+            <ProfileAvatar
               className="profile-avatar-large"
-              aria-hidden="true"
-            >
-              <IconUser />
-            </div>
+              src={avatarUrl}
+              alt={avatarDirty ? 'Profile picture preview' : 'Profile picture'}
+            />
 
             <div className="profile-identity-copy">
               <span className="profile-name-placeholder">
@@ -209,6 +257,42 @@ export default function Profile() {
 
               <span className="profile-note">
                 Your email is supplied by your authenticated account.
+              </span>
+            </div>
+          </section>
+
+          <section className="profile-card" aria-busy={readingPicture}>
+            <div className="profile-card-heading">
+              <h2>Profile picture</h2>
+              <p id="profile-picture-help">
+                PNG, JPEG or WebP, up to 512 KiB. Picture changes are only saved when you select Save Changes.
+              </p>
+            </div>
+            <div className="profile-form-field">
+              <label className="profile-detail-label" htmlFor="profile-picture">
+                {avatarUrl ? 'Replace profile picture' : 'Upload profile picture'}
+              </label>
+              <input
+                id="profile-picture"
+                className="profile-input"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                aria-describedby="profile-picture-help"
+                onChange={handlePictureChange}
+                disabled={busy || !profile}
+              />
+              <div>
+                <button
+                  type="button"
+                  className="profile-btn profile-btn-secondary"
+                  onClick={handleRemovePicture}
+                  disabled={busy || !profile || !avatarUrl}
+                >
+                  Remove profile picture
+                </button>
+              </div>
+              <span className="profile-note" role="status">
+                {readingPicture ? 'Reading image...' : avatarDirty ? 'Unsaved picture change.' : ''}
               </span>
             </div>
           </section>
@@ -241,6 +325,7 @@ export default function Profile() {
                 onChange={handleChange}
                 placeholder="Enter your name"
                 maxLength={100}
+                disabled={busy || !profile}
               />
             </div>
           </section>
@@ -263,6 +348,7 @@ export default function Profile() {
               placeholder="Tell us a little about yourself…"
               aria-label="Bio"
               maxLength={500}
+              disabled={busy || !profile}
             />
 
             <div className="profile-character-count">
@@ -298,7 +384,7 @@ export default function Profile() {
             <button
               className="profile-btn profile-btn-secondary"
               onClick={() => navigate("/dashboard")}
-              disabled={saving}
+              disabled={busy}
             >
               Cancel
             </button>
@@ -306,9 +392,9 @@ export default function Profile() {
             <button
               className="profile-btn profile-btn-primary"
               onClick={handleSave}
-              disabled={saving}
+              disabled={busy || !profile}
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? 'Saving...' : readingPicture ? 'Reading image...' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -345,22 +431,6 @@ function formatDate(date) {
   }
 
   return parsedDate.toLocaleDateString();
-}
-
-function IconUser() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  );
 }
 
 function ProfileStyles() {

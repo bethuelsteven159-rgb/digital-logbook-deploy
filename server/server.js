@@ -26,6 +26,12 @@ try {
 const app = express();
 
 app.use(cors());
+// Authenticate before accepting larger image payloads; other routes keep the default limit.
+app.patch(
+  '/api/users/me/profile',
+  require('./middleware/authMiddleware'),
+  express.json({ limit: '750kb' }),
+);
 app.use(express.json());
 
 

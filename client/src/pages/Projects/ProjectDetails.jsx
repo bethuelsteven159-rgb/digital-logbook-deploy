@@ -185,6 +185,8 @@ async function handleDeleteFilter(filterId) {
       await updateProject(id, payload);
 
       setShowEditProjectModal(false);
+      setActiveFilterId(null);
+      setFilteredEntries(null);
       await loadProject();
     } catch (requestError) {
       console.error(
@@ -356,14 +358,6 @@ async function handleDeleteFilter(filterId) {
       ? details.entries
       : [];
 
-  const usedFieldIds = new Set(
-    entries.flatMap((entry) =>
-      (Array.isArray(entry.values) ? entry.values : [])
-        .map((value) => value.fieldId)
-        .filter(Boolean),
-    ),
-  );
-
   const editableProject = {
     name: project.name || "",
     description: project.description || "",
@@ -371,7 +365,6 @@ async function handleDeleteFilter(filterId) {
       id: field.id,
       label: field.name,
       type: field.fieldType,
-      usedByEntries: usedFieldIds.has(field.id),
     })),
   };
 
@@ -661,7 +654,7 @@ async function handleDeleteFilter(filterId) {
                         <div className="entry-values">
                           {values.map((field, index) => (
                             <div className="entry-value" key={field.fieldId || field.id || index}>
-                              <span className="entry-value-name">{field.name || "Field"}</span>
+                              <span className="entry-value-name">{field.name || "Field"}{field.archived ? ' (removed)' : ''}</span>
                               <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
                             </div>
                           ))}
