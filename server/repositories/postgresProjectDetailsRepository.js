@@ -112,6 +112,7 @@ function buildEntryFromRows(rows) {
         id: row.field_id,
         name: row.field_name,
         fieldType: row.field_type,
+        archivedAt: row.field_archived_at,
       },
     }));
 
@@ -236,7 +237,7 @@ async function attachEntryFeatures(queryable, entries) {
 
 function createRepository(queryable) {
   return {
-    async getOwnedProject(projectId, userId) {
+    async getOwnedProject(projectId, userId, lock = false) {
       const result = await queryable.query(
         `SELECT id, owner_id, name, description,
                 start_date, end_date, archived_at,
@@ -244,7 +245,8 @@ function createRepository(queryable) {
          FROM projects
          WHERE id = $1
            AND owner_id = $2
-         LIMIT 1`,
+         LIMIT 1
+         ${lock ? 'FOR UPDATE' : ''}`,
         [projectId, userId],
       );
 
@@ -265,7 +267,7 @@ function createRepository(queryable) {
       return result.rows.map((row) => row.id);
     },
 
-    async getProjectFields(projectId) {
+    async getProjectFields(projectId, { includeArchived = false } = {}) {
       const result = await queryable.query(
         `SELECT pf.id, pf.project_id, pf.name, pf.field_type,
                 pf.formula, pf.position, pf.required, pf.archived_at,
@@ -279,9 +281,9 @@ function createRepository(queryable) {
                 ) AS used_by_entries
          FROM project_fields pf
          WHERE pf.project_id = $1
-           AND pf.archived_at IS NULL
+           AND ($2::boolean OR pf.archived_at IS NULL)
          ORDER BY pf.position ASC`,
-        [projectId],
+        [projectId, includeArchived],
       );
 
       return result.rows.map(mapField);
@@ -328,6 +330,7 @@ function createRepository(queryable) {
                 v.value_date,
                 v.created_at AS value_created_at,
                 f.name AS field_name,
+                f.archived_at AS field_archived_at,
                 f.field_type
          FROM entries e
          LEFT JOIN entry_field_values v
@@ -368,15 +371,19 @@ function createRepository(queryable) {
                 v.value_date,
                 v.created_at AS value_created_at,
                 f.name AS field_name,
+                f.archived_at AS field_archived_at,
                 f.field_type
          FROM entries e
-         LEFT JOIN entry_field_values v ON v.entry_id = e.id
-         LEFT JOIN project_fields f ON f.id = v.field_id
+         LEFT JOIN entry_field_values v
+           ON v.entry_id = e.id
+         LEFT JOIN project_fields f
+           ON f.id = v.field_id
          WHERE e.project_id = $1
            AND e.due_at IS NOT NULL
            AND e.due_at < NOW()
            AND e.completed_at IS NULL
-         ORDER BY e.due_at ASC, v.created_at ASC`,
+         ORDER BY e.due_at ASC,
+                  v.created_at ASC`,
         [projectId],
       );
 
@@ -764,6 +771,7 @@ function createRepository(queryable) {
                 v.value_date,
                 v.created_at AS value_created_at,
                 f.name AS field_name,
+                f.archived_at AS field_archived_at,
                 f.field_type
          FROM entries e
          LEFT JOIN entry_field_values v
@@ -780,11 +788,6 @@ function createRepository(queryable) {
       );
 
       if (!entry) return null;
-
-      await attachEntryFeatures(
-        queryable,
-        [entry],
-      );
 
       return entry;
     },

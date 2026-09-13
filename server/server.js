@@ -27,6 +27,12 @@ try {
 const app = express();
 
 app.use(cors());
+// Profile image uploads need auth before the larger payload limit kicks in.
+app.patch(
+  '/api/users/me/profile',
+  require('./middleware/authMiddleware'),
+  express.json({ limit: '750kb' }),
+);
 app.use(express.json({ limit: "10mb" }));
 
 

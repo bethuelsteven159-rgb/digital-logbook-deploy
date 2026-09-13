@@ -50,6 +50,7 @@ function serializeEntry(entry) {
       fieldId: value.fieldId,
       name: value.field?.name || "Field",
       type: value.field?.fieldType || null,
+      archived: Boolean(value.field?.archivedAt),
       value: serializeFieldValue(value),
     })),
 
@@ -77,7 +78,8 @@ function serializeEntry(entry) {
 
 function attachComputedFields(serializedEntry, allFields) {
   const computedFields = (allFields || []).filter(
-    (field) => field.fieldType === "computed",
+    (field) => field.fieldType === "computed" &&
+      (!field.archivedAt || new Date(serializedEntry.createdAt) <= new Date(field.archivedAt)),
   );
 
   if (computedFields.length === 0) {
@@ -88,6 +90,7 @@ function attachComputedFields(serializedEntry, allFields) {
     fieldId: field.id,
     name: field.name,
     type: "computed",
+    archived: Boolean(field.archivedAt),
     value: evaluateFormula(field.formula, serializedEntry.values),
   }));
 
@@ -200,7 +203,7 @@ async function getProjectDetailsService({
     projectReferences,
     links,
   ] = await Promise.all([
-    repository.getProjectFields(projectId),
+    repository.getProjectFields(projectId, { includeArchived: true }),
     repository.getProjectStats(projectId),
     repository.getProjectEntries(projectId),
     repository.getProjectReferences(projectId),
@@ -230,9 +233,7 @@ async function getProjectDetailsService({
     },
 
     stats,
-
-    fields,
-
+    fields: fields.filter((field) => !field.archivedAt),
     entries: entries.map((entry) =>
       attachComputedFields(serializeEntry(entry), fields),
     ),
@@ -250,332 +251,331 @@ async function getProjectDetailsService({
   };
 }
 
-async function createEntryService({
-  projectId,
-  userId,
-  data,
-}) {
-  return repository.withTransaction(
-    async (tx) => {
-      const project =
-        await tx.getOwnedProject(
-          projectId,
+async function createEntryService({ projectId, userId, data }) {
+  return repository.withTransaction(async (tx) => {
+    const project = await tx.getOwnedProject(projectId, userId, true);
+
+    if (!project) {
+      throw createHttpError(
+        404,
+        "Project not found",
+      );
+    }
+
+    const existingFields =
+      await tx.getProjectFields(
+        projectId,
+      );
+
+    const existingFieldMap =
+      new Map(
+        existingFields.map(
+          (field) => [
+            field.id,
+            field,
+          ],
+        ),
+      );
+
+    for (const suppliedValue of data.values) {
+      if (
+        !existingFieldMap.has(
+          suppliedValue.fieldId,
+        )
+      ) {
+        throw createHttpError(
+          400,
+          "One of the submitted fields does not belong to this project",
+        );
+      }
+    }
+
+    const usedNames = new Set(
+      existingFields.map(
+        (field) =>
+          field.name
+            .trim()
+            .toLowerCase(),
+      ),
+    );
+
+    for (const field of data.newFields) {
+      const normalizedName =
+        field.name
+          .trim()
+          .toLowerCase();
+
+      if (usedNames.has(normalizedName)) {
+        throw createHttpError(
+          409,
+          `A field named "${field.name}" already exists`,
+        );
+      }
+
+      usedNames.add(
+        normalizedName,
+      );
+    }
+
+    const referenceProjectIds = [
+      ...new Set(
+        data.referenceProjectIds || [],
+      ),
+    ];
+
+    if (
+      referenceProjectIds.includes(
+        projectId,
+      )
+    ) {
+      throw createHttpError(
+        400,
+        "An entry cannot reference its own project",
+      );
+    }
+
+    if (
+      referenceProjectIds.length > 0
+    ) {
+      const ownedIds =
+        await tx.getOwnedProjectIds(
+          referenceProjectIds,
           userId,
         );
 
-      if (!project) {
-        throw createHttpError(
-          404,
-          "Project not found",
-        );
-      }
-
-      const existingFields =
-        await tx.getProjectFields(
-          projectId,
-        );
-
-      const existingFieldMap =
-        new Map(
-          existingFields.map(
-            (field) => [
-              field.id,
-              field,
-            ],
-          ),
-        );
-
-      for (const suppliedValue of data.values) {
-        if (
-          !existingFieldMap.has(
-            suppliedValue.fieldId,
-          )
-        ) {
-          throw createHttpError(
-            400,
-            "One of the submitted fields does not belong to this project",
-          );
-        }
-      }
-
-      const usedNames = new Set(
-        existingFields.map(
-          (field) =>
-            field.name
-              .trim()
-              .toLowerCase(),
-        ),
-      );
-
-      for (const field of data.newFields) {
-        const normalizedName =
-          field.name
-            .trim()
-            .toLowerCase();
-
-        if (usedNames.has(normalizedName)) {
-          throw createHttpError(
-            409,
-            `A field named "${field.name}" already exists`,
-          );
-        }
-
-        usedNames.add(
-          normalizedName,
-        );
-      }
-
-      const referenceProjectIds = [
-        ...new Set(
-          data.referenceProjectIds || [],
-        ),
-      ];
-
       if (
-        referenceProjectIds.includes(
-          projectId,
-        )
-      ) {
-        throw createHttpError(
-          400,
-          "An entry cannot reference its own project",
-        );
-      }
-
-      if (
-        referenceProjectIds.length > 0
-      ) {
-        const ownedIds =
-          await tx.getOwnedProjectIds(
-            referenceProjectIds,
-            userId,
-          );
-
-        if (
-          ownedIds.length !==
-          referenceProjectIds.length
-        ) {
-          throw createHttpError(
-            400,
-            "One of the referenced projects does not belong to you",
-          );
-        }
-      }
-
-      const maxPosition =
-        existingFields.reduce(
-          (max, field) =>
-            Math.max(
-              max,
-              field.position || 0,
-            ),
-          0,
-        );
-
-      const newlyCreatedFields = [];
-
-      for (
-        let index = 0;
-        index < data.newFields.length;
-        index += 1
-      ) {
-        const requestedField =
-          data.newFields[index];
-
-        const createdField =
-          await tx.createProjectField({
-            projectId,
-            name:
-              requestedField.name.trim(),
-            fieldType:
-              requestedField.type,
-            formula:
-              requestedField.type === "computed"
-                ? requestedField.formula
-                : null,
-            position:
-              maxPosition +
-              index +
-              1,
-            required: false,
-          });
-
-        newlyCreatedFields.push({
-          ...createdField,
-          clientId:
-            requestedField.clientId,
-          submittedValue:
-            requestedField.value,
-        });
-      }
-
-      const entry =
-        await tx.createEntry({
-          projectId,
-          createdById: userId,
-          name: data.name.trim(),
-          durationMinutes:
-            data.durationMinutes,
-          dueAt: data.dueAt ?? null,
-        });
-
-      const valuesToCreate = [];
-
-      for (
-        const submitted of data.values
-      ) {
-        const field =
-          existingFieldMap.get(
-            submitted.fieldId,
-          );
-
-        const converted =
-          convertValue(
-            field,
-            submitted.value,
-          );
-
-        if (converted) {
-          valuesToCreate.push({
-            entryId: entry.id,
-            fieldId: field.id,
-            ...converted,
-          });
-        }
-      }
-
-      for (
-        const field of newlyCreatedFields
-      ) {
-        const converted =
-          convertValue(
-            field,
-            field.submittedValue,
-          );
-
-        if (converted) {
-          valuesToCreate.push({
-            entryId: entry.id,
-            fieldId: field.id,
-            ...converted,
-          });
-        }
-      }
-
-      if (valuesToCreate.length > 0) {
-        await tx.createEntryFieldValues(
-          valuesToCreate,
-        );
-      }
-
-      if (data.checklist?.length) {
-        await tx.createChecklistItems(
-          entry.id,
-          data.checklist,
-        );
-      }
-
-      if (
+        ownedIds.length !==
         referenceProjectIds.length
       ) {
-        await tx.createEntryProjectReferences(
-          entry.id,
-          referenceProjectIds,
-        );
-      }
-
-      const referenceEntryIds = [
-        ...new Set(
-          data.referenceEntryIds || [],
-        ),
-      ];
-
-      if (
-        referenceEntryIds.includes(
-          entry.id,
-        )
-      ) {
         throw createHttpError(
           400,
-          "An entry cannot reference itself",
+          "One of the referenced projects does not belong to you",
         );
       }
+    }
 
-      if (
-        referenceEntryIds.length > 0
-      ) {
-        const ownedEntryIds =
-          await tx.getOwnedEntryIds(
-            referenceEntryIds,
-            userId,
-          );
-
-        if (
-          ownedEntryIds.length !==
-          referenceEntryIds.length
-        ) {
-          throw createHttpError(
-            400,
-            "One of the referenced entries does not belong to you",
-          );
-        }
-
-        await tx.createEntryEntryReferences(
-          entry.id,
-          referenceEntryIds,
-        );
-      }
-
-      const linkedEntryIds = [
-        ...new Set(
-          data.linkedEntryIds || [],
-        ),
-      ];
-
-      if (
-        linkedEntryIds.includes(
-          entry.id,
-        )
-      ) {
-        throw createHttpError(
-          400,
-          "An entry cannot link to itself",
-        );
-      }
-
-      if (linkedEntryIds.length > 0) {
-        const linkedEntries =
-          await tx.getEntriesByIdsForProject(
-            linkedEntryIds,
-            projectId,
-          );
-
-        if (
-          linkedEntries.length !==
-          linkedEntryIds.length
-        ) {
-          throw createHttpError(
-            400,
-            "One or more linked entries do not belong to this project",
-          );
-        }
-
-        await tx.createEntryLinks(
-          entry.id,
-          linkedEntryIds,
-        );
-      }
-
-      const completeEntry =
-        await tx.getEntryById(
-          entry.id,
-        );
-
-      return serializeEntry(
-        completeEntry,
+    const maxPosition =
+      existingFields.reduce(
+        (max, field) =>
+          Math.max(
+            max,
+            field.position || 0,
+          ),
+        0,
       );
-    },
-  );
+
+    const newlyCreatedFields = [];
+
+    for (
+      let index = 0;
+      index < data.newFields.length;
+      index += 1
+    ) {
+      const requestedField =
+        data.newFields[index];
+
+      const createdField =
+        await tx.createProjectField({
+          projectId,
+          name:
+            requestedField.name.trim(),
+          fieldType:
+            requestedField.type,
+          formula:
+            requestedField.type === "computed"
+              ? requestedField.formula
+              : null,
+          position:
+            maxPosition +
+            index +
+            1,
+          required: false,
+        });
+
+      newlyCreatedFields.push({
+        ...createdField,
+        clientId:
+          requestedField.clientId,
+        submittedValue:
+          requestedField.value,
+      });
+    }
+
+    const entry =
+      await tx.createEntry({
+        projectId,
+        createdById: userId,
+        name: data.name.trim(),
+        durationMinutes:
+          data.durationMinutes,
+        dueAt: data.dueAt ?? null,
+      });
+
+    const valuesToCreate = [];
+
+    for (
+      const submitted of data.values
+    ) {
+      const field =
+        existingFieldMap.get(
+          submitted.fieldId,
+        );
+
+      const converted =
+        convertValue(
+          field,
+          submitted.value,
+        );
+
+      if (converted) {
+        valuesToCreate.push({
+          entryId: entry.id,
+          fieldId: field.id,
+          ...converted,
+        });
+      }
+    }
+
+    for (
+      const field of newlyCreatedFields
+    ) {
+      const converted =
+        convertValue(
+          field,
+          field.submittedValue,
+        );
+
+      if (converted) {
+        valuesToCreate.push({
+          entryId: entry.id,
+          fieldId: field.id,
+          ...converted,
+        });
+      }
+    }
+
+    if (valuesToCreate.length > 0) {
+      await tx.createEntryFieldValues(
+        valuesToCreate,
+      );
+    }
+
+    if (data.checklist?.length) {
+      await tx.createChecklistItems(
+        entry.id,
+        data.checklist,
+      );
+    }
+
+    if (
+      referenceProjectIds.length
+    ) {
+      await tx.createEntryProjectReferences(
+        entry.id,
+        referenceProjectIds,
+      );
+    }
+
+    const referenceEntryIds = [
+      ...new Set(
+        data.referenceEntryIds || [],
+      ),
+    ];
+
+    if (
+      referenceEntryIds.includes(
+        entry.id,
+      )
+    ) {
+      throw createHttpError(
+        400,
+        "An entry cannot reference itself",
+      );
+    }
+
+    if (
+      referenceEntryIds.length > 0
+    ) {
+      const ownedEntryIds =
+        await tx.getOwnedEntryIds(
+          referenceEntryIds,
+          userId,
+        );
+
+      if (
+        ownedEntryIds.length !==
+        referenceEntryIds.length
+      ) {
+        throw createHttpError(
+          400,
+          "One of the referenced entries does not belong to you",
+        );
+      }
+
+      await tx.createEntryEntryReferences(
+        entry.id,
+        referenceEntryIds,
+      );
+    }
+
+    const linkedEntryIds = [
+      ...new Set(
+        data.linkedEntryIds || [],
+      ),
+    ];
+
+    if (
+      linkedEntryIds.includes(
+        entry.id,
+      )
+    ) {
+      throw createHttpError(
+        400,
+        "An entry cannot link to itself",
+      );
+    }
+
+    if (linkedEntryIds.length > 0) {
+      const linkedEntries =
+        await tx.getEntriesByIdsForProject(
+          linkedEntryIds,
+          projectId,
+        );
+
+      if (
+        linkedEntries.length !==
+        linkedEntryIds.length
+      ) {
+        throw createHttpError(
+          400,
+          "One or more linked entries do not belong to this project",
+        );
+      }
+
+      await tx.createEntryLinks(
+        entry.id,
+        linkedEntryIds,
+      );
+    }
+
+    const completeEntry =
+      await tx.getEntryById(
+        entry.id,
+      );
+
+    const allFields =
+      await tx.getProjectFields(
+        projectId,
+      );
+
+    completeEntry.linkedEntries =
+      linkedEntryIds.map((id) => ({ id }));
+
+    return attachComputedFields(
+      serializeEntry(completeEntry),
+      allFields,
+    );
+  });
 }
 
 async function deleteChecklistItemService({

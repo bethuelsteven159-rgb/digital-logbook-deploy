@@ -1,15 +1,8 @@
 const express = require("express");
 const db = require("../db");
+const { syncProjectFields } = require('../services/projectFieldsService');
 
 const router = express.Router();
-
-const FIELD_TYPES = new Set([
-  "short_text",
-  "long_text",
-  "number",
-  "date",
-  "computed",
-]);
 
 function httpError(statusCode, message) {
   const error = new Error(message);
@@ -103,166 +96,12 @@ async function getOwnedProjectRow(client, projectId, userId) {
       WHERE id = $1
         AND owner_id = $2
       LIMIT 1
+      FOR UPDATE
     `,
     [projectId, userId],
   );
 
   return result.rows[0] || null;
-}
-
-async function syncProjectFields(client, projectId, requestedFields) {
-  if (!Array.isArray(requestedFields)) {
-    return;
-  }
-
-  const currentResult = await client.query(
-    `
-      SELECT
-        pf.id,
-        pf.name,
-        pf.field_type,
-        pf.position,
-        EXISTS (
-          SELECT 1
-          FROM entry_field_values efv
-          WHERE efv.field_id = pf.id
-        ) AS used_by_entries
-      FROM project_fields pf
-      WHERE pf.project_id = $1
-        AND pf.archived_at IS NULL
-      ORDER BY pf.position ASC, pf.created_at ASC
-      FOR UPDATE
-    `,
-    [projectId],
-  );
-
-  const currentFields = currentResult.rows;
-  const currentById = new Map(
-    currentFields.map((field) => [field.id, field]),
-  );
-
-  const requestedExistingIds = new Set();
-
-  for (const field of requestedFields) {
-    if (!field?.id) {
-      continue;
-    }
-
-    if (!currentById.has(field.id)) {
-      throw httpError(
-        400,
-        "One of the supplied project fields is invalid",
-      );
-    }
-
-    requestedExistingIds.add(field.id);
-  }
-
-  const removedFields = currentFields.filter(
-    (field) => !requestedExistingIds.has(field.id),
-  );
-
-  const lockedRemoval = removedFields.find(
-    (field) => field.used_by_entries,
-  );
-
-  if (lockedRemoval) {
-    throw httpError(
-      409,
-      `The field "${lockedRemoval.name}" is already used by an entry and cannot be removed`,
-    );
-  }
-
-  if (removedFields.length > 0) {
-    await client.query(
-      `
-        UPDATE project_fields
-        SET archived_at = NOW(),
-            updated_at = NOW()
-        WHERE id = ANY($1::uuid[])
-      `,
-      [removedFields.map((field) => field.id)],
-    );
-  }
-
-  const activeNames = new Set();
-
-  for (const field of currentFields) {
-    if (requestedExistingIds.has(field.id)) {
-      activeNames.add(field.name.trim().toLowerCase());
-    }
-  }
-
-  for (let index = 0; index < requestedFields.length; index += 1) {
-    const supplied = requestedFields[index];
-
-    if (supplied?.id) {
-      await client.query(
-        `
-          UPDATE project_fields
-          SET position = $2,
-              updated_at = NOW()
-          WHERE id = $1
-        `,
-        [supplied.id, index],
-      );
-
-      continue;
-    }
-
-    const name = String(
-      supplied?.name ?? supplied?.label ?? "",
-    ).trim();
-
-    const fieldType =
-      supplied?.fieldType ?? supplied?.type;
-
-    if (!name) {
-      throw httpError(400, "New field name is required");
-    }
-
-    if (name.length > 100) {
-      throw httpError(400, "Field name is too long");
-    }
-
-    if (!FIELD_TYPES.has(fieldType)) {
-      throw httpError(
-        400,
-        `Unsupported field type: ${fieldType}`,
-      );
-    }
-
-    const normalizedName = name.toLowerCase();
-
-    if (activeNames.has(normalizedName)) {
-      throw httpError(
-        409,
-        `A field named "${name}" already exists`,
-      );
-    }
-
-    activeNames.add(normalizedName);
-
-        const formula =
-        fieldType === "computed"
-          ? String(supplied?.formula ?? "").trim() || null
-          : null;
-
-      await client.query(
-        `
-          INSERT INTO project_fields (
-            project_id,
-            name,
-            field_type,
-            formula,
-            position,
-            required
-          )
-          VALUES ($1, $2, $3, $4, $5, FALSE)
-        `,
-        [projectId, name, fieldType, formula, index],
-      );
-  }
 }
 
 // GET /api/projects?status=active|archived|all
@@ -381,8 +220,6 @@ router.post("/", async (req, res, next) => {
 });
 
 // PATCH /api/projects/:projectId
-// Updates project metadata and the ACTIVE field layout.
-// Existing fields that already have entry values cannot be removed.
 router.patch("/:projectId", async (req, res, next) => {
   let client = null;
 

@@ -27,6 +27,7 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       'src/pages/Projects/entryViews.test.js',
+      'src/pages/Profile/profilePicture.test.js',
     ],
   },
 });

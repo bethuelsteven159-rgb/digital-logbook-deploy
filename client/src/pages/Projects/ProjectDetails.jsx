@@ -340,6 +340,8 @@ export default function ProjectDetails() {
       await updateProject(id, payload);
 
       setShowEditProjectModal(false);
+      setActiveFilterId(null);
+      setFilteredEntries(null);
       await loadProject();
     } catch (requestError) {
       console.error(
@@ -511,14 +513,6 @@ export default function ProjectDetails() {
       ? details.entries
       : [];
 
-  const usedFieldIds = new Set(
-    (Array.isArray(details.entries) ? details.entries : []).flatMap((entry) =>
-      (Array.isArray(entry.values) ? entry.values : [])
-        .map((value) => value.fieldId)
-        .filter(Boolean),
-    ),
-  );
-
   const editableProject = {
     name: project.name || "",
     description: project.description || "",
@@ -526,7 +520,6 @@ export default function ProjectDetails() {
       id: field.id,
       label: field.name,
       type: field.fieldType,
-      usedByEntries: usedFieldIds.has(field.id),
     })),
   };
 
@@ -861,7 +854,7 @@ export default function ProjectDetails() {
                         <div className="entry-values entry-values-preview">
                           {values.slice(0, 3).map((field, index) => (
                             <div className="entry-value" key={field.fieldId || field.id || index}>
-                              <span className="entry-value-name">{field.name || "Field"}</span>
+                              <span className="entry-value-name">{field.name || "Field"}{field.archived ? ' (removed)' : ''}</span>
                               <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
                             </div>
                           ))}
