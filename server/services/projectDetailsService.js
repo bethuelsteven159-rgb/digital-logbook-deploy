@@ -13,6 +13,7 @@ function serializeEntry(entry) {
     durationMinutes: entry.durationMinutes,
     occurredAt: entry.occurredAt,
     createdAt: entry.createdAt,
+    tags: entry.tags || [],
     values: (entry.values || []).map((value) => ({
       fieldId: value.fieldId,
       name: value.field?.name || "Field",
@@ -200,6 +201,7 @@ async function createEntryService({ projectId, userId, data }) {
       createdById: userId,
       name: data.name.trim(),
       durationMinutes: data.durationMinutes,
+      tags: data.tags,
     });
 
     const valuesToCreate = [];

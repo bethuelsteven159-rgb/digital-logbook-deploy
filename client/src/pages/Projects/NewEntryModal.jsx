@@ -32,6 +32,8 @@ export default function NewEntryModal({
   const [newFields, setNewFields] = useState([]);
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState("short_text");
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -103,6 +105,32 @@ export default function NewEntryModal({
         (field) => field.clientId !== clientId,
       ),
     );
+  }
+
+  function addTag() {
+    const clean = tagInput.trim().toLowerCase();
+
+    if (!clean) {
+      return;
+    }
+
+    if (tags.includes(clean)) {
+      setTagInput("");
+      return;
+    }
+
+    if (tags.length >= 10) {
+      setError("You can add up to 10 tags.");
+      return;
+    }
+
+    setTags((current) => [...current, clean]);
+    setTagInput("");
+    setError("");
+  }
+
+  function removeTag(tag) {
+    setTags((current) => current.filter((t) => t !== tag));
   }
 
   function fieldTypeLabel(type) {
@@ -202,6 +230,7 @@ export default function NewEntryModal({
     const payload = {
       name: cleanName,
       durationMinutes: duration,
+      tags,
       values: fields.map((field) => ({
         fieldId: field.id,
         value: values[field.id] ?? "",
@@ -315,6 +344,67 @@ export default function NewEntryModal({
                   )
                 }
               />
+            </div>
+
+            <div className="form-field">
+              <label
+                className="form-label"
+                htmlFor="entry-tags"
+              >
+                Tags
+              </label>
+
+              <div className="tag-input-row">
+                <input
+                  id="entry-tags"
+                  className="form-input"
+                  type="text"
+                  maxLength={30}
+                  placeholder="e.g. research, writing…"
+                  value={tagInput}
+                  onChange={(event) =>
+                    setTagInput(event.target.value)
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === ","
+                    ) {
+                      event.preventDefault();
+                      addTag();
+                    }
+                  }}
+                />
+
+                <button
+                  type="button"
+                  className="btn-add-field"
+                  onClick={addTag}
+                  aria-label="Add tag"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+
+              {tags.length > 0 && (
+                <div className="tag-list">
+                  {tags.map((tag) => (
+                    <span
+                      className="tag-chip"
+                      key={tag}
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        aria-label={`Remove ${tag}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {fields.length > 0 && (

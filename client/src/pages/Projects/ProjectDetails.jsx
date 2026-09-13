@@ -23,6 +23,14 @@ import {
   updateProject,
 } from "../../api/projectsApi";
 
+import useOnlineStatus from "../../hooks/useOnlineStatus";
+import {
+  getQueueForProject,
+  addToQueue,
+  removeFromQueue,
+  updateQueueItem,
+} from "../../offline/entryQueue";
+
 export default function ProjectDetails() {
   const { id } = useParams();
 
@@ -47,6 +55,14 @@ export default function ProjectDetails() {
     showEditProjectModal,
     setShowEditProjectModal,
   ] = useState(false);
+
+  const isOnline = useOnlineStatus();
+
+  const [pendingEntries, setPendingEntries] = useState(() =>
+    getQueueForProject(id),
+  );
+
+  const [syncing, setSyncing] = useState(false);
 
   const loadProject = useCallback(async () => {
     if (!id) {
@@ -81,7 +97,70 @@ export default function ProjectDetails() {
     loadProject();
   }, [loadProject]);
 
+  const syncPendingEntries = useCallback(async () => {
+    const queue = getQueueForProject(id);
+
+    if (queue.length === 0) {
+      return;
+    }
+
+    setSyncing(true);
+
+    for (const item of queue) {
+      updateQueueItem(item.localId, { status: "syncing" });
+
+      try {
+        await createProjectEntry(item.projectId, item.payload);
+
+        removeFromQueue(item.localId);
+
+        setPendingEntries((current) =>
+          current.filter(
+            (entry) => entry.localId !== item.localId,
+          ),
+        );
+      } catch (syncError) {
+        updateQueueItem(item.localId, {
+          status: "failed",
+          lastError: syncError.message || "Sync failed",
+        });
+
+        setPendingEntries((current) =>
+          current.map((entry) =>
+            entry.localId === item.localId
+              ? {
+                  ...entry,
+                  status: "failed",
+                  lastError: syncError.message,
+                }
+              : entry,
+          ),
+        );
+      }
+    }
+
+    setSyncing(false);
+    await loadProject();
+  }, [id, loadProject]);
+
+  useEffect(() => {
+    if (isOnline && pendingEntries.length > 0) {
+      syncPendingEntries();
+    }
+    // Only re-run when connectivity flips, not on every pendingEntries change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline]);
+
   async function handleCreateEntry(payload) {
+    if (!isOnline) {
+      const queued = addToQueue(id, payload);
+
+      setPendingEntries((current) => [...current, queued]);
+      setShowEntryModal(false);
+
+      return;
+    }
+
     try {
       await createProjectEntry(id, payload);
 
@@ -106,6 +185,20 @@ export default function ProjectDetails() {
         "Failed to create entry:",
         requestError,
       );
+
+      // A real network failure (server unreachable) has no HTTP status.
+      // A validation/auth error (400/401/etc) does — don't silently
+      // queue those, since retrying them later would just fail again.
+      const isNetworkFailure = !requestError.status;
+
+      if (isNetworkFailure) {
+        const queued = addToQueue(id, payload);
+
+        setPendingEntries((current) => [...current, queued]);
+        setShowEntryModal(false);
+
+        return;
+      }
 
       throw requestError;
     }
@@ -283,6 +376,20 @@ export default function ProjectDetails() {
   const entries = Array.isArray(details.entries)
     ? details.entries
     : [];
+
+  const displayEntries = [
+    ...pendingEntries.map((item) => ({
+      id: item.localId,
+      name: item.payload.name,
+      durationMinutes: item.payload.durationMinutes,
+      tags: item.payload.tags || [],
+      occurredAt: item.createdAt,
+      values: [],
+      isPending: true,
+      syncStatus: item.status,
+    })),
+    ...entries,
+  ];
 
   const usedFieldIds = new Set(
     entries.flatMap((entry) =>
@@ -464,7 +571,30 @@ export default function ProjectDetails() {
               </span>
             </div>
 
-            {entries.length === 0 ? (
+            {(pendingEntries.length > 0 || !isOnline) && (
+              <div className="offline-banner">
+                {!isOnline && (
+                  <span>
+                    You're offline — new entries will
+                    be saved locally.
+                  </span>
+                )}
+
+                {isOnline && pendingEntries.length > 0 && (
+                  <span>
+                    {syncing
+                      ? "Syncing…"
+                      : `${pendingEntries.length} entr${
+                          pendingEntries.length === 1
+                            ? "y"
+                            : "ies"
+                        } waiting to sync`}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {displayEntries.length === 0 ? (
               <div className="entries-empty">
                 <div className="empty-icon-wrap">
                   <IconEntryLarge />
@@ -496,7 +626,7 @@ export default function ProjectDetails() {
               </div>
             ) : (
               <div className="entries-list">
-                {entries.map((entry) => {
+                {displayEntries.map((entry) => {
                   const values = Array.isArray(
                     entry.values,
                   )
@@ -513,6 +643,15 @@ export default function ProjectDetails() {
                           <h3 className="entry-row-title">
                             {entry.name ||
                               "Logbook Entry"}
+
+                            {entry.isPending && (
+                              <span className="entry-pending-badge">
+                                {entry.syncStatus ===
+                                "failed"
+                                  ? "Sync failed"
+                                  : "Pending sync"}
+                              </span>
+                            )}
                           </h3>
 
                           <p className="entry-row-date">
@@ -531,6 +670,20 @@ export default function ProjectDetails() {
                           )}
                         </span>
                       </div>
+
+                      {Array.isArray(entry.tags) &&
+                        entry.tags.length > 0 && (
+                          <div className="entry-tags">
+                            {entry.tags.map((tag) => (
+                              <span
+                                className="entry-tag"
+                                key={tag}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
                       {values.length > 0 && (
                         <div className="entry-values">
@@ -1018,6 +1171,52 @@ function ProjectDetailsStyles() {
         font-size: 12px;
         font-weight: 500;
         white-space: nowrap;
+      }
+
+      .entry-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .entry-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .entry-pending-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 10px;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+
+      .offline-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
       }
 
       .entry-values {

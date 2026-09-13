@@ -42,6 +42,7 @@ function mapEntryRow(row) {
     name: row.entry_name,
     durationMinutes: row.duration_minutes,
     occurredAt: row.occurred_at,
+    tags: row.tags || [],
     createdAt: row.entry_created_at,
     updatedAt: row.entry_updated_at,
   };
@@ -167,6 +168,7 @@ function createRepository(queryable) {
             e.name AS entry_name,
             e.duration_minutes,
             e.occurred_at,
+            e.tags,
             e.created_at AS entry_created_at,
             e.updated_at AS entry_updated_at,
             v.id AS value_id,
@@ -235,9 +237,10 @@ function createRepository(queryable) {
             project_id,
             created_by_id,
             name,
-            duration_minutes
+            duration_minutes,
+            tags
           )
-          VALUES ($1, $2, $3, $4)
+          VALUES ($1, $2, $3, $4, $5)
           RETURNING
             id,
             project_id,
@@ -245,6 +248,7 @@ function createRepository(queryable) {
             name,
             duration_minutes,
             occurred_at,
+            tags,
             created_at,
             updated_at
         `,
@@ -253,6 +257,7 @@ function createRepository(queryable) {
           data.createdById,
           data.name,
           data.durationMinutes,
+          data.tags || [],
         ],
       );
 
@@ -265,6 +270,7 @@ function createRepository(queryable) {
         name: row.name,
         durationMinutes: row.duration_minutes,
         occurredAt: row.occurred_at,
+        tags: row.tags || [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       };
@@ -306,6 +312,7 @@ function createRepository(queryable) {
             e.name AS entry_name,
             e.duration_minutes,
             e.occurred_at,
+            e.tags,
             e.created_at AS entry_created_at,
             e.updated_at AS entry_updated_at,
             v.id AS value_id,
