@@ -9,6 +9,7 @@ const savedFiltersRoutes = require("./routes/savedFilters");
 const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
+const logbookTransferRoutes = require("./routes/logbookTransfer");
 
 // Dashboard route
 const dashboardRoutes = require("./routes/dashboard");
@@ -26,7 +27,7 @@ try {
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 
 // ==========================
@@ -77,6 +78,13 @@ app.use(
   "/api/stats",
   requireAuth,
   statsRoutes,
+);
+
+// Logbook export/import
+app.use(
+  "/api/logbook",
+  requireAuth,
+  logbookTransferRoutes,
 );
 
 // Dashboard API
