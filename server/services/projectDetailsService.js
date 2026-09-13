@@ -337,10 +337,44 @@ async function getOutstandingEntriesService({ projectId, userId }) {
 
   return entries.map(serializeEntry);
 }
+
+
+async function getIncompleteEntriesService({ projectId, userId }) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const entries = await repository.getIncompleteEntries(projectId);
+
+  return entries.map(serializeEntry);
+}
+
+async function markEntryCompleteService({ projectId, userId, entryId }) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const updated = await repository.markEntryComplete(entryId, projectId);
+
+  if (!updated) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const completeEntry = await repository.getEntryById(entryId);
+  const allFields = await repository.getProjectFields(projectId);
+
+  return attachComputedFields(serializeEntry(completeEntry), allFields);
+}
 module.exports = {
   getProjectDetailsService,
   createEntryService,
   getOutstandingEntriesService,
+  getIncompleteEntriesService,
+  markEntryCompleteService,
   serializeEntry,
   buildLinkedEntriesMap,
 };

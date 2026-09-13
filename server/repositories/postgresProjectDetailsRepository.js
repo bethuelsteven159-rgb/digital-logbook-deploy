@@ -240,6 +240,61 @@ function createRepository(queryable) {
       return groupEntries(result.rows);
     },
 
+        async markEntryComplete(entryId, projectId) {
+      const result = await queryable.query(
+        `
+          UPDATE entries
+          SET completed_at = NOW(),
+              updated_at = NOW()
+          WHERE id = $1
+            AND project_id = $2
+          RETURNING id
+        `,
+        [entryId, projectId],
+      );
+
+      return result.rowCount > 0;
+    },
+
+        async getIncompleteEntries(projectId) {
+      const result = await queryable.query(
+        `
+          SELECT
+            e.id AS entry_id,
+            e.project_id,
+            e.created_by_id,
+            e.name AS entry_name,
+            e.duration_minutes,
+            e.occurred_at,
+            e.due_at,
+            e.completed_at,
+            e.created_at AS entry_created_at,
+            e.updated_at AS entry_updated_at,
+            v.id AS value_id,
+            v.field_id,
+            v.value_text,
+            v.value_number,
+            v.value_date,
+            v.created_at AS value_created_at,
+            f.name AS field_name,
+            f.field_type
+          FROM entries e
+          LEFT JOIN entry_field_values v
+            ON v.entry_id = e.id
+          LEFT JOIN project_fields f
+            ON f.id = v.field_id
+          WHERE e.project_id = $1
+            AND e.completed_at IS NULL
+          ORDER BY
+            e.due_at ASC NULLS LAST,
+            e.occurred_at DESC
+        `,
+        [projectId],
+      );
+
+      return groupEntries(result.rows);
+    },
+
     async getEntriesByIdsForProject(projectId, entryIds) {
       if (!entryIds || entryIds.length === 0) {
         return [];

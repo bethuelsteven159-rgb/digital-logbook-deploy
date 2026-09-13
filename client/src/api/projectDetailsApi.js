@@ -117,3 +117,40 @@ export async function deleteSavedFilter(filterId) {
     method: "DELETE",
   });
 }
+
+export async function markEntryComplete(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/complete`,
+    { method: "PATCH" },
+  );
+}
+
+export async function fetchOutstandingEntries(projectId) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/entries/outstanding`);
+}
+
+export async function fetchIncompleteEntries(projectId) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/entries/incomplete`);
+}
+export async function updateSavedFilter(filterId, payload) {
+  if (!filterId) {
+    throw new Error("Filter ID is required.");
+  }
+
+  return request(`/api/projects/filters/${filterId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
