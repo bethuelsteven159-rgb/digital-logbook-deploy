@@ -13,9 +13,6 @@ const apiMocks = vi.hoisted(() => ({
   fetchProjects: vi.fn(),
   setProjectArchived: vi.fn(),
   updateProject: vi.fn(),
-  updateChecklistItem: vi.fn(),
-  deleteChecklistItem: vi.fn(),
-  updateProjectReferences: vi.fn(),
   updateEntryProjectReferences: vi.fn(),
   updateEntryReferences: vi.fn(),
   updateEntry: vi.fn(),
@@ -37,9 +34,6 @@ vi.mock('../../api/projectsApi', () => ({
 }));
 
 vi.mock('../../api/entryFeaturesApi', () => ({
-  updateChecklistItem: apiMocks.updateChecklistItem,
-  deleteChecklistItem: apiMocks.deleteChecklistItem,
-  updateProjectReferences: apiMocks.updateProjectReferences,
   updateEntryProjectReferences: apiMocks.updateEntryProjectReferences,
   updateEntryReferences: apiMocks.updateEntryReferences,
   updateEntry: apiMocks.updateEntry,
@@ -57,6 +51,18 @@ vi.mock('./NewEntryModal', () => ({
   default: () => null,
 }));
 
+vi.mock('./EntryDetailsModal', () => ({
+  default: ({ entry, archived, onClose, onEdit }) => (
+    <div role="dialog" aria-label="Entry details test modal">
+      <h2>{entry.name}</h2>
+      <div>{entry.values?.length || 0} fields</div>
+      <div>{entry.checklist?.length || 0} checklist items</div>
+      <button type="button" onClick={onEdit} disabled={archived}>Edit entry</button>
+      <button type="button" onClick={onClose}>Close entry</button>
+    </div>
+  ),
+}));
+
 vi.mock('./EditEntryModal', () => ({
   default: ({ onClose, onSave }) => (
     <div role="dialog" aria-label="Edit Entry test modal">
@@ -66,9 +72,12 @@ vi.mock('./EditEntryModal', () => ({
           onSave({
             name: 'Updated entry',
             durationMinutes: 60,
+            dueAt: null,
             fieldIds: [],
             values: [],
             newFields: [],
+            checklistItems: [],
+            newChecklistItems: [],
             referenceProjectIds: ['project-2'],
             referenceEntryIds: ['entry-2'],
           })
@@ -76,10 +85,7 @@ vi.mock('./EditEntryModal', () => ({
       >
         Save mocked edit
       </button>
-
-      <button type="button" onClick={onClose}>
-        Close edit
-      </button>
+      <button type="button" onClick={onClose}>Close edit</button>
     </div>
   ),
 }));
@@ -97,7 +103,10 @@ const entry = {
   name: 'First entry',
   durationMinutes: 30,
   occurredAt: '2026-09-10T10:00:00Z',
-  values: [],
+  dueAt: '2026-09-12T12:00:00Z',
+  values: [
+    { fieldId: 'field-1', name: 'Notes', fieldType: 'short_text', value: 'Example' },
+  ],
   checklist: [
     { id: 'check-1', text: 'Write report', completed: false },
     { id: 'check-2', text: 'Review report', completed: true },
@@ -108,10 +117,7 @@ const entry = {
 
 function detailsResponse(overrides = {}) {
   return {
-    project: {
-      ...project,
-      ...overrides,
-    },
+    project: { ...project, ...overrides },
     fields: [],
     entries: [entry],
     references: [],
@@ -128,87 +134,51 @@ function renderPage() {
   );
 }
 
-describe('ProjectDetails client entry changes', () => {
+describe('ProjectDetails entry flow', () => {
   beforeEach(() => {
-  apiMocks.fetchSavedFilters.mockResolvedValue([]);
     vi.clearAllMocks();
-
+    apiMocks.fetchSavedFilters.mockResolvedValue([]);
     apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse());
-
     apiMocks.fetchProjects.mockResolvedValue([
       project,
-      {
-        id: 'project-2',
-        name: 'Second project',
-        archivedAt: null,
-      },
+      { id: 'project-2', name: 'Second project', archivedAt: null },
     ]);
-
-    apiMocks.updateChecklistItem.mockResolvedValue({
-      id: 'check-1',
-      text: 'Updated task',
-      completed: false,
-    });
-
-    apiMocks.deleteChecklistItem.mockResolvedValue({
-      success: true,
-    });
-
     apiMocks.updateEntry.mockResolvedValue({});
     apiMocks.updateEntryProjectReferences.mockResolvedValue([]);
     apiMocks.updateEntryReferences.mockResolvedValue([]);
   });
 
-  it('shows the edit entry button for an active project', async () => {
+  it('shows entries as clickable rows instead of inline edit buttons', async () => {
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.getByText('First entry')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('First entry')).toBeInTheDocument());
 
-    expect(
-      screen.getByRole('button', { name: /Edit entry/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Click entry to view full contents/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Edit entry$/i })).not.toBeInTheDocument();
   });
 
-  it('opens the edit entry modal from the existing entry list', async () => {
+  it('opens entry details first, then opens edit from the details view', async () => {
     const user = userEvent.setup();
-
     renderPage();
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /Edit entry/i }),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('First entry')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /Click entry to view full contents/i }));
 
-    await user.click(
-      screen.getByRole('button', { name: /Edit entry/i }),
-    );
+    expect(screen.getByRole('dialog', { name: 'Entry details test modal' })).toBeInTheDocument();
+    expect(screen.getByText('2 checklist items')).toBeInTheDocument();
 
-    expect(
-      screen.getByRole('dialog', { name: 'Edit Entry test modal' }),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Edit entry$/i }));
+    expect(screen.getByRole('dialog', { name: 'Edit Entry test modal' })).toBeInTheDocument();
   });
 
   it('saves entry changes and updates both reference types', async () => {
     const user = userEvent.setup();
-
     renderPage();
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /Edit entry/i }),
-      ).toBeInTheDocument(),
-    );
-
-    await user.click(
-      screen.getByRole('button', { name: /Edit entry/i }),
-    );
-
-    await user.click(
-      screen.getByRole('button', { name: 'Save mocked edit' }),
-    );
+    await waitFor(() => expect(screen.getByText('First entry')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /Click entry to view full contents/i }));
+    await user.click(screen.getByRole('button', { name: /^Edit entry$/i }));
+    await user.click(screen.getByRole('button', { name: 'Save mocked edit' }));
 
     await waitFor(() =>
       expect(apiMocks.updateEntry).toHaveBeenCalledWith(
@@ -217,149 +187,33 @@ describe('ProjectDetails client entry changes', () => {
         expect.objectContaining({
           name: 'Updated entry',
           durationMinutes: 60,
+          checklistItems: [],
+          newChecklistItems: [],
         }),
       ),
     );
 
-    expect(
-      apiMocks.updateEntryProjectReferences,
-    ).toHaveBeenCalledWith(
+    expect(apiMocks.updateEntryProjectReferences).toHaveBeenCalledWith(
       'project-1',
       'entry-1',
       ['project-2'],
     );
-
-    expect(
-      apiMocks.updateEntryReferences,
-    ).toHaveBeenCalledWith(
+    expect(apiMocks.updateEntryReferences).toHaveBeenCalledWith(
       'project-1',
       'entry-1',
       ['entry-2'],
     );
   });
 
-  it('toggles a checklist item', async () => {
+  it('keeps archived entries viewable but disables editing', async () => {
+    apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse({ archivedAt: '2026-09-11T10:00:00Z' }));
     const user = userEvent.setup();
-
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.getByText('Write report')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('First entry')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /Click entry to view full contents/i }));
 
-    const checkbox = screen.getAllByRole('checkbox')[0];
-
-    await user.click(checkbox);
-
-    expect(apiMocks.updateChecklistItem).toHaveBeenCalledWith(
-      'project-1',
-      'entry-1',
-      'check-1',
-      true,
-    );
-  });
-
-  it('edits checklist text inline and saves it', async () => {
-    const user = userEvent.setup();
-
-    renderPage();
-
-    await waitFor(() =>
-      expect(screen.getByText('Write report')).toBeInTheDocument(),
-    );
-
-    await user.click(
-      screen.getAllByRole('button', { name: 'Edit' })[0],
-    );
-
-    const input = screen.getByDisplayValue('Write report');
-
-    await user.clear(input);
-    await user.type(input, 'Updated task');
-
-    await user.click(
-      screen.getByRole('button', { name: 'Save' }),
-    );
-
-    expect(apiMocks.updateChecklistItem).toHaveBeenCalledWith(
-      'project-1',
-      'entry-1',
-      'check-1',
-      { text: 'Updated task' },
-    );
-  });
-
-  it('deletes a checklist item after confirmation', async () => {
-    const user = userEvent.setup();
-
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-    renderPage();
-
-    await waitFor(() =>
-      expect(screen.getByText('Write report')).toBeInTheDocument(),
-    );
-
-    await user.click(
-      screen.getAllByRole('button', { name: 'Remove' })[0],
-    );
-
-    expect(window.confirm).toHaveBeenCalledWith(
-      'Remove this checklist item?',
-    );
-
-    expect(apiMocks.deleteChecklistItem).toHaveBeenCalledWith(
-      'project-1',
-      'entry-1',
-      'check-1',
-    );
-  });
-
-  it('does not delete a checklist item when confirmation is cancelled', async () => {
-    const user = userEvent.setup();
-
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-
-    renderPage();
-
-    await waitFor(() =>
-      expect(screen.getByText('Write report')).toBeInTheDocument(),
-    );
-
-    await user.click(
-      screen.getAllByRole('button', { name: 'Remove' })[0],
-    );
-
-    expect(apiMocks.deleteChecklistItem).not.toHaveBeenCalled();
-  });
-
-  it('hides entry editing and disables checklist editing for archived projects', async () => {
-    apiMocks.fetchProjectDetails.mockResolvedValue(
-      detailsResponse({
-        archivedAt: '2026-09-11T10:00:00Z',
-      }),
-    );
-
-    renderPage();
-
-    await waitFor(() =>
-      expect(screen.getByText('First entry')).toBeInTheDocument(),
-    );
-
-    expect(
-      screen.queryByRole('button', { name: /Edit entry/i }),
-    ).not.toBeInTheDocument();
-
-    const checkboxes = screen.getAllByRole('checkbox');
-
-    expect(checkboxes[0]).toBeDisabled();
-
-    expect(
-      screen.queryByRole('button', { name: 'Edit' }),
-    ).not.toBeInTheDocument();
-
-    expect(
-      screen.queryByRole('button', { name: 'Remove' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Entry details test modal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Edit entry$/i })).toBeDisabled();
   });
 });

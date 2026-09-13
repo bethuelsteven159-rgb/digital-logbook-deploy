@@ -1218,12 +1218,75 @@ async function updateEntryService({
         removedFieldIds,
       );
 
+      if (data.checklistItems !== undefined) {
+        const existingChecklist = Array.isArray(entry.checklist)
+          ? entry.checklist
+          : [];
+        const existingById = new Map(
+          existingChecklist.map((item) => [item.id, item]),
+        );
+        const requestedItems = data.checklistItems || [];
+        const requestedIds = new Set(requestedItems.map((item) => item.id));
+
+        for (const item of requestedItems) {
+          const existingItem = existingById.get(item.id);
+          if (!existingItem) {
+            throw createHttpError(
+              400,
+              "One of the submitted checklist items does not belong to this entry",
+            );
+          }
+
+          if (existingItem.completed && item.text !== existingItem.text) {
+            throw createHttpError(
+              409,
+              "Completed checklist items cannot be edited",
+            );
+          }
+        }
+
+        for (const existingItem of existingChecklist) {
+          if (!requestedIds.has(existingItem.id)) {
+            if (existingItem.completed) {
+              throw createHttpError(
+                409,
+                "Completed checklist items cannot be removed",
+              );
+            }
+            await tx.deleteChecklistItem(entryId, existingItem.id);
+            continue;
+          }
+
+          const requestedItem = requestedItems.find(
+            (item) => item.id === existingItem.id,
+          );
+
+          if (
+            requestedItem &&
+            (requestedItem.text !== existingItem.text ||
+              requestedItem.completed !== existingItem.completed)
+          ) {
+            await tx.updateChecklistItem(
+              entryId,
+              existingItem.id,
+              {
+                text: requestedItem.text,
+                completed: requestedItem.completed,
+              },
+            );
+          }
+        }
+      }
+
       if (data.newChecklistItems?.length) {
         const existingChecklistCount = Array.isArray(entry.checklist)
           ? entry.checklist.length
           : 0;
+        const requestedExistingCount = data.checklistItems !== undefined
+          ? data.checklistItems.length
+          : existingChecklistCount;
 
-        if (existingChecklistCount + data.newChecklistItems.length > 100) {
+        if (requestedExistingCount + data.newChecklistItems.length > 100) {
           throw createHttpError(
             400,
             "A checklist can contain at most 100 items.",

@@ -118,6 +118,7 @@ const updateEntrySchema = z.object({
   dueAt: z
     .string()
     .datetime({ message: "Due date must be a valid ISO date-time" })
+    .nullable()
     .optional(),
 
   fieldIds: z
@@ -145,6 +146,14 @@ const updateEntrySchema = z.object({
       }),
     )
     .default([]),
+  checklistItems: z.array(
+    z.object({
+      id: z.string().uuid(),
+      text: z.string().trim().min(1).max(300),
+      completed: z.boolean(),
+    }),
+  ).max(100).optional(),
+
   newChecklistItems: z.array(checklistItemSchema).max(100).default([]),
 }).superRefine((data, ctx) => {
   const fieldIdSet = new Set(data.fieldIds);

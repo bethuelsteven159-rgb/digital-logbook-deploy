@@ -13,6 +13,7 @@ import Sidebar from "../../components/Sidebar";
 import EditProjectModal from "../../components/EditProjectModal";
 import NewEntryModal from "./NewEntryModal";
 import EditEntryModal from "./EditEntryModal";
+import EntryDetailsModal from "./EntryDetailsModal";
 import CalendarView from "./CalendarView";
 import BoardView from "./BoardView";
 
@@ -52,24 +53,11 @@ export default function ProjectDetails() {
 
   const [projects, setProjects] = useState([]);
 
-  const [checklistSaving, setChecklistSaving] = useState({});
-  const [checklistEditing, setChecklistEditing] = useState({});
-  const [checklistDrafts, setChecklistDrafts] = useState({});
-
   const [projectReferenceSaving, setProjectReferenceSaving] =
     useState(false);
 
-  const [entryReferenceSaving, setEntryReferenceSaving] =
-    useState({});
-
   const [showProjectReferenceModal, setShowProjectReferenceModal] =
     useState(false);
-
-  const [showEntryReferenceModal, setShowEntryReferenceModal] =
-    useState(false);
-
-  const [selectedEntryForReferences, setSelectedEntryForReferences] =
-    useState(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -82,6 +70,9 @@ export default function ProjectDetails() {
     useState(false);
 
   const [selectedEntryForEdit, setSelectedEntryForEdit] =
+    useState(null);
+
+  const [selectedEntryForDetails, setSelectedEntryForDetails] =
     useState(null);
 
   const [entryView, setEntryView] =
@@ -156,7 +147,12 @@ export default function ProjectDetails() {
     return () => window.clearTimeout(timer);
   }, [details]);
 
+  function openEntryDetails(entry) {
+    setSelectedEntryForDetails(entry);
+  }
+
   function openEditEntryModal(entry) {
+    setSelectedEntryForDetails(null);
     setSelectedEntryForEdit(entry);
     setShowEditEntryModal(true);
   }
@@ -205,116 +201,6 @@ export default function ProjectDetails() {
     }
   }
 
-  async function handleChecklistToggle(entryId, itemId, completed) {
-    const key = `${entryId}:${itemId}`;
-
-    try {
-      setChecklistSaving((current) => ({ ...current, [key]: true }));
-      await updateChecklistItem(id, entryId, itemId, completed);
-      setDetails((current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          entries: current.entries.map((entry) =>
-            entry.id !== entryId
-              ? entry
-              : {
-                  ...entry,
-                  checklist: (entry.checklist || []).map((item) =>
-                    item.id === itemId ? { ...item, completed } : item,
-                  ),
-                },
-          ),
-        };
-      });
-    } catch (requestError) {
-      setError(requestError.message || "Failed to update checklist item.");
-    } finally {
-      setChecklistSaving((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
-    }
-  }
-
-  function startChecklistEdit(entryId, item) {
-    const key = `${entryId}:${item.id}`;
-    setChecklistEditing((current) => ({ ...current, [key]: true }));
-    setChecklistDrafts((current) => ({ ...current, [key]: item.text }));
-  }
-
-  function cancelChecklistEdit(entryId, itemId) {
-    const key = `${entryId}:${itemId}`;
-    setChecklistEditing((current) => {
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-    setChecklistDrafts((current) => {
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-  }
-
-  async function saveChecklistText(entryId, itemId) {
-    const key = `${entryId}:${itemId}`;
-    const text = (checklistDrafts[key] || "").trim();
-    if (!text) {
-      setError("Checklist item text cannot be empty.");
-      return;
-    }
-
-    try {
-      setChecklistSaving((current) => ({ ...current, [key]: true }));
-      setError("");
-      const updated = await updateChecklistItem(id, entryId, itemId, { text });
-      setDetails((current) => current ? ({
-        ...current,
-        entries: current.entries.map((entry) => entry.id !== entryId ? entry : {
-          ...entry,
-          checklist: (entry.checklist || []).map((item) => item.id === itemId ? { ...item, text: updated.text } : item),
-        }),
-      }) : current);
-      cancelChecklistEdit(entryId, itemId);
-    } catch (requestError) {
-      setError(requestError.message || "Failed to update checklist item.");
-    } finally {
-      setChecklistSaving((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
-    }
-  }
-
-  async function handleDeleteChecklistItem(entryId, itemId) {
-    const key = `${entryId}:${itemId}`;
-    if (!window.confirm("Remove this checklist item?")) return;
-
-    try {
-      setChecklistSaving((current) => ({ ...current, [key]: true }));
-      setError("");
-      await deleteChecklistItem(id, entryId, itemId);
-      setDetails((current) => current ? ({
-        ...current,
-        entries: current.entries.map((entry) => entry.id !== entryId ? entry : {
-          ...entry,
-          checklist: (entry.checklist || []).filter((item) => item.id !== itemId),
-        }),
-      }) : current);
-    } catch (requestError) {
-      setError(requestError.message || "Failed to remove checklist item.");
-    } finally {
-      setChecklistSaving((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
-    }
-  }
-
   async function handleUpdateProjectReferences(referencedProjectIds) {
     try {
       setProjectReferenceSaving(true);
@@ -337,53 +223,6 @@ export default function ProjectDetails() {
     } finally {
       setProjectReferenceSaving(false);
     }
-  }
-
-  async function handleUpdateEntryReferences(
-    entryId,
-    referencedEntryIds,
-  ) {
-    const key = `references:${entryId}`;
-
-    try {
-      setEntryReferenceSaving((current) => ({
-        ...current,
-        [key]: true,
-      }));
-
-      setError("");
-
-      await updateEntryReferences(
-        id,
-        entryId,
-        referencedEntryIds,
-      );
-
-      setShowEntryReferenceModal(false);
-      setSelectedEntryForReferences(null);
-      await loadProject();
-    } catch (requestError) {
-      console.error(
-        "Failed to update entry references:",
-        requestError,
-      );
-
-      setError(
-        requestError.message ||
-          "Failed to update entry references.",
-      );
-    } finally {
-      setEntryReferenceSaving((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
-    }
-  }
-
-  function openEntryReferenceModal(entry) {
-    setSelectedEntryForReferences(entry);
-    setShowEntryReferenceModal(true);
   }
 
   async function handleCreateSavedFilter(payload) {
@@ -616,7 +455,7 @@ export default function ProjectDetails() {
       : [];
 
   const usedFieldIds = new Set(
-    entries.flatMap((entry) =>
+    (Array.isArray(details.entries) ? details.entries : []).flatMap((entry) =>
       (Array.isArray(entry.values) ? entry.values : [])
         .map((value) => value.fieldId)
         .filter(Boolean),
@@ -936,13 +775,16 @@ export default function ProjectDetails() {
               <div className="entries-list">
                 {entries.map((entry) => {
                   const values = Array.isArray(entry.values) ? entry.values : [];
-                  const linkedEntries = Array.isArray(entry.linkedEntries) ? entry.linkedEntries : [];
+                  const checklist = Array.isArray(entry.checklist) ? entry.checklist : [];
+                  const completedChecklist = checklist.filter((item) => item.completed).length;
 
                   return (
-                    <article
-                      className="entry-row"
+                    <button
+                      type="button"
+                      className="entry-row entry-row-clickable"
                       id={`entry-${entry.id}`}
                       key={entry.id}
+                      onClick={() => openEntryDetails(entry)}
                     >
                       <div className="entry-row-header">
                         <div>
@@ -952,18 +794,15 @@ export default function ProjectDetails() {
                         <span className="entry-duration"><IconClockSmall />{formatLoggedTime(entry.durationMinutes)}</span>
                       </div>
 
-                      {linkedEntries.length > 0 && (
-                        <div className="entry-links">
-                          <span className="entry-links-label">Linked entries:</span>
-                          {linkedEntries.map((linked) => (
-                            <span className="entry-link-chip" key={linked.id}>{linked.name}</span>
-                          ))}
-                        </div>
-                      )}
+                      <div className="entry-row-summary">
+                        <span>{values.length} {values.length === 1 ? "field" : "fields"}</span>
+                        <span>{checklist.length ? `${completedChecklist}/${checklist.length} checklist` : "No checklist"}</span>
+                        {entry.dueAt && <span>Due {formatDate(entry.dueAt)}</span>}
+                      </div>
 
                       {values.length > 0 && (
-                        <div className="entry-values">
-                          {values.map((field, index) => (
+                        <div className="entry-values entry-values-preview">
+                          {values.slice(0, 3).map((field, index) => (
                             <div className="entry-value" key={field.fieldId || field.id || index}>
                               <span className="entry-value-name">{field.name || "Field"}</span>
                               <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
@@ -972,134 +811,8 @@ export default function ProjectDetails() {
                         </div>
                       )}
 
-                      {Array.isArray(entry.checklist) && entry.checklist.length > 0 && (
-                        <div className="entry-feature-block">
-                          <div className="entry-feature-heading">
-                            <CheckSquare size={15} />
-                            Checklist
-                          </div>
-                          <div className="entry-checklist">
-                            {entry.checklist.map((item) => {
-                              const key = `${entry.id}:${item.id}`;
-                              const isEditing = Boolean(checklistEditing[key]);
-                              const isSaving = Boolean(checklistSaving[key]);
-                              return (
-                                <div className={`entry-checklist-row ${item.completed ? "entry-checklist-item--done" : ""}`} key={item.id}>
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(item.completed)}
-                                    disabled={isSaving || isEditing || Boolean(project.archivedAt)}
-                                    onChange={(event) => handleChecklistToggle(entry.id, item.id, event.target.checked)}
-                                  />
-                                  {isEditing ? (
-                                    <input
-                                      className="entry-checklist-edit-input"
-                                      type="text"
-                                      maxLength={300}
-                                      value={checklistDrafts[key] ?? item.text}
-                                      onChange={(event) => setChecklistDrafts((current) => ({ ...current, [key]: event.target.value }))}
-                                      disabled={isSaving}
-                                    />
-                                  ) : (
-                                    <span>{item.text}</span>
-                                  )}
-                                  {!project.archivedAt && (
-                                    <div className="entry-checklist-actions">
-                                      {isEditing ? (
-                                        <>
-                                          <button type="button" className="entry-checklist-action" onClick={() => saveChecklistText(entry.id, item.id)} disabled={isSaving}>Save</button>
-                                          <button type="button" className="entry-checklist-action" onClick={() => cancelChecklistEdit(entry.id, item.id)} disabled={isSaving}>Cancel</button>
-                                        </>
-                                      ) : (
-                                        <button type="button" className="entry-checklist-action" onClick={() => startChecklistEdit(entry.id, item)} disabled={isSaving}>Edit</button>
-                                      )}
-                                      <button type="button" className="entry-checklist-action entry-checklist-delete" onClick={() => handleDeleteChecklistItem(entry.id, item.id)} disabled={isSaving || isEditing}>Remove</button>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {Array.isArray(entry.references) && entry.references.length > 0 && (
-                        <div className="entry-feature-block">
-                          <div className="entry-feature-heading">
-                            <IconLink />
-                            Referenced projects
-                          </div>
-                          <div className="entry-reference-list">
-                            {entry.references.map((reference) => (
-                              <button
-                                type="button"
-                                className="entry-reference-link"
-                                key={reference.id}
-                                onClick={() => navigate(`/projects/${reference.projectId}`)}
-                              >
-                                {reference.projectName}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {Array.isArray(entry.entryReferences) && entry.entryReferences.length > 0 && (
-                        <div className="entry-feature-block">
-                          <div className="entry-feature-heading">
-                            <IconLink />
-                            Referenced entries
-                          </div>
-                          <div className="entry-reference-list">
-                            {entry.entryReferences.map((reference) => (
-                              <button
-                                type="button"
-                                className="entry-reference-link"
-                                key={reference.id}
-                                onClick={() => {
-                                  const target = document.getElementById(
-                                    `entry-${reference.referencedEntryId}`,
-                                  );
-                                  target?.scrollIntoView({
-                                    behavior: "smooth",
-                                    block: "center",
-                                  });
-                                }}
-                              >
-                                {reference.referencedEntryName}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="entry-action-row">
-                        {!project.archivedAt && (
-                          <button
-                            type="button"
-                            className="entry-edit-button"
-                            onClick={() => openEditEntryModal(entry)}
-                          >
-                            <IconEdit />
-                            Edit entry
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="entry-reference-manage">
-                        <button
-                          type="button"
-                          className="entry-reference-manage-button"
-                          onClick={() => openEntryReferenceModal(entry)}
-                          disabled={Boolean(
-                            entryReferenceSaving[`references:${entry.id}`],
-                          )}
-                        >
-                          <IconLink />
-                          Manage entry references
-                        </button>
-                      </div>
-                    </article>
+                      <div className="entry-row-open-hint">Click entry to view full contents <span>→</span></div>
+                    </button>
                   );
                 })}
               </div>
@@ -1107,6 +820,19 @@ export default function ProjectDetails() {
           </section>
         </div>
       </main>
+
+      {selectedEntryForDetails && (
+        <EntryDetailsModal
+          entry={selectedEntryForDetails}
+          archived={Boolean(project.archivedAt)}
+          onClose={() => setSelectedEntryForDetails(null)}
+          onEdit={() => openEditEntryModal(selectedEntryForDetails)}
+          onProjectReferenceClick={(projectId) => {
+            setSelectedEntryForDetails(null);
+            navigate(`/projects/${projectId}`);
+          }}
+        />
+      )}
 
       {showEditEntryModal && selectedEntryForEdit && !project.archivedAt && (
         <EditEntryModal
@@ -1155,40 +881,6 @@ export default function ProjectDetails() {
           onClose={() => setShowProjectReferenceModal(false)}
           onSave={handleUpdateProjectReferences}
           saving={projectReferenceSaving}
-        />
-      )}
-
-      {showEntryReferenceModal && selectedEntryForReferences && (
-        <ReferenceSelectionModal
-          title="Entry references"
-          description="Select the entries that this entry should reference."
-          options={entries.filter(
-            (candidate) => candidate.id !== selectedEntryForReferences.id,
-          )}
-          selectedIds={
-            Array.isArray(selectedEntryForReferences.entryReferences)
-              ? selectedEntryForReferences.entryReferences.map(
-                  (reference) => reference.referencedEntryId,
-                )
-              : []
-          }
-          getOptionId={(option) => option.id}
-          getOptionLabel={(option) => option.name || "Logbook Entry"}
-          onClose={() => {
-            setShowEntryReferenceModal(false);
-            setSelectedEntryForReferences(null);
-          }}
-          onSave={(referencedEntryIds) =>
-            handleUpdateEntryReferences(
-              selectedEntryForReferences.id,
-              referencedEntryIds,
-            )
-          }
-          saving={Boolean(
-            entryReferenceSaving[
-              `references:${selectedEntryForReferences.id}`
-            ],
-          )}
         />
       )}
 
@@ -2649,6 +2341,236 @@ function ProjectDetailsStyles() {
         text-align: center;
         color: #94a3b8;
         font-size: 13px;
+      }
+
+      .entry-row-clickable {
+        width: 100%;
+        appearance: none;
+        border: 0;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .entry-row-clickable:focus-visible {
+        outline: 2px solid #4f63d2;
+        outline-offset: -2px;
+      }
+
+      .entry-row-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .entry-row-summary span {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 11px;
+      }
+
+      .entry-values-preview {
+        margin-top: 12px;
+      }
+
+      .entry-row-open-hint {
+        margin-top: 13px;
+        color: #4f63d2;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .entry-row-clickable:hover .entry-row-open-hint {
+        text-decoration: underline;
+      }
+
+      .entry-details-modal {
+        max-width: 720px;
+      }
+
+      .entry-details-body {
+        overflow-y: auto;
+      }
+
+      .entry-details-eyebrow {
+        margin: 0 0 4px;
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .entry-details-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .entry-details-meta-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+      }
+
+      .entry-details-meta-card span {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+      }
+
+      .entry-details-meta-card strong {
+        color: #1a2340;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .entry-details-section {
+        padding: 17px 0;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .entry-details-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+
+      .entry-details-section-heading {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 11px;
+        color: #1a2340;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .entry-details-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 9px;
+      }
+
+      .entry-details-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 11px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 9px;
+        background: #f8fafc;
+      }
+
+      .entry-details-field span,
+      .entry-details-reference-label {
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .entry-details-field strong {
+        color: #334155;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      .entry-details-checklist {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .entry-details-checklist-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        color: #334155;
+        font-size: 13px;
+      }
+
+      .entry-details-checklist-item.is-complete {
+        color: #94a3b8;
+        text-decoration: line-through;
+      }
+
+      .entry-details-checkmark {
+        width: 18px;
+        flex: 0 0 18px;
+        color: #4f63d2;
+        font-weight: 700;
+      }
+
+      .entry-details-reference-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .entry-details-reference-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .entry-details-empty {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .edit-entry-basic-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .checklist-edit-checkbox {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        accent-color: #4f63d2;
+      }
+
+      .person4-list-row {
+        align-items: center;
+      }
+
+      .person4-list-row .form-input {
+        min-width: 0;
+      }
+
+      .person4-list-row-locked {
+        background: #f8fafc;
+      }
+
+      @media (max-width: 700px) {
+        .entry-details-meta-grid,
+        .edit-entry-basic-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
     `}</style>
