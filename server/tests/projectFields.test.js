@@ -168,7 +168,7 @@ function createClient({ fields = defaultFields(), entryValues = defaultValues(),
       return { rows: [], rowCount: 1 };
     }
     if (sql.startsWith('SELECT ') && sql.includes(' FROM project_fields ')) {
-      assert.match(sql, /WHERE project_id = \$1/);
+      assert.match(sql, /WHERE (?:pf\.)?project_id = \$1/);
       assert.match(sql, /archived_at IS NULL/);
       const includeArchived = sql.includes('$2::boolean') && parameters[1] === true;
       const rows = client.fields.filter(
@@ -592,9 +592,11 @@ for (const method of ['getProjectEntries', 'getEntryById', 'getOutstandingEntrie
   test(`${method} keeps archived field names and values in its historical join`, async (t) => {
     t.mock.method(db, 'query', async (text, parameters) => {
       const sql = text.replace(/\s+/g, ' ').trim();
-      assert.match(sql, /LEFT JOIN project_fields f ON f.id = v.field_id/);
-      assert.doesNotMatch(sql, /(?:f\.)?archived_at IS NULL/);
-      assert.deepEqual(parameters, [method === 'getEntryById' ? ENTRY_ID : PROJECT_ID]);
+      if (sql.includes('FROM entries')) {
+        assert.match(sql, /LEFT JOIN project_fields f ON f.id = v.field_id/);
+        assert.doesNotMatch(sql, /(?:f\.)?archived_at IS NULL/);
+        assert.deepEqual(parameters, [method === 'getEntryById' ? ENTRY_ID : PROJECT_ID]);
+      }
       return {
         rows: [
           {

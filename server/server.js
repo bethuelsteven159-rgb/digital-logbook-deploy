@@ -9,6 +9,7 @@ const savedFiltersRoutes = require("./routes/savedFilters");
 const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
+const logbookTransferRoutes = require("./routes/logbookTransfer");
 
 // Dashboard route
 const dashboardRoutes = require("./routes/dashboard");
@@ -26,13 +27,13 @@ try {
 const app = express();
 
 app.use(cors());
-// Authenticate before accepting larger image payloads; other routes keep the default limit.
+// Profile image uploads need auth before the larger payload limit kicks in.
 app.patch(
   '/api/users/me/profile',
   require('./middleware/authMiddleware'),
   express.json({ limit: '750kb' }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 
 // ==========================
@@ -83,6 +84,13 @@ app.use(
   "/api/stats",
   requireAuth,
   statsRoutes,
+);
+
+// Logbook export/import
+app.use(
+  "/api/logbook",
+  requireAuth,
+  logbookTransferRoutes,
 );
 
 // Dashboard API

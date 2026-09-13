@@ -13,6 +13,7 @@ import {
     createProject,
     fetchProjects,
 } from "../../api/projectsApi";
+import { loadPreferences, PREFERENCES_EVENT, sortProjects } from "../../utils/preferences";
 
 export default function Projects() {
     const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function Projects() {
     );
 
     const [projects, setProjects] = useState([]);
+    const [preferences, setPreferences] = useState(loadPreferences);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -47,7 +49,7 @@ export default function Projects() {
             setError("");
 
             const data = await fetchProjects(status);
-            setProjects(Array.isArray(data) ? data : []);
+            setProjects(Array.isArray(data) ? sortProjects(data, preferences.projectOrder) : []);
         } catch (requestError) {
             console.error("Failed to load projects:", requestError);
             setProjects([]);
@@ -58,11 +60,21 @@ export default function Projects() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [preferences.projectOrder]);
 
     useEffect(() => {
         loadProjects(tab);
     }, [tab, loadProjects]);
+
+    useEffect(() => {
+        function handlePreferencesChanged(event) {
+            const next = event.detail || loadPreferences();
+            setPreferences(next);
+        }
+
+        window.addEventListener(PREFERENCES_EVENT, handlePreferencesChanged);
+        return () => window.removeEventListener(PREFERENCES_EVENT, handlePreferencesChanged);
+    }, []);
 
     function switchTab(nextTab) {
         setTab(nextTab);
@@ -84,12 +96,12 @@ export default function Projects() {
             return;
         }
 
-        setProjects((current) => [
-            created,
-            ...current.filter(
-                (project) => project.id !== created.id,
+        setProjects((current) =>
+            sortProjects(
+                [created, ...current.filter((project) => project.id !== created.id)],
+                preferences.projectOrder,
             ),
-        ]);
+        );
     }
 
     function clearDateFilter() {

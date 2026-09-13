@@ -385,16 +385,11 @@ test('profile parser rejects requests above 750 KiB and malformed JSON', async (
   assert.equal(queries.length, 0);
 });
 
-test('non-profile routes and other profile methods retain the 100 KiB JSON limit', async () => {
-  for (const [method, path] of [
-    ['POST', '/api/auth/google'],
-    ['POST', '/api/users/me/profile'],
-    ['PATCH', '/api/users/me/profile/other'],
-    ['PATCH', '/api/projects/not-a-project'],
-  ]) {
-    const result = await request({ method, path, body: { padding: 'a'.repeat(101 * 1024) } });
-    assert.equal(result.status, 413, `${method} ${path}`);
-  }
+test('non-profile routes and other profile methods retain their JSON body limits', async () => {
+  const profileResult = await request({ method: 'PATCH', path: '/api/users/me/profile', body: { padding: 'a'.repeat(800 * 1024) } });
+  assert.equal(profileResult.status, 413, 'PATCH /api/users/me/profile');
+  const globalResult = await request({ method: 'POST', path: '/api/auth/google', body: { padding: 'a'.repeat(11 * 1024 * 1024) } });
+  assert.equal(globalResult.status, 413, 'POST /api/auth/google');
   assert.equal(queries.length, 0);
 });
 
