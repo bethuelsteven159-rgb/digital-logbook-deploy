@@ -1,9 +1,30 @@
 const repository = require("../repositories/projectDetailsRepository");
+const { evaluateFormula } = require("./computedFieldService");
 
 function createHttpError(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+}
+
+
+function buildLinkedEntriesMap(entries, links) {
+  const linkedByEntryId = new Map(
+    entries.map((entry) => [entry.id, []]),
+  );
+
+  for (const link of links) {
+    linkedByEntryId.get(link.sourceEntryId)?.push({
+      id: link.targetEntryId,
+      name: link.targetName,
+    });
+    linkedByEntryId.get(link.targetEntryId)?.push({
+      id: link.sourceEntryId,
+      name: link.sourceName,
+    });
+  }
+
+  return linkedByEntryId;
 }
 
 function serializeEntry(entry) {
@@ -12,6 +33,8 @@ function serializeEntry(entry) {
     name: entry.name,
     durationMinutes: entry.durationMinutes,
     occurredAt: entry.occurredAt,
+    dueAt: entry.dueAt,
+    completedAt: entry.completedAt,
     createdAt: entry.createdAt,
     tags: entry.tags || [],
     values: (entry.values || []).map((value) => ({
@@ -20,8 +43,33 @@ function serializeEntry(entry) {
       type: value.field?.fieldType || null,
       value: serializeFieldValue(value),
     })),
+    linkedEntries: Array.isArray(entry.linkedEntries)
+      ? entry.linkedEntries
+      : [],
   };
 }
+
+function attachComputedFields(serializedEntry, allFields) {
+  const computedFields = allFields.filter(
+    (field) => field.fieldType === "computed",
+  );
+
+  if (computedFields.length === 0) {
+    return serializedEntry;
+  }
+
+  const computedValues = computedFields.map((field) => ({
+    fieldId: field.id,
+    name: field.name,
+    type: "computed",
+    value: evaluateFormula(field.formula, serializedEntry.values),
+  }));
+
+    return {
+      ...serializedEntry,
+      values: [...serializedEntry.values, ...computedValues],
+    };
+  }
 
 function serializeFieldValue(value) {
   const fieldType = value.field?.fieldType;
@@ -96,6 +144,9 @@ function convertValue(field, rawValue) {
       };
     }
 
+    case "computed":
+      return null;
+
     default:
       throw createHttpError(
         400,
@@ -111,11 +162,18 @@ async function getProjectDetailsService({ projectId, userId }) {
     throw createHttpError(404, "Project not found");
   }
 
-  const [fields, stats, entries] = await Promise.all([
+  const [fields, stats, entries, links] = await Promise.all([
     repository.getProjectFields(projectId),
     repository.getProjectStats(projectId),
     repository.getProjectEntries(projectId),
+    repository.getProjectEntryLinks(projectId),
   ]);
+
+  const linkedByEntryId = buildLinkedEntriesMap(entries, links);
+
+  for (const entry of entries) {
+    entry.linkedEntries = linkedByEntryId.get(entry.id) || [];
+  }
 
   return {
     project: {
@@ -128,7 +186,9 @@ async function getProjectDetailsService({ projectId, userId }) {
 
     stats,
     fields,
-    entries: entries.map(serializeEntry),
+    entries: entries.map((entry) =>
+      attachComputedFields(serializeEntry(entry), fields),
+    ),
   };
 }
 
@@ -185,6 +245,10 @@ async function createEntryService({ projectId, userId, data }) {
         projectId,
         name: requestedField.name.trim(),
         fieldType: requestedField.type,
+        formula:
+          requestedField.type === "computed"
+            ? requestedField.formula
+            : null,
         position: maxPosition + index + 1,
         required: false,
       });
@@ -196,13 +260,34 @@ async function createEntryService({ projectId, userId, data }) {
       });
     }
 
+    const linkedEntryIds = [...new Set(data.linkedEntryIds || [])];
+    const linkedEntries = await tx.getEntriesByIdsForProject(
+      projectId,
+      linkedEntryIds,
+    );
+
+    if (linkedEntries.length !== linkedEntryIds.length) {
+      throw createHttpError(
+        400,
+        "One or more linked entries do not belong to this project",
+      );
+    }
+
     const entry = await tx.createEntry({
       projectId,
       createdById: userId,
       name: data.name.trim(),
       durationMinutes: data.durationMinutes,
+
       tags: data.tags,
+
+      dueAt: data.dueAt ?? null,
+
     });
+
+    if (linkedEntryIds.length > 0) {
+      await tx.createEntryLinks(entry.id, linkedEntryIds);
+    }
 
     const valuesToCreate = [];
 
@@ -239,13 +324,28 @@ async function createEntryService({ projectId, userId, data }) {
       await tx.createEntryFieldValues(valuesToCreate);
     }
 
-    const completeEntry = await tx.getEntryById(entry.id);
+        const completeEntry = await tx.getEntryById(entry.id);
+    const allFields = await tx.getProjectFields(projectId);
+    completeEntry.linkedEntries = linkedEntries;
 
-    return serializeEntry(completeEntry);
+    return attachComputedFields(serializeEntry(completeEntry), allFields);
   });
 }
+async function getOutstandingEntriesService({ projectId, userId }) {
+  const project = await repository.getOwnedProject(projectId, userId);
 
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const entries = await repository.getOutstandingEntries(projectId);
+
+  return entries.map(serializeEntry);
+}
 module.exports = {
   getProjectDetailsService,
   createEntryService,
+  getOutstandingEntriesService,
+  serializeEntry,
+  buildLinkedEntriesMap,
 };

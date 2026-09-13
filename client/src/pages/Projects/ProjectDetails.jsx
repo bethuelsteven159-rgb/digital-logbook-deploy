@@ -12,10 +12,16 @@ import {
 import Sidebar from "../../components/Sidebar";
 import EditProjectModal from "../../components/EditProjectModal";
 import NewEntryModal from "./NewEntryModal";
+import CalendarView from "./CalendarView";
+import BoardView from "./BoardView";
 
 import {
   createProjectEntry,
   fetchProjectDetails,
+  fetchSavedFilters,
+  createSavedFilter,
+  applySavedFilter,
+  deleteSavedFilter,
 } from "../../api/projectDetailsApi";
 
 import {
@@ -48,6 +54,9 @@ export default function ProjectDetails() {
   const [showEntryModal, setShowEntryModal] =
     useState(false);
 
+  const [entryView, setEntryView] =
+    useState("list");
+
   const [projectActionSaving, setProjectActionSaving] =
     useState(false);
 
@@ -64,6 +73,10 @@ export default function ProjectDetails() {
 
   const [syncing, setSyncing] = useState(false);
 
+  const [savedFilters, setSavedFilters] = useState([]);
+  const [activeFilterId, setActiveFilterId] = useState(null);
+  const [filteredEntries, setFilteredEntries] = useState(null);
+
   const loadProject = useCallback(async () => {
     if (!id) {
       setError("No project ID was provided.");
@@ -78,6 +91,10 @@ export default function ProjectDetails() {
       const data = await fetchProjectDetails(id);
 
       setDetails(data);
+
+      const filters = await fetchSavedFilters(id);
+
+      setSavedFilters(filters || []);
     } catch (requestError) {
       console.error(
         "Failed to load project:",
@@ -204,6 +221,58 @@ export default function ProjectDetails() {
     }
   }
 
+  async function handleCreateSavedFilter(payload) {
+  try {
+    const newFilter = await createSavedFilter(id, payload);
+
+    setSavedFilters((current) => [newFilter, ...current]);
+  } catch (submitError) {
+    console.error(
+      "Failed to create saved filter:",
+      submitError,
+    );
+  }
+}
+
+async function handleApplyFilter(filterId) {
+  if (!filterId) {
+    setActiveFilterId(null);
+    setFilteredEntries(null);
+    return;
+  }
+
+  try {
+    const results = await applySavedFilter(id, filterId);
+
+    setActiveFilterId(filterId);
+    setFilteredEntries(results || []);
+  } catch (applyError) {
+    console.error(
+      "Failed to apply saved filter:",
+      applyError,
+    );
+  }
+}
+
+async function handleDeleteFilter(filterId) {
+  try {
+    await deleteSavedFilter(filterId);
+
+    setSavedFilters((current) =>
+      current.filter((filter) => filter.id !== filterId),
+    );
+
+    if (activeFilterId === filterId) {
+      setActiveFilterId(null);
+      setFilteredEntries(null);
+    }
+  } catch (deleteError) {
+    console.error(
+      "Failed to delete saved filter:",
+      deleteError,
+    );
+  }
+}
   async function handleUpdateProject(payload) {
     try {
       await updateProject(id, payload);
@@ -373,9 +442,12 @@ export default function ProjectDetails() {
     ? details.fields
     : [];
 
-  const entries = Array.isArray(details.entries)
-    ? details.entries
-    : [];
+ const entries =
+  filteredEntries !== null
+    ? filteredEntries
+    : Array.isArray(details.entries)
+      ? details.entries
+      : [];
 
   const displayEntries = [
     ...pendingEntries.map((item) => ({
@@ -558,17 +630,96 @@ export default function ProjectDetails() {
 
           {/* Entries */}
           <section className="entries-section">
-            <div className="entries-header">
-              <h2 className="entries-title">
-                Entries
-              </h2>
+            <div className="entries-header entries-header-with-views">
+              <div>
+                <h2 className="entries-title">Entries</h2>
+                <span className="entries-count">
+                  {entries.length} {entries.length === 1 ? "entry" : "entries"}
+                </span>
+              </div>
 
-              <span className="entries-count">
-                {entries.length}{" "}
-                {entries.length === 1
-                  ? "entry"
-                  : "entries"}
-              </span>
+              {entries.length > 0 && (
+                <div className="entry-view-switcher" aria-label="Entry view">
+                  {[
+                    ["list", "List"],
+                    ["calendar", "Calendar"],
+                    ["board", "Board"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`view-btn ${entryView === value ? "view-btn-active" : ""}`}
+                      onClick={() => setEntryView(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+                          <div className="saved-filters-bar">
+              <select
+                className="form-select"
+                value={activeFilterId || ""}
+                onChange={(event) =>
+                  handleApplyFilter(
+                    event.target.value || null,
+                  )
+                }
+              >
+                <option value="">
+                  All entries
+                </option>
+
+                {savedFilters.map((filter) => (
+                  <option
+                    key={filter.id}
+                    value={filter.id}
+                  >
+                    {filter.name}
+                  </option>
+                ))}
+              </select>
+
+              {activeFilterId && (
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() =>
+                    handleDeleteFilter(activeFilterId)
+                  }
+                >
+                  Delete filter
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="btn-add-field"
+                onClick={() => {
+                  const name = window.prompt(
+                    "Filter name:",
+                  );
+
+                  if (!name) {
+                    return;
+                  }
+
+                  handleCreateSavedFilter({
+                    name,
+                    criteria: [
+                      {
+                        fieldName: "durationMinutes",
+                        operator: "greater_than",
+                        value: 0,
+                      },
+                    ],
+                  });
+                }}
+              >
+                + New filter
+              </button>
             </div>
 
             {(pendingEntries.length > 0 || !isOnline) && (
@@ -596,34 +747,21 @@ export default function ProjectDetails() {
 
             {displayEntries.length === 0 ? (
               <div className="entries-empty">
-                <div className="empty-icon-wrap">
-                  <IconEntryLarge />
-                </div>
-
-                <p className="empty-heading">
-                  No entries yet.
-                </p>
-
+                <div className="empty-icon-wrap"><IconEntryLarge /></div>
+                <p className="empty-heading">No entries yet.</p>
                 <p className="empty-body">
-                  Add your first entry to start
-                  building a record for this
-                  project. Each entry captures a
-                  piece of your work.
+                  Add your first entry to start building a record for this project. Each entry captures a piece of your work.
                 </p>
-
                 {!project.archivedAt && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() =>
-                      setShowEntryModal(true)
-                    }
-                  >
-                    <IconPlus />
-                    Add New Entry
+                  <button type="button" className="btn btn-primary" onClick={() => setShowEntryModal(true)}>
+                    <IconPlus /> Add New Entry
                   </button>
                 )}
               </div>
+            ) : entryView === "calendar" ? (
+              <CalendarView entries={entries} formatLoggedTime={formatLoggedTime} />
+            ) : entryView === "board" ? (
+              <BoardView entries={entries} fields={fields} formatLoggedTime={formatLoggedTime} />
             ) : (
               <div className="entries-list">
                 {displayEntries.map((entry) => {
@@ -632,12 +770,10 @@ export default function ProjectDetails() {
                   )
                     ? entry.values
                     : [];
+                  const linkedEntries = Array.isArray(entry.linkedEntries) ? entry.linkedEntries : [];
 
                   return (
-                    <article
-                      className="entry-row"
-                      key={entry.id}
-                    >
+                    <article className="entry-row" key={entry.id}>
                       <div className="entry-row-header">
                         <div>
                           <h3 className="entry-row-title">
@@ -661,14 +797,7 @@ export default function ProjectDetails() {
                             )}
                           </p>
                         </div>
-
-                        <span className="entry-duration">
-                          <IconClockSmall />
-
-                          {formatLoggedTime(
-                            entry.durationMinutes,
-                          )}
-                        </span>
+                        <span className="entry-duration"><IconClockSmall />{formatLoggedTime(entry.durationMinutes)}</span>
                       </div>
 
                       {Array.isArray(entry.tags) &&
@@ -685,31 +814,23 @@ export default function ProjectDetails() {
                           </div>
                         )}
 
+                      {linkedEntries.length > 0 && (
+                        <div className="entry-links">
+                          <span className="entry-links-label">Linked entries:</span>
+                          {linkedEntries.map((linked) => (
+                            <span className="entry-link-chip" key={linked.id}>{linked.name}</span>
+                          ))}
+                        </div>
+                      )}
+
                       {values.length > 0 && (
                         <div className="entry-values">
-                          {values.map(
-                            (field, index) => (
-                              <div
-                                className="entry-value"
-                                key={
-                                  field.fieldId ||
-                                  field.id ||
-                                  index
-                                }
-                              >
-                                <span className="entry-value-name">
-                                  {field.name ||
-                                    "Field"}
-                                </span>
-
-                                <span className="entry-value-content">
-                                  <FormattedFieldValue
-                                    field={field}
-                                  />
-                                </span>
-                              </div>
-                            ),
-                          )}
+                          {values.map((field, index) => (
+                            <div className="entry-value" key={field.fieldId || field.id || index}>
+                              <span className="entry-value-name">{field.name || "Field"}</span>
+                              <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </article>
@@ -725,6 +846,7 @@ export default function ProjectDetails() {
       {showEntryModal && !project.archivedAt && (
         <NewEntryModal
           fields={fields}
+          entries={entries}
           onClose={() =>
             setShowEntryModal(false)
           }
@@ -1660,6 +1782,112 @@ function ProjectDetailsStyles() {
       }
 
       /* Responsive */
+
+
+      .entries-header-with-views {
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .entry-view-switcher {
+        display: flex;
+        gap: 6px;
+        padding: 4px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+
+      .view-btn {
+        border: 0;
+        border-radius: 7px;
+        padding: 8px 12px;
+        background: transparent;
+        color: #64748b;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .view-btn-active {
+        background: #ffffff;
+        color: #1a2340;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+      }
+
+      .entry-links {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .entry-links-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+      }
+
+      .entry-link-chip {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3949ab;
+        font-size: 11px;
+      }
+
+      .calendar-toolbar,
+      .board-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 14px 0;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        border-left: 1px solid #e2e8f0;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .calendar-weekdays {
+        border: 0;
+      }
+
+      .calendar-weekdays > div {
+        padding: 8px;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+      }
+
+      .calendar-cell {
+        min-height: 112px;
+        padding: 8px;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        background: #fff;
+      }
+
+      .calendar-cell-empty { background: #f8fafc; }
+      .calendar-day-number { font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+      .calendar-entry { display: grid; gap: 2px; margin-bottom: 6px; padding: 6px; border-radius: 7px; background: #eef2ff; font-size: 10px; color: #334155; }
+      .calendar-entry strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .calendar-entry span, .calendar-entry small { color: #64748b; }
+
+      .board-toolbar { justify-content: flex-start; }
+      .board-toolbar label { font-size: 12px; font-weight: 600; color: #475569; }
+      .board-select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+      .board-columns { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 12px; }
+      .board-column { flex: 0 0 260px; padding: 10px; border-radius: 10px; background: #f1f5f9; }
+      .board-column-header { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: #334155; font-size: 12px; }
+      .board-card { display: grid; gap: 5px; padding: 10px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 12px; }
+      .board-card span, .board-card small { color: #64748b; }
+      .view-empty { padding: 28px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 10px; }
 
       @media (max-width: 900px) {
         .breadcrumb-bar,

@@ -5,6 +5,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const projectRoutes = require("./routes/projects");
 const projectDetailsRoutes = require("./routes/projectDetails");
+const savedFiltersRoutes = require("./routes/savedFilters");
 const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
@@ -58,6 +59,12 @@ app.use(
   "/api/projects",
   requireAuth,
   projectDetailsRoutes,
+);
+
+app.use(
+  "/api/projects",
+  requireAuth,
+  savedFiltersRoutes,
 );
 
 app.use(

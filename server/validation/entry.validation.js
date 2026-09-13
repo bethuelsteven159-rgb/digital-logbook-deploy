@@ -7,6 +7,7 @@ const fieldTypeSchema = z.enum([
   "long_text",
   "number",
   "date",
+  "computed",
 ]);
 
 const customValueSchema = z.union([
@@ -29,6 +30,7 @@ const createEntrySchema = z.object({
     .min(0, "Duration cannot be negative")
     .max(10080, "Duration is too large"),
 
+
   tags: z
     .array(
       z
@@ -43,6 +45,12 @@ const createEntrySchema = z.object({
       ...new Set(tags.map((tag) => tag.toLowerCase())),
     ]),
 
+    dueAt: z
+    .string()
+    .datetime({ message: "Due date must be a valid ISO date-time" })
+    .optional(),
+
+
   values: z
     .array(
       z.object({
@@ -52,15 +60,20 @@ const createEntrySchema = z.object({
     )
     .default([]),
 
+  linkedEntryIds: z
+    .array(z.string().uuid())
+    .default([]),
+
   newFields: z
-    .array(
-      z.object({
-        clientId: z.string().min(1),
-        name: z.string().trim().min(1).max(100),
-        type: fieldTypeSchema,
-        value: customValueSchema.optional(),
-      }),
-    )
+  .array(
+    z.object({
+      clientId: z.string().min(1),
+      name: z.string().trim().min(1).max(100),
+      type: fieldTypeSchema,
+      value: customValueSchema.optional(),
+      formula: z.string().trim().max(500).optional(),
+    }),
+  )
     .default([]),
 });
 
