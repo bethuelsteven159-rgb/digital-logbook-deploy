@@ -50,6 +50,8 @@ export default function EntryDetailsModal({
   onClose,
   onEdit,
   onProjectReferenceClick,
+  onChecklistToggle,
+  checklistSaving = {},
 }) {
   if (!entry) return null;
 
@@ -132,12 +134,27 @@ export default function EntryDetailsModal({
               <p className="entry-details-empty">No checklist items.</p>
             ) : (
               <div className="entry-details-checklist">
-                {checklist.map((item) => (
-                  <div className={`entry-details-checklist-item ${item.completed ? "is-complete" : ""}`} key={item.id}>
-                    <span className="entry-details-checkmark">{item.completed ? "✓" : "○"}</span>
-                    <span>{item.text}</span>
-                  </div>
-                ))}
+                {checklist.map((item) => {
+                  const saving = Boolean(checklistSaving[`${entry.id}:${item.id}`]);
+
+                  return (
+                    <label
+                      className={`entry-details-checklist-item ${item.completed ? "is-complete" : ""}`}
+                      key={item.id}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={Boolean(item.completed)}
+                        disabled={saving || archived}
+                        onChange={(event) =>
+                          onChecklistToggle?.(entry.id, item.id, event.target.checked)
+                        }
+                        aria-label={`${item.completed ? "Uncheck" : "Check"} ${item.text}`}
+                      />
+                      <span>{item.text}</span>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </section>

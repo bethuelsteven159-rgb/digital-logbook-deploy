@@ -337,7 +337,7 @@ export default function EditEntryModal({
                         checked={item.completed}
                         onChange={(event) => updateChecklistItem(item.id, { completed: event.target.checked })}
                         disabled={saving}
-                        aria-label={`Mark ${item.text} complete`}
+                        aria-label={item.completed ? `Uncheck ${item.text}` : `Check ${item.text}`}
                       />
                       <input
                         className="form-input"

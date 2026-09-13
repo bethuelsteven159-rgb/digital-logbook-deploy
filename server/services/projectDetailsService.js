@@ -1218,18 +1218,14 @@ async function updateEntryService({
         removedFieldIds,
       );
 
-      if (data.checklistItems !== undefined) {
-        const existingChecklist = Array.isArray(entry.checklist)
-          ? entry.checklist
-          : [];
-        const existingById = new Map(
-          existingChecklist.map((item) => [item.id, item]),
+      if (Array.isArray(data.checklistItems)) {
+        const existingChecklist = new Map(
+          (entry.checklist || []).map((item) => [item.id, item]),
         );
-        const requestedItems = data.checklistItems || [];
-        const requestedIds = new Set(requestedItems.map((item) => item.id));
+        const submittedChecklistIds = new Set();
 
-        for (const item of requestedItems) {
-          const existingItem = existingById.get(item.id);
+        for (const submittedItem of data.checklistItems) {
+          const existingItem = existingChecklist.get(submittedItem.id);
           if (!existingItem) {
             throw createHttpError(
               400,
@@ -1237,44 +1233,50 @@ async function updateEntryService({
             );
           }
 
-          if (existingItem.completed && item.text !== existingItem.text) {
+          submittedChecklistIds.add(existingItem.id);
+
+          const nextCompleted = Boolean(submittedItem.completed);
+          const nextText = String(submittedItem.text ?? "").trim();
+
+          if (!nextText) {
+            throw createHttpError(400, "Checklist item text cannot be empty");
+          }
+
+          if (existingItem.completed && nextCompleted && nextText !== existingItem.text) {
             throw createHttpError(
               409,
-              "Completed checklist items cannot be edited",
+              "Completed checklist items must be unticked before their text can be changed",
+            );
+          }
+
+          const changes = {};
+          if (nextCompleted !== Boolean(existingItem.completed)) {
+            changes.completed = nextCompleted;
+          }
+          if (nextText !== existingItem.text) {
+            changes.text = nextText;
+          }
+
+          if (Object.keys(changes).length > 0) {
+            await tx.updateChecklistItem(
+              entryId,
+              existingItem.id,
+              changes,
             );
           }
         }
 
-        for (const existingItem of existingChecklist) {
-          if (!requestedIds.has(existingItem.id)) {
-            if (existingItem.completed) {
-              throw createHttpError(
-                409,
-                "Completed checklist items cannot be removed",
-              );
-            }
-            await tx.deleteChecklistItem(entryId, existingItem.id);
-            continue;
-          }
+        for (const existingItem of entry.checklist || []) {
+          if (submittedChecklistIds.has(existingItem.id)) continue;
 
-          const requestedItem = requestedItems.find(
-            (item) => item.id === existingItem.id,
-          );
-
-          if (
-            requestedItem &&
-            (requestedItem.text !== existingItem.text ||
-              requestedItem.completed !== existingItem.completed)
-          ) {
-            await tx.updateChecklistItem(
-              entryId,
-              existingItem.id,
-              {
-                text: requestedItem.text,
-                completed: requestedItem.completed,
-              },
+          if (existingItem.completed) {
+            throw createHttpError(
+              409,
+              "Completed checklist items cannot be removed",
             );
           }
+
+          await tx.deleteChecklistItem(entryId, existingItem.id);
         }
       }
 
@@ -1282,11 +1284,8 @@ async function updateEntryService({
         const existingChecklistCount = Array.isArray(entry.checklist)
           ? entry.checklist.length
           : 0;
-        const requestedExistingCount = data.checklistItems !== undefined
-          ? data.checklistItems.length
-          : existingChecklistCount;
 
-        if (requestedExistingCount + data.newChecklistItems.length > 100) {
+        if (existingChecklistCount + data.newChecklistItems.length > 100) {
           throw createHttpError(
             400,
             "A checklist can contain at most 100 items.",

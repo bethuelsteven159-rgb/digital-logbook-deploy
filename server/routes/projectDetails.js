@@ -3,17 +3,16 @@ const express = require("express");
 const {
   getProjectDetails,
   createProjectEntry,
+  getOutstandingEntries,
   updateEntry,
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
   updateEntryProjectReferences,
   updateEntryReferences,
-  getOutstandingEntries,
 } = require("../controllers/projectDetailsController");
 
-const router =
-  express.Router();
+const router = express.Router();
 
 router.get(
   "/:projectId",
@@ -40,6 +39,12 @@ router.patch(
   updateEntry,
 );
 
+/*
+ * Checklist item updates
+ *
+ * Used by the Entry Details modal when the user
+ * checks or unchecks a checklist item.
+ */
 router.patch(
   "/:projectId/entries/:entryId/checklist/:itemId",
   updateChecklistItem,

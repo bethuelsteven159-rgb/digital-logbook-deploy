@@ -931,8 +931,8 @@ function createRepository(queryable) {
     ) {
       const sets = [];
       const values = [
-        entryId,
         itemId,
+        entryId,
       ];
 
       if (changes.text !== undefined) {

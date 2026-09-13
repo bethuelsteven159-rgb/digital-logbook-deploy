@@ -75,6 +75,8 @@ export default function ProjectDetails() {
   const [selectedEntryForDetails, setSelectedEntryForDetails] =
     useState(null);
 
+  const [checklistSaving, setChecklistSaving] = useState({});
+
   const [entryView, setEntryView] =
     useState("list");
 
@@ -155,6 +157,61 @@ export default function ProjectDetails() {
     setSelectedEntryForDetails(null);
     setSelectedEntryForEdit(entry);
     setShowEditEntryModal(true);
+  }
+
+  async function handleChecklistToggle(entryId, itemId, completed) {
+    const key = `${entryId}:${itemId}`;
+
+    try {
+      setChecklistSaving((current) => ({ ...current, [key]: true }));
+      setError("");
+
+      const updated = await updateChecklistItem(
+        id,
+        entryId,
+        itemId,
+        { completed },
+      );
+
+      setDetails((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          entries: current.entries.map((candidate) =>
+            candidate.id !== entryId
+              ? candidate
+              : {
+                  ...candidate,
+                  checklist: (candidate.checklist || []).map((item) =>
+                    item.id === itemId
+                      ? { ...item, completed: Boolean(updated?.completed ?? completed) }
+                      : item,
+                  ),
+                },
+          ),
+        };
+      });
+
+      setSelectedEntryForDetails((current) => {
+        if (!current || current.id !== entryId) return current;
+        return {
+          ...current,
+          checklist: (current.checklist || []).map((item) =>
+            item.id === itemId
+              ? { ...item, completed: Boolean(updated?.completed ?? completed) }
+              : item,
+          ),
+        };
+      });
+    } catch (requestError) {
+      setError(requestError.message || "Failed to update checklist item.");
+    } finally {
+      setChecklistSaving((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
   }
 
   async function handleUpdateEntry(entryId, payload) {
@@ -827,6 +884,8 @@ export default function ProjectDetails() {
           archived={Boolean(project.archivedAt)}
           onClose={() => setSelectedEntryForDetails(null)}
           onEdit={() => openEditEntryModal(selectedEntryForDetails)}
+          onChecklistToggle={handleChecklistToggle}
+          checklistSaving={checklistSaving}
           onProjectReferenceClick={(projectId) => {
             setSelectedEntryForDetails(null);
             navigate(`/projects/${projectId}`);
