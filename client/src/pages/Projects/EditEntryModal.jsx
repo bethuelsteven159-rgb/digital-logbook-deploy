@@ -6,6 +6,7 @@ const FIELD_TYPES = [
   { value: "long_text", label: "Long text" },
   { value: "number", label: "Number" },
   { value: "date", label: "Date" },
+  { value: "computed", label: "Computed" },
 ];
 
 function createNewField() {
@@ -27,11 +28,14 @@ export default function EditEntryModal({
 }) {
   const [entryName, setEntryName] = useState(entry?.name || "");
   const [durationMinutes, setDurationMinutes] = useState(entry?.durationMinutes ?? 0);
+  const [dueAt, setDueAt] = useState(entry?.dueAt ? String(entry.dueAt).slice(0, 16) : "");
   const [values, setValues] = useState({});
   const [selectedFieldIds, setSelectedFieldIds] = useState([]);
   const [newFields, setNewFields] = useState([]);
   const [referenceProjectIds, setReferenceProjectIds] = useState([]);
   const [referenceEntryIds, setReferenceEntryIds] = useState([]);
+  const [checklistItems, setChecklistItems] = useState([]);
+  const [checklistText, setChecklistText] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -46,6 +50,7 @@ export default function EditEntryModal({
   useEffect(() => {
     setEntryName(entry?.name || "");
     setDurationMinutes(entry?.durationMinutes ?? 0);
+    setDueAt(entry?.dueAt ? String(entry.dueAt).slice(0, 16) : "");
     setValues(entryValueMap);
     setSelectedFieldIds((fields || []).map((field) => field.id));
     setNewFields([]);
@@ -57,6 +62,8 @@ export default function EditEntryModal({
         .map((reference) => reference.entryId)
         .filter(Boolean),
     );
+    setChecklistItems([]);
+    setChecklistText("");
     setError("");
   }, [entry, entryValueMap, fields]);
 
@@ -85,6 +92,26 @@ export default function EditEntryModal({
     setNewFields((current) => current.filter((field) => field.clientId !== clientId));
   }
 
+  function addChecklistItem() {
+    const text = checklistText.trim();
+    if (!text) return;
+    if (text.length > 300) {
+      setError("Checklist items cannot exceed 300 characters.");
+      return;
+    }
+    if ((entry?.checklist?.length || 0) + checklistItems.length >= 100) {
+      setError("A checklist can contain at most 100 items.");
+      return;
+    }
+    setChecklistItems((current) => [...current, { text }]);
+    setChecklistText("");
+    setError("");
+  }
+
+  function removeChecklistItem(index) {
+    setChecklistItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
   function toggleReference(setter, id) {
     setter((current) =>
       current.includes(id)
@@ -94,6 +121,9 @@ export default function EditEntryModal({
   }
 
   function renderInput(field, value, onChange) {
+    if (field.fieldType === "computed" || field.type === "computed") {
+      return <input className="form-input" type="text" value={value ?? ""} readOnly />;
+    }
     if (field.fieldType === "number" || field.type === "number") {
       return <input className="form-input" type="number" value={value} onChange={(e) => onChange(e.target.value)} />;
     }
@@ -140,9 +170,11 @@ export default function EditEntryModal({
     const payload = {
       name: cleanName,
       durationMinutes: duration,
+      ...(dueAt ? { dueAt: new Date(dueAt).toISOString() } : {}),
       fieldIds: selectedFields.map((field) => field.id),
       values: selectedFields.map((field) => ({ fieldId: field.id, value: values[field.id] ?? "" })),
       newFields: cleanedNewFields,
+      newChecklistItems: checklistItems,
       referenceProjectIds,
       referenceEntryIds,
     };
@@ -183,6 +215,11 @@ export default function EditEntryModal({
             <div className="form-field">
               <label className="form-label form-label-required" htmlFor="edit-entry-duration">Duration (minutes)</label>
               <input id="edit-entry-duration" className="form-input" type="number" min="0" max="10080" step="1" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="edit-entry-due-date">Due date (optional)</label>
+              <input id="edit-entry-due-date" className="form-input" type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} disabled={saving} />
             </div>
 
             <div className="fields-block">
@@ -231,6 +268,33 @@ export default function EditEntryModal({
               )}
             </div>
 
+            <div className="fields-block">
+              <div className="edit-entry-fields-heading">
+                <div>
+                  <p className="fields-section-label">Add checklist items</p>
+                  <p className="edit-entry-help">New items are added to the existing checklist when you save.</p>
+                </div>
+              </div>
+
+              {checklistItems.length > 0 && (
+                <div className="person4-list">
+                  {checklistItems.map((item, index) => (
+                    <div className="person4-list-row" key={`${item.text}-${index}`}>
+                      <span>{item.text}</span>
+                      <button type="button" className="field-row-remove" onClick={() => removeChecklistItem(index)} disabled={saving}>Remove</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="person4-add-row">
+                <input className="form-input" type="text" maxLength={300} placeholder="e.g. Review notes" value={checklistText} onChange={(e) => setChecklistText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChecklistItem(); } }} disabled={saving} />
+                <button type="button" className="btn-add-field" onClick={addChecklistItem} disabled={saving}>
+                  <Plus size={14} /> Add item
+                </button>
+              </div>
+            </div>
+
             <div className="edit-entry-reference-grid">
               <div className="edit-entry-reference-section">
                 <div className="edit-entry-section-heading">Referenced projects</div>
@@ -259,7 +323,7 @@ export default function EditEntryModal({
               </div>
             </div>
 
-            <div className="edit-entry-note"><Trash2 size={13} /> Checklist items can be edited or removed directly from the entry after saving.</div>
+            <div className="edit-entry-note"><Trash2 size={13} /> Existing checklist items can still be edited or removed directly from the entry.</div>
             {error && <div className="form-error">{error}</div>}
           </div>
 

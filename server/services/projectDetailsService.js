@@ -1,4 +1,5 @@
 const repository = require("../repositories/projectDetailsRepository");
+const { evaluateFormula } = require("./computedFieldService");
 
 function createHttpError(statusCode, message) {
   const error = new Error(message);
@@ -41,6 +42,8 @@ function serializeEntry(entry) {
     name: entry.name,
     durationMinutes: entry.durationMinutes,
     occurredAt: entry.occurredAt,
+    dueAt: entry.dueAt,
+    completedAt: entry.completedAt,
     createdAt: entry.createdAt,
 
     values: (entry.values || []).map((value) => ({
@@ -69,6 +72,28 @@ function serializeEntry(entry) {
     linkedEntries: Array.isArray(entry.linkedEntries)
       ? entry.linkedEntries
       : [],
+  };
+}
+
+function attachComputedFields(serializedEntry, allFields) {
+  const computedFields = (allFields || []).filter(
+    (field) => field.fieldType === "computed",
+  );
+
+  if (computedFields.length === 0) {
+    return serializedEntry;
+  }
+
+  const computedValues = computedFields.map((field) => ({
+    fieldId: field.id,
+    name: field.name,
+    type: "computed",
+    value: evaluateFormula(field.formula, serializedEntry.values),
+  }));
+
+  return {
+    ...serializedEntry,
+    values: [...serializedEntry.values, ...computedValues],
   };
 }
 
@@ -122,6 +147,9 @@ function convertValue(field, rawValue) {
         valueNumber: number,
       };
     }
+
+    case "computed":
+      return null;
 
     case "date": {
       const date = new Date(
@@ -205,8 +233,8 @@ async function getProjectDetailsService({
 
     fields,
 
-    entries: entries.map(
-      serializeEntry,
+    entries: entries.map((entry) =>
+      attachComputedFields(serializeEntry(entry), fields),
     ),
 
     references:
@@ -361,6 +389,10 @@ async function createEntryService({
               requestedField.name.trim(),
             fieldType:
               requestedField.type,
+            formula:
+              requestedField.type === "computed"
+                ? requestedField.formula
+                : null,
             position:
               maxPosition +
               index +
@@ -384,6 +416,7 @@ async function createEntryService({
           name: data.name.trim(),
           durationMinutes:
             data.durationMinutes,
+          dueAt: data.dueAt ?? null,
         });
 
       const valuesToCreate = [];
@@ -1066,6 +1099,10 @@ async function updateEntryService({
               requested.name.trim(),
             fieldType:
               requested.type,
+            formula:
+              requested.type === "computed"
+                ? requested.formula
+                : null,
             position:
               maxPosition +
               index +
@@ -1181,6 +1218,24 @@ async function updateEntryService({
         removedFieldIds,
       );
 
+      if (data.newChecklistItems?.length) {
+        const existingChecklistCount = Array.isArray(entry.checklist)
+          ? entry.checklist.length
+          : 0;
+
+        if (existingChecklistCount + data.newChecklistItems.length > 100) {
+          throw createHttpError(
+            400,
+            "A checklist can contain at most 100 items.",
+          );
+        }
+
+        await tx.createChecklistItems(
+          entryId,
+          data.newChecklistItems,
+        );
+      }
+
       const linkedEntryIds = [
         ...new Set(
           data.linkedEntryIds || [],
@@ -1271,6 +1326,20 @@ async function updateChecklistItemService({
   }
 
   return serializeChecklist(item);
+}
+
+async function getOutstandingEntriesService({ projectId, userId }) {
+  const project = await repository.getOwnedProject(projectId, userId);
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+  const [entries, fields] = await Promise.all([
+    repository.getOutstandingEntries(projectId),
+    repository.getProjectFields(projectId),
+  ]);
+  return entries.map((entry) =>
+    attachComputedFields(serializeEntry(entry), fields),
+  );
 }
 
 module.exports = {

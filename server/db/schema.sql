@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS project_fields (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
-    field_type VARCHAR(20) NOT NULL CHECK (field_type IN ('short_text', 'long_text', 'number', 'date')),
+    field_type VARCHAR(20) NOT NULL CHECK (field_type IN ('short_text', 'long_text', 'number', 'date', 'computed')),
+    formula TEXT,
     position INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0),
     required BOOLEAN NOT NULL DEFAULT FALSE,
     archived_at TIMESTAMPTZ,
@@ -40,6 +41,8 @@ CREATE TABLE IF NOT EXISTS entries (
     name VARCHAR(150) NOT NULL,
     duration_minutes INTEGER NOT NULL DEFAULT 0 CHECK (duration_minutes >= 0 AND duration_minutes <= 10080),
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    due_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -97,3 +100,17 @@ CREATE INDEX IF NOT EXISTS idx_entry_project_references_entry
 
 CREATE INDEX IF NOT EXISTS idx_entry_project_references_project
     ON entry_project_references(referenced_project_id);
+
+
+CREATE TABLE IF NOT EXISTS saved_filters (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    criteria JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_filters_owner ON saved_filters (owner_id);
+CREATE INDEX IF NOT EXISTS idx_saved_filters_project ON saved_filters (project_id);

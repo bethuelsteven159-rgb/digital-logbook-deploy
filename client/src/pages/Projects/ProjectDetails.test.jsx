@@ -6,6 +6,10 @@ import ProjectDetails from './ProjectDetails';
 const apiMocks = vi.hoisted(() => ({
   fetchProjectDetails: vi.fn(),
   createProjectEntry: vi.fn(),
+  fetchSavedFilters: vi.fn(),
+  createSavedFilter: vi.fn(),
+  applySavedFilter: vi.fn(),
+  deleteSavedFilter: vi.fn(),
   fetchProjects: vi.fn(),
   setProjectArchived: vi.fn(),
   updateProject: vi.fn(),
@@ -20,6 +24,10 @@ const apiMocks = vi.hoisted(() => ({
 vi.mock('../../api/projectDetailsApi', () => ({
   createProjectEntry: apiMocks.createProjectEntry,
   fetchProjectDetails: apiMocks.fetchProjectDetails,
+  fetchSavedFilters: apiMocks.fetchSavedFilters,
+  createSavedFilter: apiMocks.createSavedFilter,
+  applySavedFilter: apiMocks.applySavedFilter,
+  deleteSavedFilter: apiMocks.deleteSavedFilter,
 }));
 
 vi.mock('../../api/projectsApi', () => ({
@@ -122,6 +130,7 @@ function renderPage() {
 
 describe('ProjectDetails client entry changes', () => {
   beforeEach(() => {
+  apiMocks.fetchSavedFilters.mockResolvedValue([]);
     vi.clearAllMocks();
 
     apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse());

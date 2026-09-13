@@ -24,6 +24,7 @@ function mapField(row) {
     projectId: row.project_id,
     name: row.name,
     fieldType: row.field_type,
+    formula: row.formula,
     position: row.position,
     required: row.required,
     archivedAt: row.archived_at,
@@ -85,6 +86,8 @@ function mapEntryRow(row) {
     name: row.entry_name,
     durationMinutes: row.duration_minutes,
     occurredAt: row.occurred_at,
+    dueAt: row.due_at,
+    completedAt: row.completed_at,
     createdAt: row.entry_created_at,
     updatedAt: row.entry_updated_at,
   };
@@ -265,7 +268,7 @@ function createRepository(queryable) {
     async getProjectFields(projectId) {
       const result = await queryable.query(
         `SELECT pf.id, pf.project_id, pf.name, pf.field_type,
-                pf.position, pf.required, pf.archived_at,
+                pf.formula, pf.position, pf.required, pf.archived_at,
                 pf.created_at, pf.updated_at,
                 EXISTS (
                   SELECT 1
@@ -314,6 +317,8 @@ function createRepository(queryable) {
                 e.name AS entry_name,
                 e.duration_minutes,
                 e.occurred_at,
+                e.due_at,
+                e.completed_at,
                 e.created_at AS entry_created_at,
                 e.updated_at AS entry_updated_at,
                 v.id AS value_id,
@@ -342,6 +347,40 @@ function createRepository(queryable) {
         queryable,
         entries,
       );
+    },
+
+    async getOutstandingEntries(projectId) {
+      const result = await queryable.query(
+        `SELECT e.id AS entry_id,
+                e.project_id,
+                e.created_by_id,
+                e.name AS entry_name,
+                e.duration_minutes,
+                e.occurred_at,
+                e.due_at,
+                e.completed_at,
+                e.created_at AS entry_created_at,
+                e.updated_at AS entry_updated_at,
+                v.id AS value_id,
+                v.field_id,
+                v.value_text,
+                v.value_number,
+                v.value_date,
+                v.created_at AS value_created_at,
+                f.name AS field_name,
+                f.field_type
+         FROM entries e
+         LEFT JOIN entry_field_values v ON v.entry_id = e.id
+         LEFT JOIN project_fields f ON f.id = v.field_id
+         WHERE e.project_id = $1
+           AND e.due_at IS NOT NULL
+           AND e.due_at < NOW()
+           AND e.completed_at IS NULL
+         ORDER BY e.due_at ASC, v.created_at ASC`,
+        [projectId],
+      );
+
+      return groupEntries(result.rows);
     },
 
     async getProjectReferences(projectId) {
@@ -522,6 +561,8 @@ function createRepository(queryable) {
                 e.name,
                 e.duration_minutes,
                 e.occurred_at,
+                e.due_at,
+                e.completed_at,
                 e.created_at,
                 e.updated_at
          FROM entries e
@@ -536,6 +577,8 @@ function createRepository(queryable) {
         name: row.name,
         durationMinutes: row.duration_minutes,
         occurredAt: row.occurred_at,
+        dueAt: row.due_at,
+        completedAt: row.completed_at,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       }));
@@ -545,7 +588,9 @@ function createRepository(queryable) {
       const result = await queryable.query(
         `SELECT l.id,
                 l.source_entry_id,
-                l.target_entry_id
+                source_entry.name AS source_name,
+                l.target_entry_id,
+                target_entry.name AS target_name
          FROM entry_links l
          JOIN entries source_entry
            ON source_entry.id = l.source_entry_id
@@ -556,7 +601,13 @@ function createRepository(queryable) {
         [projectId],
       );
 
-      return result.rows;
+      return result.rows.map((row) => ({
+        id: row.id,
+        sourceEntryId: row.source_entry_id,
+        sourceName: row.source_name,
+        targetEntryId: row.target_entry_id,
+        targetName: row.target_name,
+      }));
     },
 
     async createEntryLinks(
@@ -581,17 +632,18 @@ function createRepository(queryable) {
     async createProjectField(data) {
       const result = await queryable.query(
         `INSERT INTO project_fields
-           (project_id, name, field_type,
+           (project_id, name, field_type, formula,
             position, required)
-         VALUES ($1, $2, $3, $4, $5)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, project_id, name,
-                   field_type, position, required,
+                   field_type, formula, position, required,
                    archived_at, created_at,
                    updated_at`,
         [
           data.projectId,
           data.name,
           data.fieldType,
+          data.formula ?? null,
           data.position,
           data.required ?? false,
         ],
@@ -604,18 +656,19 @@ function createRepository(queryable) {
       const result = await queryable.query(
         `INSERT INTO entries
            (project_id, created_by_id,
-            name, duration_minutes)
-         VALUES ($1, $2, $3, $4)
+            name, duration_minutes, due_at)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id, project_id,
                    created_by_id, name,
                    duration_minutes,
-                   occurred_at, created_at,
-                   updated_at`,
+                   occurred_at, due_at, completed_at,
+                   created_at, updated_at`,
         [
           data.projectId,
           data.createdById,
           data.name,
           data.durationMinutes,
+          data.dueAt ?? null,
         ],
       );
 
@@ -629,6 +682,8 @@ function createRepository(queryable) {
         durationMinutes:
           row.duration_minutes,
         occurredAt: row.occurred_at,
+        dueAt: row.due_at,
+        completedAt: row.completed_at,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       };
@@ -659,6 +714,17 @@ function createRepository(queryable) {
       entryId,
       items,
     ) {
+      if (!items.length) return 0;
+
+      const positionResult = await queryable.query(
+        `SELECT COALESCE(MAX(position), -1)::int AS max_position
+         FROM entry_checklist_items
+         WHERE entry_id = $1`,
+        [entryId],
+      );
+
+      const startingPosition = positionResult.rows[0].max_position + 1;
+
       for (
         let index = 0;
         index < items.length;
@@ -671,7 +737,7 @@ function createRepository(queryable) {
           [
             entryId,
             items[index].text,
-            index,
+            startingPosition + index,
           ],
         );
       }
@@ -687,6 +753,8 @@ function createRepository(queryable) {
                 e.name AS entry_name,
                 e.duration_minutes,
                 e.occurred_at,
+                e.due_at,
+                e.completed_at,
                 e.created_at AS entry_created_at,
                 e.updated_at AS entry_updated_at,
                 v.id AS value_id,
@@ -762,15 +830,17 @@ function createRepository(queryable) {
         `UPDATE entries
          SET name = $2,
              duration_minutes = $3,
+             due_at = $4,
              updated_at = NOW()
          WHERE id = $1
          RETURNING id, project_id, created_by_id, name,
-                   duration_minutes, occurred_at,
+                   duration_minutes, occurred_at, due_at, completed_at,
                    created_at, updated_at`,
         [
           entryId,
           data.name,
           data.durationMinutes,
+          data.dueAt ?? null,
         ],
       );
 

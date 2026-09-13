@@ -19,6 +19,10 @@ import BoardView from "./BoardView";
 import {
   createProjectEntry,
   fetchProjectDetails,
+  fetchSavedFilters,
+  createSavedFilter,
+  applySavedFilter,
+  deleteSavedFilter,
 } from "../../api/projectDetailsApi";
 
 import {
@@ -91,6 +95,10 @@ export default function ProjectDetails() {
     setShowEditProjectModal,
   ] = useState(false);
 
+  const [savedFilters, setSavedFilters] = useState([]);
+  const [activeFilterId, setActiveFilterId] = useState(null);
+  const [filteredEntries, setFilteredEntries] = useState(null);
+
   const loadProject = useCallback(async () => {
     if (!id) {
       setError("No project ID was provided.");
@@ -112,6 +120,11 @@ export default function ProjectDetails() {
         console.error("Failed to load projects for references:", projectsError);
         setProjects([]);
       }
+      if (typeof fetchSavedFilters === "function") {
+        const filters = await fetchSavedFilters(id);
+        setSavedFilters(filters || []);
+      }
+
     } catch (requestError) {
       console.error(
         "Failed to load project:",
@@ -373,6 +386,59 @@ export default function ProjectDetails() {
     setShowEntryReferenceModal(true);
   }
 
+  async function handleCreateSavedFilter(payload) {
+    try {
+    const newFilter = await createSavedFilter(id, payload);
+
+    setSavedFilters((current) => [newFilter, ...current]);
+    } catch (submitError) {
+      console.error(
+        "Failed to create saved filter:",
+        submitError,
+      );
+    }
+  }
+
+    async function handleApplyFilter(filterId) {
+  if (!filterId) {
+    setActiveFilterId(null);
+    setFilteredEntries(null);
+    return;
+  }
+
+  try {
+    const results = await applySavedFilter(id, filterId);
+
+    setActiveFilterId(filterId);
+    setFilteredEntries(results || []);
+  } catch (applyError) {
+    console.error(
+      "Failed to apply saved filter:",
+      applyError,
+    );
+  }
+}
+
+  async function handleDeleteFilter(filterId) {
+  try {
+    await deleteSavedFilter(filterId);
+
+    setSavedFilters((current) =>
+      current.filter((filter) => filter.id !== filterId),
+    );
+
+    if (activeFilterId === filterId) {
+      setActiveFilterId(null);
+      setFilteredEntries(null);
+    }
+  } catch (deleteError) {
+    console.error(
+      "Failed to delete saved filter:",
+      deleteError,
+    );
+  }
+}
+
   async function handleUpdateProject(payload) {
     try {
       await updateProject(id, payload);
@@ -542,9 +608,12 @@ export default function ProjectDetails() {
     ? details.fields
     : [];
 
-  const entries = Array.isArray(details.entries)
-    ? details.entries
-    : [];
+ const entries =
+  filteredEntries !== null
+    ? filteredEntries
+    : Array.isArray(details.entries)
+      ? details.entries
+      : [];
 
   const usedFieldIds = new Set(
     entries.flatMap((entry) =>
@@ -780,6 +849,70 @@ export default function ProjectDetails() {
                   ))}
                 </div>
               )}
+            </div>
+
+                          <div className="saved-filters-bar">
+              <select
+                className="form-select"
+                value={activeFilterId || ""}
+                onChange={(event) =>
+                  handleApplyFilter(
+                    event.target.value || null,
+                  )
+                }
+              >
+                <option value="">
+                  All entries
+                </option>
+
+                {savedFilters.map((filter) => (
+                  <option
+                    key={filter.id}
+                    value={filter.id}
+                  >
+                    {filter.name}
+                  </option>
+                ))}
+              </select>
+
+              {activeFilterId && (
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() =>
+                    handleDeleteFilter(activeFilterId)
+                  }
+                >
+                  Delete filter
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="btn-add-field"
+                onClick={() => {
+                  const name = window.prompt(
+                    "Filter name:",
+                  );
+
+                  if (!name) {
+                    return;
+                  }
+
+                  handleCreateSavedFilter({
+                    name,
+                    criteria: [
+                      {
+                        fieldName: "durationMinutes",
+                        operator: "greater_than",
+                        value: 0,
+                      },
+                    ],
+                  });
+                }}
+              >
+                + New filter
+              </button>
             </div>
 
             {entries.length === 0 ? (

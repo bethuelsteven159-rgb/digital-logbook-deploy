@@ -5,6 +5,7 @@ const fieldTypeSchema = z.enum([
   "long_text",
   "number",
   "date",
+  "computed",
 ]);
 
 const customValueSchema = z.union([
@@ -31,6 +32,11 @@ const createEntrySchema = z.object({
     .min(0, "Duration cannot be negative")
     .max(10080, "Duration is too large"),
 
+  dueAt: z
+    .string()
+    .datetime({ message: "Due date must be a valid ISO date-time" })
+    .optional(),
+
   values: z
     .array(
       z.object({
@@ -51,6 +57,7 @@ const createEntrySchema = z.object({
         name: z.string().trim().min(1).max(100),
         type: fieldTypeSchema,
         value: customValueSchema.optional(),
+        formula: z.string().trim().max(500).optional(),
       }),
     )
     .default([]),
@@ -108,6 +115,11 @@ const updateEntrySchema = z.object({
     .min(0, "Duration cannot be negative")
     .max(10080, "Duration is too large"),
 
+  dueAt: z
+    .string()
+    .datetime({ message: "Due date must be a valid ISO date-time" })
+    .optional(),
+
   fieldIds: z
     .array(z.string().uuid())
     .max(100)
@@ -129,9 +141,11 @@ const updateEntrySchema = z.object({
         name: z.string().trim().min(1).max(100),
         type: fieldTypeSchema,
         value: customValueSchema.optional(),
+        formula: z.string().trim().max(500).optional(),
       }),
     )
     .default([]),
+  newChecklistItems: z.array(checklistItemSchema).max(100).default([]),
 }).superRefine((data, ctx) => {
   const fieldIdSet = new Set(data.fieldIds);
   const valueIds = data.values.map((item) => item.fieldId);

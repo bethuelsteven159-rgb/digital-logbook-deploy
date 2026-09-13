@@ -9,6 +9,7 @@ const {
   updateProjectReferences,
   updateEntryProjectReferences,
   updateEntryReferences,
+  getOutstandingEntries,
 } = require("../controllers/projectDetailsController");
 
 const router =
@@ -22,6 +23,11 @@ router.get(
 router.post(
   "/:projectId/entries",
   createProjectEntry,
+);
+
+router.get(
+  "/:projectId/entries/outstanding",
+  getOutstandingEntries,
 );
 
 router.patch(
