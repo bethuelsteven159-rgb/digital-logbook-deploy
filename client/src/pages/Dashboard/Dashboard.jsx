@@ -22,6 +22,32 @@ const EMPTY_DASHBOARD = {
   recentActivity: [],
 };
 
+const ONBOARDING_STORAGE_KEY =
+  "digitalLogbookOnboardingComplete";
+
+const ONBOARDING_STEPS = [
+  {
+    title: "Create a project",
+    description:
+      "Projects help you organise the work you want to track. Start by creating a project for an assignment, module, research task, or any other piece of work.",
+  },
+  {
+    title: "Open your project",
+    description:
+      "Open a project to view its logbook, existing entries, project fields, and the different ways you can review your work.",
+  },
+  {
+    title: "Create your first entry",
+    description:
+      "Entries record what you worked on, how much time you spent, and any extra information that is useful for that project.",
+  },
+  {
+    title: "Track and review your work",
+    description:
+      "Use the timeline, Calendar, Board, filters, and statistics to review your progress and find previous work quickly.",
+  },
+];
+
 export default function Dashboard() {
   const [collapsed, setCollapsed] =
     useState(false);
@@ -31,8 +57,31 @@ export default function Dashboard() {
     useState(true);
   const [error, setError] =
     useState("");
+  const [showOnboarding, setShowOnboarding] =
+    useState(false);
+  const [onboardingStep, setOnboardingStep] =
+    useState(0);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const completed =
+        window.localStorage.getItem(
+          ONBOARDING_STORAGE_KEY,
+        ) === "true";
+
+      if (!completed) {
+        setShowOnboarding(true);
+      }
+    } catch (storageError) {
+      console.warn(
+        "Could not read onboarding preference:",
+        storageError,
+      );
+      setShowOnboarding(true);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +137,43 @@ export default function Dashboard() {
       cancelled = true;
     };
   }, []);
+
+  function finishOnboarding() {
+    try {
+      window.localStorage.setItem(
+        ONBOARDING_STORAGE_KEY,
+        "true",
+      );
+    } catch (storageError) {
+      console.warn(
+        "Could not save onboarding preference:",
+        storageError,
+      );
+    }
+
+    setShowOnboarding(false);
+    setOnboardingStep(0);
+  }
+
+  function restartOnboarding() {
+    setOnboardingStep(0);
+    setShowOnboarding(true);
+  }
+
+  function nextOnboardingStep() {
+    if (onboardingStep === ONBOARDING_STEPS.length - 1) {
+      finishOnboarding();
+      return;
+    }
+
+    setOnboardingStep((current) =>
+      Math.min(current + 1, ONBOARDING_STEPS.length - 1),
+    );
+  }
+
+  function previousOnboardingStep() {
+    setOnboardingStep((current) => Math.max(current - 1, 0));
+  }
 
   const { stats, overview, recentActivity } =
     dashboard;
@@ -329,6 +415,14 @@ export default function Dashboard() {
                       ? "Create First Project"
                       : "View Projects"}
                   </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-full"
+                    onClick={restartOnboarding}
+                  >
+                    Show Getting Started Guide
+                  </button>
                 </div>
               </section>
 
@@ -393,6 +487,75 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {showOnboarding && (
+        <div className="onboarding-overlay">
+          <section
+            className="onboarding-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="onboarding-title"
+          >
+            <div className="onboarding-topbar">
+              <span className="onboarding-badge">
+                Getting Started
+              </span>
+              <button
+                type="button"
+                className="onboarding-skip"
+                onClick={finishOnboarding}
+              >
+                Skip guide
+              </button>
+            </div>
+
+            <div className="onboarding-progress">
+              {ONBOARDING_STEPS.map((step, index) => (
+                <span
+                  key={step.title}
+                  className={`onboarding-progress-dot ${
+                    index <= onboardingStep ? "is-active" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
+
+            <p className="onboarding-step-label">
+              Step {onboardingStep + 1} of {ONBOARDING_STEPS.length}
+            </p>
+            <h2
+              className="onboarding-title"
+              id="onboarding-title"
+            >
+              {ONBOARDING_STEPS[onboardingStep].title}
+            </h2>
+            <p className="onboarding-description">
+              {ONBOARDING_STEPS[onboardingStep].description}
+            </p>
+
+            <div className="onboarding-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={previousOnboardingStep}
+                disabled={onboardingStep === 0}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={nextOnboardingStep}
+              >
+                {onboardingStep === ONBOARDING_STEPS.length - 1
+                  ? "Get Started"
+                  : "Next"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       <style>{`
         .app-shell {
@@ -459,6 +622,19 @@ export default function Dashboard() {
         .btn-primary:focus-visible {
           outline: 2px solid #4f63d2;
           outline-offset: 2px;
+        }
+        .btn-secondary {
+          background: #ffffff;
+          color: #475569;
+          border: 1px solid #cbd5e1;
+        }
+        .btn-secondary:hover:not(:disabled) {
+          background: #f8fafc;
+          border-color: #94a3b8;
+        }
+        .btn-secondary:disabled {
+          cursor: not-allowed;
+          opacity: 0.45;
         }
         .btn-full {
           width: 100%;
@@ -743,6 +919,99 @@ export default function Dashboard() {
           font-size: 13px;
           font-weight: 600;
           color: #94a3b8;
+        }
+
+        /* First-time onboarding */
+        .onboarding-overlay {
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background: rgba(15, 23, 42, 0.55);
+          z-index: 2000;
+        }
+        .onboarding-modal {
+          width: min(520px, 100%);
+          padding: 26px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          background: #ffffff;
+          box-shadow: 0 24px 70px rgba(15, 23, 42, 0.3);
+        }
+        .onboarding-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+        .onboarding-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 5px 9px;
+          border-radius: 999px;
+          background: rgba(79, 99, 210, 0.1);
+          color: #4f63d2;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+        .onboarding-skip {
+          padding: 0;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          cursor: pointer;
+          font-family: 'Inter', sans-serif;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        .onboarding-skip:hover {
+          color: #1a2340;
+          text-decoration: underline;
+        }
+        .onboarding-progress {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 7px;
+          margin-bottom: 22px;
+        }
+        .onboarding-progress-dot {
+          height: 4px;
+          border-radius: 999px;
+          background: #e2e8f0;
+        }
+        .onboarding-progress-dot.is-active {
+          background: #4f63d2;
+        }
+        .onboarding-step-label {
+          margin: 0 0 8px;
+          color: #94a3b8;
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .onboarding-title {
+          margin: 0;
+          color: #1a2340;
+          font-family: 'DM Serif Display', Georgia, serif;
+          font-size: 27px;
+          font-weight: 400;
+        }
+        .onboarding-description {
+          margin: 12px 0 0;
+          color: #64748b;
+          font-size: 14px;
+          line-height: 1.7;
+        }
+        .onboarding-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 28px;
         }
 
         /* Responsive */
