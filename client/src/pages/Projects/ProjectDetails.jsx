@@ -37,6 +37,14 @@ import {
   updateProject,
 } from "../../api/projectsApi";
 
+import useOnlineStatus from "../../hooks/useOnlineStatus";
+import {
+  getQueueForProject,
+  addToQueue,
+  removeFromQueue,
+  updateQueueItem,
+} from "../../offline/entryQueue";
+
 import {
   updateChecklistItem,
   deleteChecklistItem,
@@ -92,6 +100,14 @@ export default function ProjectDetails() {
     showEditProjectModal,
     setShowEditProjectModal,
   ] = useState(false);
+
+  const isOnline = useOnlineStatus();
+
+  const [pendingEntries, setPendingEntries] = useState(() =>
+    getQueueForProject(id),
+  );
+
+  const [syncing, setSyncing] = useState(false);
 
   const [savedFilters, setSavedFilters] = useState([]);
   const [activeFilterId, setActiveFilterId] = useState(null);
@@ -149,6 +165,60 @@ export default function ProjectDetails() {
   useEffect(() => {
     loadProject();
   }, [loadProject]);
+
+  const syncPendingEntries = useCallback(async () => {
+    const queue = getQueueForProject(id);
+
+    if (queue.length === 0) {
+      return;
+    }
+
+    setSyncing(true);
+
+    for (const item of queue) {
+      updateQueueItem(item.localId, { status: "syncing" });
+
+      try {
+        await createProjectEntry(item.projectId, item.payload);
+
+        removeFromQueue(item.localId);
+
+        setPendingEntries((current) =>
+          current.filter(
+            (entry) => entry.localId !== item.localId,
+          ),
+        );
+      } catch (syncError) {
+        updateQueueItem(item.localId, {
+          status: "failed",
+          lastError: syncError.message || "Sync failed",
+        });
+
+        setPendingEntries((current) =>
+          current.map((entry) =>
+            entry.localId === item.localId
+              ? {
+                  ...entry,
+                  status: "failed",
+                  lastError: syncError.message,
+                }
+              : entry,
+          ),
+        );
+      }
+    }
+
+    setSyncing(false);
+    await loadProject();
+  }, [id, loadProject]);
+
+  useEffect(() => {
+    if (isOnline && pendingEntries.length > 0) {
+      syncPendingEntries();
+    }
+    // Only re-run when connectivity flips, not on every pendingEntries change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline]);
 
   useEffect(() => {
     if (!details || !window.location.hash) return;
@@ -242,6 +312,15 @@ export default function ProjectDetails() {
   }
 
   async function handleCreateEntry(payload) {
+    if (!isOnline) {
+      const queued = addToQueue(id, payload);
+
+      setPendingEntries((current) => [...current, queued]);
+      setShowEntryModal(false);
+
+      return;
+    }
+
     try {
       await createProjectEntry(id, payload);
 
@@ -266,6 +345,20 @@ export default function ProjectDetails() {
         "Failed to create entry:",
         requestError,
       );
+
+      // A real network failure (server unreachable) has no HTTP status.
+      // A validation/auth error (400/401/etc) does — don't silently
+      // queue those, since retrying them later would just fail again.
+      const isNetworkFailure = !requestError.status;
+
+      if (isNetworkFailure) {
+        const queued = addToQueue(id, payload);
+
+        setPendingEntries((current) => [...current, queued]);
+        setShowEntryModal(false);
+
+        return;
+      }
 
       throw requestError;
     }
@@ -634,6 +727,28 @@ async function handleShowIncomplete() {
       ? details.entries
       : [];
 
+  const displayEntries = [
+    ...pendingEntries.map((item) => ({
+      id: item.localId,
+      name: item.payload.name,
+      durationMinutes: item.payload.durationMinutes,
+      tags: item.payload.tags || [],
+      occurredAt: item.createdAt,
+      values: [],
+      isPending: true,
+      syncStatus: item.status,
+    })),
+    ...entries,
+  ];
+
+  const usedFieldIds = new Set(
+    entries.flatMap((entry) =>
+      (Array.isArray(entry.values) ? entry.values : [])
+        .map((value) => value.fieldId)
+        .filter(Boolean),
+    ),
+  );
+
   const editableProject = {
     name: project.name || "",
     description: project.description || "",
@@ -923,7 +1038,6 @@ async function handleShowIncomplete() {
     + New filter
   </button>
 </div>
-
 <button
   type="button"
   className={
@@ -1135,7 +1249,30 @@ async function handleShowIncomplete() {
   </div>
 </div>
 )}
-            {entries.length === 0 ? (
+            {(pendingEntries.length > 0 || !isOnline) && (
+              <div className="offline-banner">
+                {!isOnline && (
+                  <span>
+                    You're offline — new entries will
+                    be saved locally.
+                  </span>
+                )}
+
+                {isOnline && pendingEntries.length > 0 && (
+                  <span>
+                    {syncing
+                      ? "Syncing…"
+                      : `${pendingEntries.length} entr${
+                          pendingEntries.length === 1
+                            ? "y"
+                            : "ies"
+                        } waiting to sync`}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {displayEntries.length === 0 ? (
               <div className="entries-empty">
                 <div className="empty-icon-wrap"><IconEntryLarge /></div>
                 <p className="empty-heading">No entries yet.</p>
@@ -1154,8 +1291,13 @@ async function handleShowIncomplete() {
               <BoardView entries={entries} fields={fields} formatLoggedTime={formatLoggedTime} />
             ) : (
               <div className="entries-list">
-                {entries.map((entry) => {
-                  const values = Array.isArray(entry.values) ? entry.values : [];
+                {displayEntries.map((entry) => {
+                  const values = Array.isArray(
+                    entry.values,
+                  )
+                    ? entry.values
+                    : [];
+                  const linkedEntries = Array.isArray(entry.linkedEntries) ? entry.linkedEntries : [];
                   const checklist = Array.isArray(entry.checklist) ? entry.checklist : [];
                   const completedChecklist = checklist.filter((item) => item.completed).length;
 
@@ -1174,8 +1316,26 @@ async function handleShowIncomplete() {
                     >
                       <div className="entry-row-header">
                         <div>
-                          <h3 className="entry-row-title">{entry.name|| "Logbook Entry"}</h3>
-                          <p className="entry-row-date">{formatDate(entry.occurredAt || entry.createdAt)}</p>
+                          <h3 className="entry-row-title">
+                            {entry.name ||
+                              "Logbook Entry"}
+
+                            {entry.isPending && (
+                              <span className="entry-pending-badge">
+                                {entry.syncStatus ===
+                                "failed"
+                                  ? "Sync failed"
+                                  : "Pending sync"}
+                              </span>
+                            )}
+                          </h3>
+
+                          <p className="entry-row-date">
+                            {formatDate(
+                              entry.occurredAt ||
+                                entry.createdAt,
+                            )}
+                          </p>
 
                           {entry.dueAt && (
                             <p
@@ -1195,6 +1355,29 @@ async function handleShowIncomplete() {
                         </div>
                         <span className="entry-duration"><IconClockSmall />{formatLoggedTime(entry.durationMinutes)}</span>
                       </div>
+
+                      {Array.isArray(entry.tags) &&
+                        entry.tags.length > 0 && (
+                          <div className="entry-tags">
+                            {entry.tags.map((tag) => (
+                              <span
+                                className="entry-tag"
+                                key={tag}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                      {linkedEntries.length > 0 && (
+                        <div className="entry-links">
+                          <span className="entry-links-label">Linked entries:</span>
+                          {linkedEntries.map((linked) => (
+                            <span className="entry-link-chip" key={linked.id}>{linked.name}</span>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="entry-row-summary">
                         <span>{values.length} {values.length === 1 ? "field" : "fields"}</span>
@@ -1869,6 +2052,52 @@ function ProjectDetailsStyles() {
         font-size: 12px;
         font-weight: 500;
         white-space: nowrap;
+      }
+
+      .entry-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .entry-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .entry-pending-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 10px;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+
+      .offline-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
       }
 
       .entry-values {

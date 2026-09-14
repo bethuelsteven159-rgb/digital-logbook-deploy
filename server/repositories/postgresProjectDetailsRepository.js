@@ -86,6 +86,7 @@ function mapEntryRow(row) {
     name: row.entry_name,
     durationMinutes: row.duration_minutes,
     occurredAt: row.occurred_at,
+    tags: row.tags || [],
     dueAt: row.due_at,
     completedAt: row.completed_at,
     createdAt: row.entry_created_at,
@@ -319,6 +320,7 @@ function createRepository(queryable) {
                 e.name AS entry_name,
                 e.duration_minutes,
                 e.occurred_at,
+                e.tags,
                 e.due_at,
                 e.completed_at,
                 e.created_at AS entry_created_at,
@@ -360,6 +362,7 @@ function createRepository(queryable) {
                 e.name AS entry_name,
                 e.duration_minutes,
                 e.occurred_at,
+                e.tags,
                 e.due_at,
                 e.completed_at,
                 e.created_at AS entry_created_at,
@@ -718,12 +721,12 @@ function createRepository(queryable) {
       const result = await queryable.query(
         `INSERT INTO entries
            (project_id, created_by_id,
-            name, duration_minutes, due_at)
-         VALUES ($1, $2, $3, $4, $5)
+            name, duration_minutes, due_at, tags)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, project_id,
                    created_by_id, name,
                    duration_minutes,
-                   occurred_at, due_at, completed_at,
+                   occurred_at, due_at, completed_at, tags,
                    created_at, updated_at`,
         [
           data.projectId,
@@ -731,6 +734,7 @@ function createRepository(queryable) {
           data.name,
           data.durationMinutes,
           data.dueAt ?? null,
+          data.tags || [],
         ],
       );
 
@@ -746,6 +750,7 @@ function createRepository(queryable) {
         occurredAt: row.occurred_at,
         dueAt: row.due_at,
         completedAt: row.completed_at,
+        tags: row.tags || [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       };
@@ -815,6 +820,7 @@ function createRepository(queryable) {
                 e.name AS entry_name,
                 e.duration_minutes,
                 e.occurred_at,
+                e.tags,
                 e.due_at,
                 e.completed_at,
                 e.created_at AS entry_created_at,
