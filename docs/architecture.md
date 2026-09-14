@@ -74,13 +74,20 @@ This separation means storage changes don't require touching routing, and vice v
 
 ## 4. Data Model
 
-The database consists of five core entities:
+The database consists of the core user, project, field, entry and entry-value entities, with additional feature tables for checklists, references and saved filters.
+
+Core entities:
 
 - `users`
 - `projects`
 - `project_fields`
 - `entries`
 - `entry_field_values`
+- `entry_checklist_items`
+- `entry_project_references`
+- `project_project_references`
+- `entry_entry_references`
+- `saved_filters`
 
 ### Relationships
 
@@ -89,6 +96,11 @@ The database consists of five core entities:
 - **Projects → Entries** (1:Many) — a project can contain multiple log entries.
 - **Entries → Entry Field Values** (1:Many) — an entry can hold values for each custom field.
 - **Project Fields → Entry Field Values** (1:Many) — a field definition can be referenced by many entry values.
+- **Entries → Checklist Items** (1:Many) — an entry can contain ordered checklist items.
+- **Entries → Project References** (1:Many) — an entry can reference other projects.
+- **Projects → Project References** (1:Many) — a project can reference other projects.
+- **Entries → Entry References** (1:Many) — an entry can reference other entries.
+- **Projects → Saved Filters** (1:Many) — saved filter definitions can be associated with projects.
 
 See `docs/DATABASE.md` for full table schemas, constraints, and the entity relationship diagram.
 

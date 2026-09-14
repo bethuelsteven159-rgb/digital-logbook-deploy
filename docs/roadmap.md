@@ -17,8 +17,8 @@ As of now, the team has completed **Sprint 1** only. The status below reflects r
 | 1 | Project Setup | 🟢 Mostly complete | Sprint 1 |
 | 2 | Core Functionality (Basic Features) | 🟢 Implemented | Sprint 1 |
 | 3 | Authentication & User Management | 🟢 Implemented, tested locally | Sprint 1 |
-| 4 | Feature Development (Intermediate/Advanced) | ⚪ Not started | Planned, later sprints |
-| 5 | Testing & Integration | ⚪ Not started (CI/CD scaffolded) | Planned from Sprint 2 |
+| 4 | Feature Development (Intermediate/Advanced) | 🟢 Partially implemented | Sprint 2 |
+| 5 | Testing & Integration | 🟡 In progress | Sprint 2 onward |
 | 6 | Finalisation | ⚪ Not started | Planned |
 
 ## Stage 1 – Project Setup
@@ -51,7 +51,7 @@ This stage corresponds to the **Basic Features** tier in the requirements: authe
 
 This stage corresponds to the **Intermediate** tier (tags, checklists, entry links, computed fields, saved filters, calendar/board views, offline capture and sync, export/import) and **Advanced** tier (custom calculations, custom dashboards, historical versioning, structured search, automation/reminders, long-term performance) from the requirements document.
 
-**Status:** not started. Per the requirements document, advanced functionality is deliberately deferred until the core system (Stage 2) is stable, and feature tiers are prioritisation guidance rather than a fixed requirement to implement everything.
+**Progress:** Intermediate functionality has been implemented across the current application, including checklists, project and entry references, computed fields, saved filters, calendar/board views, outstanding work/due dates, offline capture/synchronisation support, and export/import. The Person 4 entry-editing and settings work is also implemented. Advanced items remain deferred where they have not been implemented.
 
 ## Stage 5 – Testing and Integration
 
@@ -61,7 +61,7 @@ This stage corresponds to the **Intermediate** tier (tags, checklists, entry lin
 * Review code quality.
 * Ensure acceptance criteria are satisfied.
 
-**Progress in Sprint 1:** formal testing has not started, but the groundwork is in place — Gitea Actions is configured to run automated checks on Pull Requests, and the team's Definition of Done (in [Git Workflow](./git-workflow.md)) requires relevant tests and passing checks before a Pull Request can be merged. Authentication has been manually tested locally and verified end-to-end, and issues found during that process are tracked in [Bug Tracking](./bug-tracking.md). Formal/automated test coverage is planned to begin from Sprint 2.
+**Progress:** automated client testing is now in place for the implemented feature work. The current test run reports 6 test files passed, 44 tests passed and 0 failures, including entry details, entry editing, project details, settings, preferences and entry-feature API behaviour. Broader integration testing, full backend test coverage and stakeholder acceptance remain ongoing.
 
 ## Stage 6 – Finalisation
 

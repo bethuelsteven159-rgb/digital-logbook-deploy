@@ -272,6 +272,24 @@ flowchart TD
     J --> D
 ```
 
+## Logbook Entry Interaction Design
+
+Entries remain within the project workspace rather than appearing as a separate sidebar destination or standalone All Entries page. Selecting an entry opens an **Entry Details** modal.
+
+The Entry Details modal presents the entry name, duration, entry and due dates, project-field values, checklist state and available references. From this modal, users can open **Edit Entry**.
+
+The Edit Entry modal supports updating the entry name, duration, due date and project-field values. It also supports permitted project-field changes, project references, entry references and checklist management. Completed checklist items are locked for text editing/removal until they are unchecked; unfinished items can be edited or removed, and new checklist items can be added.
+
+For active projects, checklist items can also be checked or unchecked directly from the Entry Details view, with the updated state saved immediately. Archived projects remain read-only for these entry-editing actions.
+
+### Entry Ordering
+
+Entry display order can be controlled from Settings using **Newest first** or **Oldest first**.
+
+### References
+
+The implemented project and entry workflows support references between projects and between entries, while preserving entry-to-project references.
+
 ## Profile, Statistics and Settings
 
 ### Profile
@@ -284,13 +302,15 @@ The Stats screen provides a higher-level view of progress. It includes summary i
 
 ### Settings
 
-The Settings screen provides the application settings area. The current implementation presents the settings section as work in progress, making the current implementation state explicit rather than presenting incomplete controls as functional features.
+The Settings screen provides functional application preferences and data-management controls. Users can choose the application theme, entry ordering and project ordering. The Data Management section supports exporting the logbook to JSON and importing a previously exported JSON file. Matching records are updated during import instead of being duplicated.
+
+The Data & Reset section is currently presented as **Available soon**; reset and data-clearing actions are not yet functional.
 
 ## Design Process
 
 The UI was developed through an iterative process that moved from **basic designs**, to **Figma designs**, and finally to the **implemented application**.
 
-The design material for this process is stored in the `docs/pdf/` folder of the repository. This folder contains the project's UI/UX design evidence, including the basic designs and the final Figma-based desktop and mobile designs.
+The design material for this process is stored in the `docs/ui-ux_pdfs/` folder of the repository. This folder contains the project's UI/UX design evidence, including the basic designs and the final Figma-based desktop and mobile designs.
 
 ### Design-to-Implementation Flow
 
@@ -300,7 +320,7 @@ flowchart LR
     C --> D[Desktop and Mobile UI]
 ```
 
-The progression demonstrates how the visual design was translated into the implemented interface rather than treating the final application as an isolated development step. The design evidence is available in `docs/pdf/`.
+The progression demonstrates how the visual design was translated into the implemented interface rather than treating the final application as an isolated development step. The design evidence is available in `docs/ui-ux_pdfs/`.
 
 ## Design Principles
 
@@ -343,14 +363,14 @@ The frontend uses a consistent set of reusable interaction patterns:
 | Search | Allows users to locate projects quickly. |
 | Filters | Supports date- and hours-based project filtering. |
 | Tabs | Separates active and archived projects. |
-| Modal Dialogs | Supports project creation, project editing and new-entry creation without leaving the current page. |
+| Modal Dialogs | Supports project creation, project editing, entry details, entry editing and new-entry creation without leaving the current project context. |
 | Summary Cards | Present high-level dashboard and statistics information. |
 | Empty States | Explain unavailable data and guide the user towards the next action. |
 | Error / Loading States | Communicate when data is loading or when an operation cannot be completed. |
 
 ## Responsive Design Approach
 
-The interface was designed for both desktop and mobile use. The design evidence for the desktop and mobile versions is included in the `docs/pdf/` folder.
+The interface was designed for both desktop and mobile use. The design evidence for the desktop and mobile versions is included in the `docs/ui-ux_pdfs/` folder.
 
 The Login page uses a responsive breakpoint at `768px`. Below this width, the two-column layout collapses into a single-column layout, the branding panel becomes full-width, and secondary content such as the feature list and footer is hidden to keep the mobile experience focused on authentication.
 

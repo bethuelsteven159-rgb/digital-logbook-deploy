@@ -55,6 +55,8 @@ erDiagram
         VARCHAR name
         INTEGER duration_minutes
         TIMESTAMPTZ occurred_at
+        TIMESTAMPTZ due_at
+        TIMESTAMPTZ completed_at
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
     }
@@ -145,7 +147,8 @@ Examples include fields such as `Mood`, `Mileage`, `Location`, or `Date`.
 | `id`          | `UUID`         | `PRIMARY KEY`, Default: `gen_random_uuid()`                                       | Unique field identifier                          |
 | `project_id`  | `UUID`         | `NOT NULL`, `REFERENCES projects(id) ON DELETE CASCADE`                           | Project that owns the custom field               |
 | `name`        | `VARCHAR(100)` | `NOT NULL`                                                                         | Name displayed for the custom field              |
-| `field_type`  | `VARCHAR(20)`  | `NOT NULL`, `CHECK(field_type IN ('short_text', 'long_text', 'number', 'date'))`  | Data type accepted by the field                  |
+| `field_type`  | `VARCHAR(20)`  | `NOT NULL`, `CHECK(field_type IN ('short_text', 'long_text', 'number', 'date', 'computed'))`  | Data type accepted by the field                  |
+| `formula`     | `TEXT`         | `NULL`                                                                             | Formula used by computed fields                  |
 | `position`    | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(position >= 0)`                                  | Position used when displaying fields in the UI   |
 | `required`    | `BOOLEAN`      | `NOT NULL`, Default: `FALSE`                                                       | Indicates whether the field must be completed    |
 | `archived_at` | `TIMESTAMPTZ`  | `NULL`                                                                             | Timestamp indicating when the field was archived |
@@ -166,6 +169,8 @@ Stores individual log events recorded within a project.
 | `name`             | `VARCHAR(150)` | `NOT NULL`                                                                 | Name or short description of the entry     |
 | `duration_minutes` | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(duration_minutes BETWEEN 0 AND 10080)`   | Duration of the logged activity in minutes |
 | `occurred_at`      | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                              | Date and time when the activity occurred   |
+| `due_at`           | `TIMESTAMPTZ`  | `NULL`                                                                     | Optional due date/time for outstanding work |
+| `completed_at`     | `TIMESTAMPTZ`  | `NULL`                                                                     | Completion timestamp when work is completed |
 | `created_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                              | Date and time the entry was created        |
 | `updated_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                              | Date and time the entry was last updated   |
 
@@ -243,6 +248,11 @@ Every table uses a UUID primary key:
 * `project_fields.id`
 * `entries.id`
 * `entry_field_values.id`
+* `entry_checklist_items.id`
+* `entry_project_references.id`
+* `project_project_references.id`
+* `entry_entry_references.id`
+* `saved_filters.id`
 
 UUIDs are generated using:
 
@@ -272,6 +282,27 @@ entry_field_values.entry_id
 
 entry_field_values.field_id
     -> project_fields.id
+
+entry_checklist_items.entry_id
+    -> entries.id
+
+entry_project_references.entry_id
+    -> entries.id
+
+entry_project_references.referenced_project_id
+    -> projects.id
+
+project_project_references.project_id
+    -> projects.id
+
+project_project_references.referenced_project_id
+    -> projects.id
+
+entry_entry_references.entry_id
+    -> entries.id
+
+entry_entry_references.referenced_entry_id
+    -> entries.id
 ```
 
 ### Check Constraints
@@ -473,3 +504,15 @@ Stores checklist items belonging to an entry. Items have a position for stable d
 ### `entry_project_references`
 
 Stores references from an entry to another project owned by the same user. The unique constraint prevents duplicate references for the same entry/project pair.
+
+### `project_project_references`
+
+Stores references from one project to another project. Duplicate pairs are prevented and self-references are rejected by a check constraint.
+
+### `entry_entry_references`
+
+Stores references from one entry to another entry. Duplicate pairs are prevented and self-references are rejected by a check constraint.
+
+### `saved_filters`
+
+Stores saved filter definitions for users, optionally associated with a project.

@@ -401,7 +401,7 @@ The backend/database remains the authoritative source of persistent application 
 
 ### FR-026 – Export and Import
 
-Users should eventually be able to export their records and restore/import them in a readable format.
+Users should be able to export their records and restore/import them in a readable JSON format. The current implementation updates matching records instead of creating duplicates and does not delete local records that are absent from an import file.
 
 ---
 
@@ -958,6 +958,26 @@ The completed authentication flow includes:
 
 Authentication should still be considered subject to formal project testing and stakeholder acceptance where required.
 
+## 14.2 Person 4 Feature Progress
+
+The following assigned feature work has been implemented in the current application:
+
+| Area | Current status | Notes |
+|---|---|---|
+| Entry Details | **Implemented** | Entries open in a details modal within the project workspace. |
+| Edit Entry | **Implemented** | Existing entries can be edited through a modal, including permitted custom-field changes and due date. |
+| Checklists | **Implemented and tested** | Items can be checked/unchecked from Entry Details. Editing/removal rules are enforced in Edit Entry. |
+| Project references | **Implemented** | Project-to-project references are supported. |
+| Entry references | **Implemented** | Entry-to-entry references are supported. |
+| Entry-to-project references | **Implemented** | Existing entry-to-project references remain supported. |
+| Export/import | **Implemented and tested** | JSON export/import is available from Settings; matching records are updated instead of duplicated. |
+| Application preferences | **Implemented and tested** | Theme, entry order and project order preferences are available. |
+| Reset options | **Deferred** | The Settings reset section remains marked **Available soon** and does not perform a reset. |
+
+### Automated Test Evidence
+
+The current client test suite for the updated work passes with **6 test files, 44 tests passed and 0 failures**. This covers entry details, entry editing, project details, settings, preferences and entry-feature API behaviour. Broader project integration and stakeholder acceptance remain separate activities.
+
 ---
 
 # 15. Requirement Change Management
@@ -1101,6 +1121,7 @@ A requirement should be considered fully completed only when:
 | 0.4 | 24/08/2026 | Team | Requirements structure, stakeholder interaction records, feature organisation, traceability, and documentation structure revised. |
 | 0.5 | 22/08/2026 | Team | Authentication and repository architecture decisions documented. |
 | 0.6 | 24/08/2026 | Simphiwe | Stakeholder Interaction Register populated with dated entries from the 04/08 and 12/08 meetings; Section 4.2 updated with the full list of client suggestions by meeting; Team Process Log added; project-management and repository tooling documentation updated. |
+| 0.7 | 14/09/2026 | Team | Current implementation status updated for entry details/editing, checklists, references, export/import, application preferences and automated client testing. |
 
 ---
 
