@@ -3,6 +3,7 @@ const {
   listSavedFiltersService,
   deleteSavedFilterService,
   applySavedFilterService,
+  updateSavedFilterService,
 } = require("../services/savedFilterService");
 
 const {
@@ -42,6 +43,35 @@ async function createSavedFilter(req, res, next) {
     });
 
     return res.status(201).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateSavedFilter(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+
+    const parsed = createSavedFilterSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid saved filter data",
+        errors: parsed.error.flatten(),
+      });
+    }
+
+    const data = await updateSavedFilterService({
+      ownerId: userId,
+      filterId: req.params.filterId,
+      data: parsed.data,
+    });
+
+    return res.status(200).json({
       success: true,
       data,
     });
@@ -110,4 +140,5 @@ module.exports = {
   listSavedFilters,
   deleteSavedFilter,
   applySavedFilter,
+  updateSavedFilter,
 };
