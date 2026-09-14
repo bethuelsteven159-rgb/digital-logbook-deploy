@@ -42,6 +42,30 @@ const repository = {
     return mapSavedFilter(result.rows[0]);
   },
 
+    async updateSavedFilter({ filterId, ownerId, name, criteria }) {
+    const result = await db.query(
+      `
+        UPDATE saved_filters
+        SET name = $3,
+            criteria = $4,
+            updated_at = NOW()
+        WHERE id = $1
+          AND owner_id = $2
+        RETURNING
+          id,
+          owner_id,
+          project_id,
+          name,
+          criteria,
+          created_at,
+          updated_at
+      `,
+      [filterId, ownerId, name, JSON.stringify(criteria)],
+    );
+
+    return mapSavedFilter(result.rows[0]);
+  },
+
   async getSavedFiltersForProject({ ownerId, projectId }) {
     const result = await db.query(
       `

@@ -26,6 +26,23 @@ async function createSavedFilterService({ ownerId, projectId, data }) {
   });
 }
 
+async function updateSavedFilterService({ ownerId, filterId, data }) {
+  const existing = await savedFilterRepository.getSavedFilterById({
+    filterId,
+    ownerId,
+  });
+
+  if (!existing) {
+    throw createHttpError(404, "Saved filter not found");
+  }
+
+  return savedFilterRepository.updateSavedFilter({
+    filterId,
+    ownerId,
+    name: data.name.trim(),
+    criteria: data.criteria,
+  });
+}
 async function listSavedFiltersService({ ownerId, projectId }) {
   const project = await projectDetailsRepository.getOwnedProject(
     projectId,

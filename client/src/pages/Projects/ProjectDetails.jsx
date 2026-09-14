@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
+import { X, Plus } from "lucide-react";
 import EditProjectModal from "../../components/EditProjectModal";
 import NewEntryModal from "./NewEntryModal";
 import EditEntryModal from "./EditEntryModal";
@@ -24,6 +25,10 @@ import {
   createSavedFilter,
   applySavedFilter,
   deleteSavedFilter,
+  updateSavedFilter,
+  markEntryComplete,
+  fetchOutstandingEntries,
+  fetchIncompleteEntries,
 } from "../../api/projectDetailsApi";
 
 import {
@@ -107,6 +112,14 @@ export default function ProjectDetails() {
   const [savedFilters, setSavedFilters] = useState([]);
   const [activeFilterId, setActiveFilterId] = useState(null);
   const [filteredEntries, setFilteredEntries] = useState(null);
+  const [entryStatusView, setEntryStatusView] = useState(null);
+
+  const [showFilterBuilder, setShowFilterBuilder] = useState(false);
+  const [editingFilterId, setEditingFilterId] = useState(null);
+  const [filterName, setFilterName] = useState("");
+  const [filterConditions, setFilterConditions] = useState([
+    { targetField: "durationMinutes", operator: "greater_than", value: "" },
+  ]);
 
   const loadProject = useCallback(async () => {
     if (!id) {
@@ -388,7 +401,38 @@ export default function ProjectDetails() {
     }
   }
 
-    async function handleApplyFilter(filterId) {
+
+async function handleUpdateSavedFilter(filterId, payload) {
+  try {
+    const updatedFilter = await updateSavedFilter(filterId, payload);
+
+    setSavedFilters((current) =>
+      current.map((filter) =>
+        filter.id === filterId ? updatedFilter : filter,
+      ),
+    );
+  } catch (submitError) {
+    console.error(
+      "Failed to update saved filter:",
+      submitError,
+    );
+  }
+}
+
+function handleOpenEditFilter(filter) {
+  setEditingFilterId(filter.id);
+  setFilterName(filter.name);
+  setFilterConditions(
+    filter.criteria.map((criterion) => ({
+      targetField: criterion.fieldName || criterion.fieldId,
+      operator: criterion.operator,
+      value: criterion.value,
+    })),
+  );
+  setShowFilterBuilder(true);
+}
+
+async function handleApplyFilter(filterId) {
   if (!filterId) {
     setActiveFilterId(null);
     setFilteredEntries(null);
@@ -428,6 +472,83 @@ export default function ProjectDetails() {
   }
 }
 
+function addFilterCondition() {
+  setFilterConditions((current) => [
+    ...current,
+    { targetField: "durationMinutes", operator: "greater_than", value: "" },
+  ]);
+}
+
+function updateFilterCondition(index, updates) {
+  setFilterConditions((current) =>
+    current.map((condition, i) =>
+      i === index ? { ...condition, ...updates } : condition,
+    ),
+  );
+}
+
+function removeFilterCondition(index) {
+  setFilterConditions((current) =>
+    current.filter((_, i) => i !== index),
+  );
+}
+async function handleMarkComplete(entryId) {
+  try {
+    await markEntryComplete(id, entryId);
+
+    await loadProject();
+  } catch (completeError) {
+    console.error(
+      "Failed to mark entry complete:",
+      completeError,
+    );
+  }
+}
+
+
+async function handleShowOverdue() {
+  if (entryStatusView === "overdue") {
+    setEntryStatusView(null);
+    setFilteredEntries(null);
+    setActiveFilterId(null);
+    return;
+  }
+
+  try {
+    const results = await fetchOutstandingEntries(id);
+
+    setEntryStatusView("overdue");
+    setActiveFilterId(null);
+    setFilteredEntries(results || []);
+  } catch (outstandingError) {
+    console.error(
+      "Failed to load overdue entries:",
+      outstandingError,
+    );
+  }
+}
+
+async function handleShowIncomplete() {
+  if (entryStatusView === "incomplete") {
+    setEntryStatusView(null);
+    setFilteredEntries(null);
+    setActiveFilterId(null);
+    return;
+  }
+
+  try {
+    const results = await fetchIncompleteEntries(id);
+
+    setEntryStatusView("incomplete");
+    setActiveFilterId(null);
+    setFilteredEntries(results || []);
+  } catch (incompleteError) {
+    console.error(
+      "Failed to load incomplete entries:",
+      incompleteError,
+    );
+  }
+}
   async function handleUpdateProject(payload) {
     try {
       await updateProject(id, payload);
@@ -855,70 +976,279 @@ export default function ProjectDetails() {
               )}
             </div>
 
-                          <div className="saved-filters-bar">
-              <select
-                className="form-select"
-                value={activeFilterId || ""}
-                onChange={(event) =>
-                  handleApplyFilter(
-                    event.target.value || null,
-                  )
-                }
-              >
-                <option value="">
-                  All entries
-                </option>
+                         <div className="saved-filters-bar">
+  <select
+    className="form-select"
+    value={activeFilterId || ""}
+    onChange={(event) =>
+      handleApplyFilter(
+        event.target.value || null,
+      )
+    }
+  >
+    <option value="">
+      All entries
+    </option>
 
-                {savedFilters.map((filter) => (
-                  <option
-                    key={filter.id}
-                    value={filter.id}
-                  >
-                    {filter.name}
-                  </option>
-                ))}
-              </select>
+    {savedFilters.map((filter) => (
+      <option
+        key={filter.id}
+        value={filter.id}
+      >
+        {filter.name}
+      </option>
+    ))}
+  </select>
 
-              {activeFilterId && (
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={() =>
-                    handleDeleteFilter(activeFilterId)
-                  }
-                >
-                  Delete filter
-                </button>
-              )}
+  {activeFilterId && (
+  <>
+    <button
+      type="button"
+      className="btn-cancel"
+      onClick={() => {
+        const filter = savedFilters.find(
+          (f) => f.id === activeFilterId,
+        );
 
-              <button
-                type="button"
-                className="btn-add-field"
-                onClick={() => {
-                  const name = window.prompt(
-                    "Filter name:",
-                  );
+        if (filter) {
+          handleOpenEditFilter(filter);
+        }
+      }}
+    >
+      Edit filter
+    </button>
 
-                  if (!name) {
-                    return;
-                  }
+    <button
+      type="button"
+      className="btn-cancel"
+      onClick={() =>
+        handleDeleteFilter(activeFilterId)
+      }
+    >
+      Delete filter
+    </button>
+  </>
+)}
 
-                  handleCreateSavedFilter({
-                    name,
-                    criteria: [
-                      {
-                        fieldName: "durationMinutes",
-                        operator: "greater_than",
-                        value: 0,
-                      },
-                    ],
-                  });
-                }}
-              >
-                + New filter
-              </button>
-            </div>
+  <button
+    type="button"
+    className="btn-add-field"
+    onClick={() => setShowFilterBuilder(true)}
+  >
+    + New filter
+  </button>
+</div>
+<button
+  type="button"
+  className={
+    entryStatusView === "overdue"
+      ? "btn-save"
+      : "btn-cancel"
+  }
+  onClick={handleShowOverdue}
+>
+  {entryStatusView === "overdue"
+    ? "Showing overdue only"
+    : "Show overdue only"}
+</button>
 
+<button
+  type="button"
+  className={
+    entryStatusView === "incomplete"
+      ? "btn-save"
+      : "btn-cancel"
+  }
+  onClick={handleShowIncomplete}
+>
+  {entryStatusView === "incomplete"
+    ? "Showing incomplete only"
+    : "Show incomplete only"}
+</button>
+
+{showFilterBuilder && (
+  <div className="filter-builder">
+  <div className="form-field">
+    <label className="form-label">
+      Filter name
+    </label>
+
+    <input
+      className="form-input"
+      type="text"
+      value={filterName}
+      onChange={(event) =>
+        setFilterName(event.target.value)
+      }
+      placeholder="e.g. Long entries"
+    />
+  </div>
+
+  {filterConditions.map((condition, index) => (
+    <div className="filter-condition-row" key={index}>
+      <div className="form-field">
+        <label className="form-label">
+          Field
+        </label>
+
+        <select
+          className="form-select"
+          value={condition.targetField}
+          onChange={(event) =>
+            updateFilterCondition(index, {
+              targetField: event.target.value,
+            })
+          }
+        >
+          <option value="name">Entry name</option>
+          <option value="durationMinutes">
+            Time spent (minutes)
+          </option>
+
+          {fields.map((field) => (
+            <option
+              key={field.id}
+              value={field.id}
+            >
+              {field.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-field">
+        <label className="form-label">
+          Condition
+        </label>
+
+        <select
+          className="form-select"
+          value={condition.operator}
+          onChange={(event) =>
+            updateFilterCondition(index, {
+              operator: event.target.value,
+            })
+          }
+        >
+          <option value="equals">Equals</option>
+          <option value="not_equals">Not equals</option>
+          <option value="contains">Contains</option>
+          <option value="greater_than">
+            Greater than
+          </option>
+          <option value="less_than">
+            Less than
+          </option>
+        </select>
+      </div>
+
+      <div className="form-field">
+        <label className="form-label">
+          Value
+        </label>
+
+        <input
+          className="form-input"
+          type="text"
+          value={condition.value}
+          onChange={(event) =>
+            updateFilterCondition(index, {
+              value: event.target.value,
+            })
+          }
+          placeholder="e.g. 10"
+        />
+      </div>
+
+      {filterConditions.length > 1 && (
+        <button
+          type="button"
+          className="field-row-remove"
+          onClick={() => removeFilterCondition(index)}
+          aria-label="Remove condition"
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  ))}
+
+  <button
+    type="button"
+    className="btn-add-field"
+    onClick={addFilterCondition}
+  >
+    <Plus size={14} />
+    Add condition
+  </button>
+
+ <div className="filter-builder-actions">
+   <button
+  type="button"
+  className="btn-cancel"
+  onClick={() => {
+    setShowFilterBuilder(false);
+    setEditingFilterId(null);
+    setFilterName("");
+    setFilterConditions([
+      { targetField: "durationMinutes", operator: "greater_than", value: "" },
+    ]);
+  }}
+>
+  Cancel
+</button>
+
+    <button
+  type="button"
+  className="btn-save"
+  onClick={() => {
+    if (!filterName.trim()) {
+      return;
+    }
+
+    const criteria = filterConditions.map((condition) => {
+      const isBuiltIn =
+        condition.targetField === "name" ||
+        condition.targetField === "durationMinutes";
+
+      return isBuiltIn
+        ? {
+            fieldName: condition.targetField,
+            operator: condition.operator,
+            value: condition.value,
+          }
+        : {
+            fieldId: condition.targetField,
+            operator: condition.operator,
+            value: condition.value,
+          };
+    });
+
+    if (editingFilterId) {
+      handleUpdateSavedFilter(editingFilterId, {
+        name: filterName.trim(),
+        criteria,
+      });
+    } else {
+      handleCreateSavedFilter({
+        name: filterName.trim(),
+        criteria,
+      });
+    }
+
+    setShowFilterBuilder(false);
+    setEditingFilterId(null);
+    setFilterName("");
+    setFilterConditions([
+      { targetField: "durationMinutes", operator: "greater_than", value: "" },
+    ]);
+  }}
+>
+  {editingFilterId ? "Update filter" : "Save filter"}
+</button>
+  </div>
+</div>
+)}
             {(pendingEntries.length > 0 || !isOnline) && (
               <div className="offline-banner">
                 {!isOnline && (
@@ -971,6 +1301,11 @@ export default function ProjectDetails() {
                   const checklist = Array.isArray(entry.checklist) ? entry.checklist : [];
                   const completedChecklist = checklist.filter((item) => item.completed).length;
 
+                                    const isOverdue =
+                    entry.dueAt &&
+                    !entry.completedAt &&
+                    new Date(entry.dueAt) < new Date();
+
                   return (
                     <button
                       type="button"
@@ -1001,6 +1336,22 @@ export default function ProjectDetails() {
                                 entry.createdAt,
                             )}
                           </p>
+
+                          {entry.dueAt && (
+                            <p
+                              className={
+                                isOverdue
+                                  ? "entry-due-date entry-due-overdue"
+                                  : "entry-due-date"
+                              }
+                            >
+                              {entry.completedAt
+                                ? "Completed"
+                                : isOverdue
+                                  ? `Overdue — was due ${formatDate(entry.dueAt)}`
+                                  : `Due ${formatDate(entry.dueAt)}`}
+                            </p>
+                          )}
                         </div>
                         <span className="entry-duration"><IconClockSmall />{formatLoggedTime(entry.durationMinutes)}</span>
                       </div>
@@ -1034,6 +1385,19 @@ export default function ProjectDetails() {
                         {entry.dueAt && <span>Due {formatDate(entry.dueAt)}</span>}
                       </div>
 
+                      {entry.dueAt && !entry.completedAt && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="btn-cancel"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleMarkComplete(entry.id);
+                          }}
+                        >
+                          Mark as complete
+                        </span>
+                      )}
                       {values.length > 0 && (
                         <div className="entry-values entry-values-preview">
                           {values.slice(0, 3).map((field, index) => (
@@ -1662,6 +2026,18 @@ function ProjectDetailsStyles() {
         font-size: 12px;
         color: #94a3b8;
         margin: 4px 0 0;
+      }
+
+            .entry-due-date {
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        color: #64748b;
+        margin: 4px 0 0;
+        font-weight: 600;
+      }
+
+      .entry-due-overdue {
+        color: #dc2626;
       }
 
       .entry-duration {
