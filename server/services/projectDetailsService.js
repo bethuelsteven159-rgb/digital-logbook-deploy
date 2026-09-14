@@ -415,6 +415,7 @@ async function createEntryService({ projectId, userId, data }) {
         name: data.name.trim(),
         durationMinutes:
           data.durationMinutes,
+          tags: data.tags,
         dueAt: data.dueAt ?? null,
       });
 
