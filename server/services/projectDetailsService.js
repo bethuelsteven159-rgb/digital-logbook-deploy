@@ -7,6 +7,14 @@ function createHttpError(statusCode, message) {
   return error;
 }
 
+function serializeChecklist(item) {
+  return {
+    id: item.id,
+    text: item.text,
+    completed: Boolean(item.completed),
+    position: item.position,
+  };
+}
 
 function buildLinkedEntriesMap(entries, links) {
   const linkedByEntryId = new Map(
@@ -18,6 +26,7 @@ function buildLinkedEntriesMap(entries, links) {
       id: link.targetEntryId,
       name: link.targetName,
     });
+
     linkedByEntryId.get(link.targetEntryId)?.push({
       id: link.sourceEntryId,
       name: link.sourceName,
@@ -36,12 +45,31 @@ function serializeEntry(entry) {
     dueAt: entry.dueAt,
     completedAt: entry.completedAt,
     createdAt: entry.createdAt,
+
     values: (entry.values || []).map((value) => ({
       fieldId: value.fieldId,
       name: value.field?.name || "Field",
       type: value.field?.fieldType || null,
+      archived: Boolean(value.field?.archivedAt),
       value: serializeFieldValue(value),
     })),
+
+    checklist: (entry.checklist || []).map(serializeChecklist),
+
+    references: (entry.references || []).map((reference) => ({
+      id: reference.id,
+      projectId: reference.projectId,
+      projectName: reference.projectName,
+    })),
+
+    entryReferences: (entry.entryReferences || []).map((reference) => ({
+      id: reference.id,
+      entryId: reference.referencedEntryId,
+      entryName: reference.referencedEntryName,
+      projectId: reference.referencedProjectId,
+      projectName: reference.referencedProjectName,
+    })),
+
     linkedEntries: Array.isArray(entry.linkedEntries)
       ? entry.linkedEntries
       : [],
@@ -49,8 +77,9 @@ function serializeEntry(entry) {
 }
 
 function attachComputedFields(serializedEntry, allFields) {
-  const computedFields = allFields.filter(
-    (field) => field.fieldType === "computed",
+  const computedFields = (allFields || []).filter(
+    (field) => field.fieldType === "computed" &&
+      (!field.archivedAt || new Date(serializedEntry.createdAt) <= new Date(field.archivedAt)),
   );
 
   if (computedFields.length === 0) {
@@ -61,18 +90,17 @@ function attachComputedFields(serializedEntry, allFields) {
     fieldId: field.id,
     name: field.name,
     type: "computed",
+    archived: Boolean(field.archivedAt),
     value: evaluateFormula(field.formula, serializedEntry.values),
   }));
 
-    return {
-      ...serializedEntry,
-      values: [...serializedEntry.values, ...computedValues],
-    };
-  }
+  return {
+    ...serializedEntry,
+    values: [...serializedEntry.values, ...computedValues],
+  };
+}
 
 function serializeFieldValue(value) {
-  const fieldType = value.field?.fieldType;
-
   if (
     value.valueNumber !== null &&
     value.valueNumber !== undefined
@@ -95,12 +123,9 @@ function serializeFieldValue(value) {
 function convertValue(field, rawValue) {
   if (
     rawValue === undefined ||
-    rawValue === null
+    rawValue === null ||
+    rawValue === ""
   ) {
-    return null;
-  }
-
-  if (rawValue === "") {
     return null;
   }
 
@@ -126,6 +151,9 @@ function convertValue(field, rawValue) {
       };
     }
 
+    case "computed":
+      return null;
+
     case "date": {
       const date = new Date(
         `${rawValue}T00:00:00.000Z`,
@@ -143,9 +171,6 @@ function convertValue(field, rawValue) {
       };
     }
 
-    case "computed":
-      return null;
-
     default:
       throw createHttpError(
         400,
@@ -154,24 +179,46 @@ function convertValue(field, rawValue) {
   }
 }
 
-async function getProjectDetailsService({ projectId, userId }) {
-  const project = await repository.getOwnedProject(projectId, userId);
+async function getProjectDetailsService({
+  projectId,
+  userId,
+}) {
+  const project =
+    await repository.getOwnedProject(
+      projectId,
+      userId,
+    );
 
   if (!project) {
-    throw createHttpError(404, "Project not found");
+    throw createHttpError(
+      404,
+      "Project not found",
+    );
   }
 
-  const [fields, stats, entries, links] = await Promise.all([
-    repository.getProjectFields(projectId),
+  const [
+    fields,
+    stats,
+    entries,
+    projectReferences,
+    links,
+  ] = await Promise.all([
+    repository.getProjectFields(projectId, { includeArchived: true }),
     repository.getProjectStats(projectId),
     repository.getProjectEntries(projectId),
+    repository.getProjectReferences(projectId),
     repository.getProjectEntryLinks(projectId),
   ]);
 
-  const linkedByEntryId = buildLinkedEntriesMap(entries, links);
+  const linkedByEntryId =
+    buildLinkedEntriesMap(
+      entries,
+      links,
+    );
 
   for (const entry of entries) {
-    entry.linkedEntries = linkedByEntryId.get(entry.id) || [];
+    entry.linkedEntries =
+      linkedByEntryId.get(entry.id) || [];
   }
 
   return {
@@ -179,33 +226,63 @@ async function getProjectDetailsService({ projectId, userId }) {
       id: project.id,
       name: project.name,
       description: project.description,
+      startDate: project.startDate,
+      endDate: project.endDate,
       archivedAt: project.archivedAt,
       createdAt: project.createdAt,
     },
 
     stats,
-    fields,
+    fields: fields.filter((field) => !field.archivedAt),
     entries: entries.map((entry) =>
       attachComputedFields(serializeEntry(entry), fields),
     ),
+
+    references:
+      projectReferences.map(
+        (reference) => ({
+          id: reference.id,
+          projectId:
+            reference.referencedProjectId,
+          projectName:
+            reference.referencedProjectName,
+        }),
+      ),
   };
 }
 
 async function createEntryService({ projectId, userId, data }) {
   return repository.withTransaction(async (tx) => {
-    const project = await tx.getOwnedProject(projectId, userId);
+    const project = await tx.getOwnedProject(projectId, userId, true);
 
     if (!project) {
-      throw createHttpError(404, "Project not found");
+      throw createHttpError(
+        404,
+        "Project not found",
+      );
     }
 
-    const existingFields = await tx.getProjectFields(projectId);
-    const existingFieldMap = new Map(
-      existingFields.map((field) => [field.id, field]),
-    );
+    const existingFields =
+      await tx.getProjectFields(
+        projectId,
+      );
+
+    const existingFieldMap =
+      new Map(
+        existingFields.map(
+          (field) => [
+            field.id,
+            field,
+          ],
+        ),
+      );
 
     for (const suppliedValue of data.values) {
-      if (!existingFieldMap.has(suppliedValue.fieldId)) {
+      if (
+        !existingFieldMap.has(
+          suppliedValue.fieldId,
+        )
+      ) {
         throw createHttpError(
           400,
           "One of the submitted fields does not belong to this project",
@@ -214,11 +291,19 @@ async function createEntryService({ projectId, userId, data }) {
     }
 
     const usedNames = new Set(
-      existingFields.map((field) => field.name.trim().toLowerCase()),
+      existingFields.map(
+        (field) =>
+          field.name
+            .trim()
+            .toLowerCase(),
+      ),
     );
 
     for (const field of data.newFields) {
-      const normalizedName = field.name.trim().toLowerCase();
+      const normalizedName =
+        field.name
+          .trim()
+          .toLowerCase();
 
       if (usedNames.has(normalizedName)) {
         throw createHttpError(
@@ -227,117 +312,1097 @@ async function createEntryService({ projectId, userId, data }) {
         );
       }
 
-      usedNames.add(normalizedName);
-    }
-
-    const maxPosition = existingFields.reduce(
-      (max, field) => Math.max(max, field.position || 0),
-      0,
-    );
-
-    const newlyCreatedFields = [];
-
-    for (let index = 0; index < data.newFields.length; index += 1) {
-      const requestedField = data.newFields[index];
-
-      const createdField = await tx.createProjectField({
-        projectId,
-        name: requestedField.name.trim(),
-        fieldType: requestedField.type,
-        formula:
-          requestedField.type === "computed"
-            ? requestedField.formula
-            : null,
-        position: maxPosition + index + 1,
-        required: false,
-      });
-
-      newlyCreatedFields.push({
-        ...createdField,
-        clientId: requestedField.clientId,
-        submittedValue: requestedField.value,
-      });
-    }
-
-    const linkedEntryIds = [...new Set(data.linkedEntryIds || [])];
-    const linkedEntries = await tx.getEntriesByIdsForProject(
-      projectId,
-      linkedEntryIds,
-    );
-
-    if (linkedEntries.length !== linkedEntryIds.length) {
-      throw createHttpError(
-        400,
-        "One or more linked entries do not belong to this project",
+      usedNames.add(
+        normalizedName,
       );
     }
 
-    const entry = await tx.createEntry({
-      projectId,
-      createdById: userId,
-      name: data.name.trim(),
-      durationMinutes: data.durationMinutes,
-      dueAt: data.dueAt ?? null,
-    });
+    const referenceProjectIds = [
+      ...new Set(
+        data.referenceProjectIds || [],
+      ),
+    ];
 
-    if (linkedEntryIds.length > 0) {
-      await tx.createEntryLinks(entry.id, linkedEntryIds);
+    if (
+      referenceProjectIds.includes(
+        projectId,
+      )
+    ) {
+      throw createHttpError(
+        400,
+        "An entry cannot reference its own project",
+      );
     }
+
+    if (
+      referenceProjectIds.length > 0
+    ) {
+      const ownedIds =
+        await tx.getOwnedProjectIds(
+          referenceProjectIds,
+          userId,
+        );
+
+      if (
+        ownedIds.length !==
+        referenceProjectIds.length
+      ) {
+        throw createHttpError(
+          400,
+          "One of the referenced projects does not belong to you",
+        );
+      }
+    }
+
+    const maxPosition =
+      existingFields.reduce(
+        (max, field) =>
+          Math.max(
+            max,
+            field.position || 0,
+          ),
+        0,
+      );
+
+    const newlyCreatedFields = [];
+
+    for (
+      let index = 0;
+      index < data.newFields.length;
+      index += 1
+    ) {
+      const requestedField =
+        data.newFields[index];
+
+      const createdField =
+        await tx.createProjectField({
+          projectId,
+          name:
+            requestedField.name.trim(),
+          fieldType:
+            requestedField.type,
+          formula:
+            requestedField.type === "computed"
+              ? requestedField.formula
+              : null,
+          position:
+            maxPosition +
+            index +
+            1,
+          required: false,
+        });
+
+      newlyCreatedFields.push({
+        ...createdField,
+        clientId:
+          requestedField.clientId,
+        submittedValue:
+          requestedField.value,
+      });
+    }
+
+    const entry =
+      await tx.createEntry({
+        projectId,
+        createdById: userId,
+        name: data.name.trim(),
+        durationMinutes:
+          data.durationMinutes,
+        dueAt: data.dueAt ?? null,
+      });
 
     const valuesToCreate = [];
 
-    for (const submitted of data.values) {
-      const field = existingFieldMap.get(submitted.fieldId);
-      const converted = convertValue(field, submitted.value);
+    for (
+      const submitted of data.values
+    ) {
+      const field =
+        existingFieldMap.get(
+          submitted.fieldId,
+        );
 
-      if (!converted) {
-        continue;
+      const converted =
+        convertValue(
+          field,
+          submitted.value,
+        );
+
+      if (converted) {
+        valuesToCreate.push({
+          entryId: entry.id,
+          fieldId: field.id,
+          ...converted,
+        });
       }
-
-      valuesToCreate.push({
-        entryId: entry.id,
-        fieldId: field.id,
-        ...converted,
-      });
     }
 
-    for (const field of newlyCreatedFields) {
-      const converted = convertValue(field, field.submittedValue);
+    for (
+      const field of newlyCreatedFields
+    ) {
+      const converted =
+        convertValue(
+          field,
+          field.submittedValue,
+        );
 
-      if (!converted) {
-        continue;
+      if (converted) {
+        valuesToCreate.push({
+          entryId: entry.id,
+          fieldId: field.id,
+          ...converted,
+        });
       }
-
-      valuesToCreate.push({
-        entryId: entry.id,
-        fieldId: field.id,
-        ...converted,
-      });
     }
 
     if (valuesToCreate.length > 0) {
-      await tx.createEntryFieldValues(valuesToCreate);
+      await tx.createEntryFieldValues(
+        valuesToCreate,
+      );
     }
 
-        const completeEntry = await tx.getEntryById(entry.id);
-    const allFields = await tx.getProjectFields(projectId);
-    completeEntry.linkedEntries = linkedEntries;
+    if (data.checklist?.length) {
+      await tx.createChecklistItems(
+        entry.id,
+        data.checklist,
+      );
+    }
 
-    return attachComputedFields(serializeEntry(completeEntry), allFields);
+    if (
+      referenceProjectIds.length
+    ) {
+      await tx.createEntryProjectReferences(
+        entry.id,
+        referenceProjectIds,
+      );
+    }
+
+    const referenceEntryIds = [
+      ...new Set(
+        data.referenceEntryIds || [],
+      ),
+    ];
+
+    if (
+      referenceEntryIds.includes(
+        entry.id,
+      )
+    ) {
+      throw createHttpError(
+        400,
+        "An entry cannot reference itself",
+      );
+    }
+
+    if (
+      referenceEntryIds.length > 0
+    ) {
+      const ownedEntryIds =
+        await tx.getOwnedEntryIds(
+          referenceEntryIds,
+          userId,
+        );
+
+      if (
+        ownedEntryIds.length !==
+        referenceEntryIds.length
+      ) {
+        throw createHttpError(
+          400,
+          "One of the referenced entries does not belong to you",
+        );
+      }
+
+      await tx.createEntryEntryReferences(
+        entry.id,
+        referenceEntryIds,
+      );
+    }
+
+    const linkedEntryIds = [
+      ...new Set(
+        data.linkedEntryIds || [],
+      ),
+    ];
+
+    if (
+      linkedEntryIds.includes(
+        entry.id,
+      )
+    ) {
+      throw createHttpError(
+        400,
+        "An entry cannot link to itself",
+      );
+    }
+
+    if (linkedEntryIds.length > 0) {
+      const linkedEntries =
+        await tx.getEntriesByIdsForProject(
+          linkedEntryIds,
+          projectId,
+        );
+
+      if (
+        linkedEntries.length !==
+        linkedEntryIds.length
+      ) {
+        throw createHttpError(
+          400,
+          "One or more linked entries do not belong to this project",
+        );
+      }
+
+      await tx.createEntryLinks(
+        entry.id,
+        linkedEntryIds,
+      );
+    }
+
+    const completeEntry =
+      await tx.getEntryById(
+        entry.id,
+      );
+
+    const allFields =
+      await tx.getProjectFields(
+        projectId,
+      );
+
+    completeEntry.linkedEntries =
+      linkedEntryIds.map((id) => ({ id }));
+
+    return attachComputedFields(
+      serializeEntry(completeEntry),
+      allFields,
+    );
   });
 }
+
+async function deleteChecklistItemService({
+  entryId,
+  itemId,
+  userId,
+}) {
+  const ownedEntry =
+    await repository.getOwnedEntry(
+      entryId,
+      userId,
+    );
+
+  if (!ownedEntry) {
+    throw createHttpError(
+      404,
+      "Entry not found",
+    );
+  }
+
+  const deleted =
+    await repository.deleteChecklistItem(
+      entryId,
+      itemId,
+    );
+
+  if (!deleted) {
+    throw createHttpError(
+      404,
+      "Checklist item not found",
+    );
+  }
+
+  return {
+    id: deleted.id,
+  };
+}
+
+async function updateProjectReferencesService({
+  projectId,
+  userId,
+  projectIds,
+}) {
+  return repository.withTransaction(
+    async (tx) => {
+      const project =
+        await tx.getOwnedProject(
+          projectId,
+          userId,
+        );
+
+      if (!project) {
+        throw createHttpError(
+          404,
+          "Project not found",
+        );
+      }
+
+      const uniqueProjectIds = [
+        ...new Set(projectIds || []),
+      ];
+
+      if (
+        uniqueProjectIds.includes(
+          projectId,
+        )
+      ) {
+        throw createHttpError(
+          400,
+          "A project cannot reference itself",
+        );
+      }
+
+      if (
+        uniqueProjectIds.length > 0
+      ) {
+        const ownedIds =
+          await tx.getOwnedProjectIds(
+            uniqueProjectIds,
+            userId,
+          );
+
+        if (
+          ownedIds.length !==
+          uniqueProjectIds.length
+        ) {
+          throw createHttpError(
+            400,
+            "One of the referenced projects does not belong to you",
+          );
+        }
+      }
+
+      const existing =
+        await tx.getProjectReferences(
+          projectId,
+        );
+
+      const existingIds = new Set(
+        existing.map(
+          (reference) =>
+            reference.referencedProjectId,
+        ),
+      );
+
+      const desiredIds =
+        new Set(uniqueProjectIds);
+
+      const idsToAdd =
+        uniqueProjectIds.filter(
+          (referenceId) =>
+            !existingIds.has(
+              referenceId,
+            ),
+        );
+
+      const idsToRemove =
+        existing
+          .map(
+            (reference) =>
+              reference.referencedProjectId,
+          )
+          .filter(
+            (referenceId) =>
+              !desiredIds.has(
+                referenceId,
+              ),
+          );
+
+      if (idsToAdd.length > 0) {
+        await tx.createProjectReferences(
+          projectId,
+          idsToAdd,
+        );
+      }
+
+      if (idsToRemove.length > 0) {
+        await tx.removeProjectReferences(
+          projectId,
+          idsToRemove,
+        );
+      }
+
+      return tx.getProjectReferences(
+        projectId,
+      );
+    },
+  );
+}
+
+async function updateEntryProjectReferencesService({
+  entryId,
+  userId,
+  projectIds,
+}) {
+  return repository.withTransaction(
+    async (tx) => {
+      const ownedEntry =
+        await tx.getOwnedEntry(
+          entryId,
+          userId,
+        );
+
+      if (!ownedEntry) {
+        throw createHttpError(
+          404,
+          "Entry not found",
+        );
+      }
+
+      const uniqueProjectIds = [
+        ...new Set(projectIds || []),
+      ];
+
+      const currentEntry =
+        await tx.getEntryById(
+          entryId,
+        );
+
+      if (!currentEntry) {
+        throw createHttpError(
+          404,
+          "Entry not found",
+        );
+      }
+
+      if (
+        uniqueProjectIds.includes(
+          currentEntry.projectId,
+        )
+      ) {
+        throw createHttpError(
+          400,
+          "An entry cannot reference its own project",
+        );
+      }
+
+      if (
+        uniqueProjectIds.length > 0
+      ) {
+        const ownedProjectIds =
+          await tx.getOwnedProjectIds(
+            uniqueProjectIds,
+            userId,
+          );
+
+        if (
+          ownedProjectIds.length !==
+          uniqueProjectIds.length
+        ) {
+          throw createHttpError(
+            400,
+            "One of the referenced projects does not belong to you",
+          );
+        }
+      }
+
+      const existing =
+        await tx.getEntryProjectReferences(
+          entryId,
+        );
+
+      const existingIds = new Set(
+        existing.map(
+          (reference) =>
+            reference.projectId,
+        ),
+      );
+
+      const desiredIds =
+        new Set(uniqueProjectIds);
+
+      const idsToAdd =
+        uniqueProjectIds.filter(
+          (projectId) =>
+            !existingIds.has(projectId),
+        );
+
+      const idsToRemove =
+        existing
+          .map(
+            (reference) =>
+              reference.projectId,
+          )
+          .filter(
+            (projectId) =>
+              !desiredIds.has(projectId),
+          );
+
+      if (idsToAdd.length > 0) {
+        await tx.createEntryProjectReferences(
+          entryId,
+          idsToAdd,
+        );
+      }
+
+      if (idsToRemove.length > 0) {
+        await tx.removeEntryProjectReferences(
+          entryId,
+          idsToRemove,
+        );
+      }
+
+      return tx.getEntryProjectReferences(
+        entryId,
+      );
+    },
+  );
+}
+
+async function updateEntryReferencesService({
+  entryId,
+  userId,
+  entryIds,
+}) {
+  return repository.withTransaction(
+    async (tx) => {
+      const ownedEntry =
+        await tx.getOwnedEntry(
+          entryId,
+          userId,
+        );
+
+      if (!ownedEntry) {
+        throw createHttpError(
+          404,
+          "Entry not found",
+        );
+      }
+
+      const uniqueEntryIds = [
+        ...new Set(entryIds || []),
+      ];
+
+      if (
+        uniqueEntryIds.includes(
+          entryId,
+        )
+      ) {
+        throw createHttpError(
+          400,
+          "An entry cannot reference itself",
+        );
+      }
+
+      if (
+        uniqueEntryIds.length > 0
+      ) {
+        const ownedEntryIds =
+          await tx.getOwnedEntryIds(
+            uniqueEntryIds,
+            userId,
+          );
+
+        if (
+          ownedEntryIds.length !==
+          uniqueEntryIds.length
+        ) {
+          throw createHttpError(
+            400,
+            "One of the referenced entries does not belong to you",
+          );
+        }
+      }
+
+      const currentEntry =
+        await tx.getEntryById(
+          entryId,
+        );
+
+      if (!currentEntry) {
+        throw createHttpError(
+          404,
+          "Entry not found",
+        );
+      }
+
+      const existingIds = new Set(
+        (currentEntry.entryReferences || [])
+          .map(
+            (reference) =>
+              reference.referencedEntryId,
+          ),
+      );
+
+      const desiredIds =
+        new Set(uniqueEntryIds);
+
+      const idsToAdd =
+        uniqueEntryIds.filter(
+          (referenceId) =>
+            !existingIds.has(
+              referenceId,
+            ),
+        );
+
+      const idsToRemove =
+        Array.from(existingIds).filter(
+          (referenceId) =>
+            !desiredIds.has(
+              referenceId,
+            ),
+        );
+
+      if (idsToAdd.length > 0) {
+        await tx.createEntryEntryReferences(
+          entryId,
+          idsToAdd,
+        );
+      }
+
+      if (idsToRemove.length > 0) {
+        await tx.removeEntryEntryReferences(
+          entryId,
+          idsToRemove,
+        );
+      }
+
+      const updatedEntry =
+        await tx.getEntryById(
+          entryId,
+        );
+
+      return serializeEntry(
+        updatedEntry,
+      );
+    },
+  );
+}
+
+async function updateEntryService({
+  projectId,
+  entryId,
+  userId,
+  data,
+}) {
+  return repository.withTransaction(
+    async (tx) => {
+      const project =
+        await tx.getOwnedProject(
+          projectId,
+          userId,
+        );
+
+      if (!project) {
+        throw createHttpError(
+          404,
+          "Project not found",
+        );
+      }
+
+      if (project.archivedAt) {
+        throw createHttpError(
+          409,
+          "Archived projects cannot be edited",
+        );
+      }
+
+      const entry =
+        await tx.getEntryById(
+          entryId,
+        );
+
+      if (
+        !entry ||
+        entry.projectId !== projectId
+      ) {
+        throw createHttpError(
+          404,
+          "Entry not found",
+        );
+      }
+
+      const requestedFieldIds = [
+        ...new Set(
+          data.fieldIds || [],
+        ),
+      ];
+
+      const fields =
+        await tx.getProjectFields(
+          projectId,
+        );
+
+      const fieldMap = new Map(
+        fields.map(
+          (field) => [
+            field.id,
+            field,
+          ],
+        ),
+      );
+
+      for (
+        const fieldId of requestedFieldIds
+      ) {
+        if (!fieldMap.has(fieldId)) {
+          throw createHttpError(
+            400,
+            "One of the submitted fields does not belong to this project",
+          );
+        }
+      }
+
+      const usedNames = new Set(
+        fields.map(
+          (field) =>
+            field.name
+              .trim()
+              .toLowerCase(),
+        ),
+      );
+
+      const newFields =
+        data.newFields || [];
+
+      const createdFields = [];
+
+      const maxPosition =
+        fields.reduce(
+          (max, field) =>
+            Math.max(
+              max,
+              field.position || 0,
+            ),
+          -1,
+        );
+
+      for (
+        let index = 0;
+        index < newFields.length;
+        index += 1
+      ) {
+        const requested =
+          newFields[index];
+
+        const normalizedName =
+          requested.name
+            .trim()
+            .toLowerCase();
+
+        if (
+          usedNames.has(
+            normalizedName,
+          )
+        ) {
+          throw createHttpError(
+            409,
+            `A field named "${requested.name}" already exists`,
+          );
+        }
+
+        usedNames.add(
+          normalizedName,
+        );
+
+        const created =
+          await tx.createProjectField({
+            projectId,
+            name:
+              requested.name.trim(),
+            fieldType:
+              requested.type,
+            formula:
+              requested.type === "computed"
+                ? requested.formula
+                : null,
+            position:
+              maxPosition +
+              index +
+              1,
+            required: false,
+          });
+
+        createdFields.push({
+          ...created,
+          clientId:
+            requested.clientId,
+          submittedValue:
+            requested.value,
+        });
+      }
+
+      const valuesByField =
+        new Map(
+          (data.values || []).map(
+            (item) => [
+              item.fieldId,
+              item.value,
+            ],
+          ),
+        );
+
+      const convertedValues = [];
+
+      for (
+        const fieldId of requestedFieldIds
+      ) {
+        const field =
+          fieldMap.get(fieldId);
+
+        const converted =
+          convertValue(
+            field,
+            valuesByField.get(
+              fieldId,
+            ),
+          );
+
+        if (converted) {
+          convertedValues.push({
+            entryId,
+            fieldId,
+            ...converted,
+          });
+        }
+      }
+
+      for (
+        const field of createdFields
+      ) {
+        const converted =
+          convertValue(
+            field,
+            field.submittedValue,
+          );
+
+        if (converted) {
+          convertedValues.push({
+            entryId,
+            fieldId: field.id,
+            ...converted,
+          });
+        }
+      }
+
+      const removedFieldIds =
+        fields
+          .filter(
+            (field) =>
+              !requestedFieldIds.includes(
+                field.id,
+              ),
+          )
+          .map(
+            (field) =>
+              field.id,
+          );
+
+      const protectedRemoved =
+        fields.filter(
+          (field) =>
+            removedFieldIds.includes(
+              field.id,
+            ) &&
+            field.usedByEntries,
+        );
+
+      if (
+        protectedRemoved.length > 0
+      ) {
+        throw createHttpError(
+          409,
+          "A field used by an entry cannot be removed",
+        );
+      }
+
+      const updatedRow =
+        await tx.updateEntry(
+          entryId,
+          data,
+        );
+
+      await tx.replaceEntryFieldValues(
+        entryId,
+        convertedValues,
+      );
+
+      await tx.archiveProjectFields(
+        removedFieldIds,
+      );
+
+      if (Array.isArray(data.checklistItems)) {
+        const existingChecklist = new Map(
+          (entry.checklist || []).map((item) => [item.id, item]),
+        );
+        const submittedChecklistIds = new Set();
+
+        for (const submittedItem of data.checklistItems) {
+          const existingItem = existingChecklist.get(submittedItem.id);
+          if (!existingItem) {
+            throw createHttpError(
+              400,
+              "One of the submitted checklist items does not belong to this entry",
+            );
+          }
+
+          submittedChecklistIds.add(existingItem.id);
+
+          const nextCompleted = Boolean(submittedItem.completed);
+          const nextText = String(submittedItem.text ?? "").trim();
+
+          if (!nextText) {
+            throw createHttpError(400, "Checklist item text cannot be empty");
+          }
+
+          if (existingItem.completed && nextCompleted && nextText !== existingItem.text) {
+            throw createHttpError(
+              409,
+              "Completed checklist items must be unticked before their text can be changed",
+            );
+          }
+
+          const changes = {};
+          if (nextCompleted !== Boolean(existingItem.completed)) {
+            changes.completed = nextCompleted;
+          }
+          if (nextText !== existingItem.text) {
+            changes.text = nextText;
+          }
+
+          if (Object.keys(changes).length > 0) {
+            await tx.updateChecklistItem(
+              entryId,
+              existingItem.id,
+              changes,
+            );
+          }
+        }
+
+        for (const existingItem of entry.checklist || []) {
+          if (submittedChecklistIds.has(existingItem.id)) continue;
+
+          if (existingItem.completed) {
+            throw createHttpError(
+              409,
+              "Completed checklist items cannot be removed",
+            );
+          }
+
+          await tx.deleteChecklistItem(entryId, existingItem.id);
+        }
+      }
+
+      if (data.newChecklistItems?.length) {
+        const existingChecklistCount = Array.isArray(entry.checklist)
+          ? entry.checklist.length
+          : 0;
+
+        if (existingChecklistCount + data.newChecklistItems.length > 100) {
+          throw createHttpError(
+            400,
+            "A checklist can contain at most 100 items.",
+          );
+        }
+
+        await tx.createChecklistItems(
+          entryId,
+          data.newChecklistItems,
+        );
+      }
+
+      const linkedEntryIds = [
+        ...new Set(
+          data.linkedEntryIds || [],
+        ),
+      ];
+
+      if (
+        linkedEntryIds.includes(
+          entryId,
+        )
+      ) {
+        throw createHttpError(
+          400,
+          "An entry cannot link to itself",
+        );
+      }
+
+      if (
+        linkedEntryIds.length > 0
+      ) {
+        const linkedEntries =
+          await tx.getEntriesByIdsForProject(
+            linkedEntryIds,
+            projectId,
+          );
+
+        if (
+          linkedEntries.length !==
+          linkedEntryIds.length
+        ) {
+          throw createHttpError(
+            400,
+            "One or more linked entries do not belong to this project",
+          );
+        }
+
+        await tx.createEntryLinks(
+          entryId,
+          linkedEntryIds,
+        );
+      }
+
+      return {
+        id: updatedRow.id,
+        name: updatedRow.name,
+        durationMinutes:
+          updatedRow.duration_minutes,
+        occurredAt:
+          updatedRow.occurred_at,
+        updatedAt:
+          updatedRow.updated_at,
+      };
+    },
+  );
+}
+
+async function updateChecklistItemService({
+  entryId,
+  itemId,
+  userId,
+  changes,
+}) {
+  const ownedEntry =
+    await repository.getOwnedEntry(
+      entryId,
+      userId,
+    );
+
+  if (!ownedEntry) {
+    throw createHttpError(
+      404,
+      "Entry not found",
+    );
+  }
+
+  const item =
+    await repository.updateChecklistItem(
+      entryId,
+      itemId,
+      changes,
+    );
+
+  if (!item) {
+    throw createHttpError(
+      404,
+      "Checklist item not found",
+    );
+  }
+
+  return serializeChecklist(item);
+}
+
 async function getOutstandingEntriesService({ projectId, userId }) {
   const project = await repository.getOwnedProject(projectId, userId);
-
   if (!project) {
     throw createHttpError(404, "Project not found");
   }
-
-  const entries = await repository.getOutstandingEntries(projectId);
-
-  return entries.map(serializeEntry);
+  const [entries, fields] = await Promise.all([
+    repository.getOutstandingEntries(projectId),
+    repository.getProjectFields(projectId),
+  ]);
+  return entries.map((entry) =>
+    attachComputedFields(serializeEntry(entry), fields),
+  );
 }
-
 
 async function getIncompleteEntriesService({ projectId, userId }) {
   const project = await repository.getOwnedProject(projectId, userId);
@@ -369,12 +1434,19 @@ async function markEntryCompleteService({ projectId, userId, entryId }) {
 
   return attachComputedFields(serializeEntry(completeEntry), allFields);
 }
+
 module.exports = {
   getProjectDetailsService,
   createEntryService,
   getOutstandingEntriesService,
   getIncompleteEntriesService,
   markEntryCompleteService,
+  updateChecklistItemService,
+  deleteChecklistItemService,
+  updateProjectReferencesService,
+  updateEntryProjectReferencesService,
+  updateEntryReferencesService,
+  updateEntryService,
   serializeEntry,
   buildLinkedEntriesMap,
 };

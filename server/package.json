@@ -6,7 +6,7 @@
  "scripts": {
   "dev": "nodemon server.js",
   "start": "node server.js",
-  "test": "vitest run",
+  "test": "vitest run && npm run test:node",
   "test:node": "node --test tests/*.test.js",
   "migrate:entry-links": "node scripts/applyEntryLinksMigration.js"
 },
