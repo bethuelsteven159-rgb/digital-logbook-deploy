@@ -46,6 +46,10 @@ function serializeEntry(entry) {
     completedAt: entry.completedAt,
     createdAt: entry.createdAt,
 
+    tags: entry.tags || [],
+
+
+
     values: (entry.values || []).map((value) => ({
       fieldId: value.fieldId,
       name: value.field?.name || "Field",
@@ -317,11 +321,14 @@ async function createEntryService({ projectId, userId, data }) {
       );
     }
 
+
+
     const referenceProjectIds = [
       ...new Set(
         data.referenceProjectIds || [],
       ),
     ];
+
 
     if (
       referenceProjectIds.includes(
@@ -408,6 +415,7 @@ async function createEntryService({ projectId, userId, data }) {
         name: data.name.trim(),
         durationMinutes:
           data.durationMinutes,
+          tags: data.tags,
         dueAt: data.dueAt ?? null,
       });
 
