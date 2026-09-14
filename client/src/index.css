@@ -919,3 +919,127 @@ html[data-theme="dark"] *:hover {
     align-items: flex-start;
   }
 }
+
+/* =========================================================
+   DARK MODE — DASHBOARD ACCESSIBILITY FIX
+   Keeps dashboard cards, statistics and supporting text
+   readable when the application is using dark mode.
+   ========================================================= */
+
+html[data-theme="dark"] .dashboard-content {
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .dash-card {
+  background: #1a2538;
+  border-color: #3b4a61;
+}
+
+html[data-theme="dark"] .stat-card-label {
+  color: #bdc8d6;
+}
+
+html[data-theme="dark"] .stat-card-number {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .stat-card-unit,
+html[data-theme="dark"] .stat-card-empty-note {
+  color: #aebbd0;
+}
+
+html[data-theme="dark"] .stat-card-icon {
+  background: #243149;
+  color: #c5d0de;
+}
+
+html[data-theme="dark"] .dash-card-header {
+  border-color: #3b4a61;
+}
+
+html[data-theme="dark"] .dash-card-title,
+html[data-theme="dark"] .activity-title,
+html[data-theme="dark"] .get-started-heading {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .activity-row {
+  border-color: #2f3d52;
+}
+
+html[data-theme="dark"] .activity-icon,
+html[data-theme="dark"] .get-started-icon {
+  background: #243149;
+  color: #aebbd0;
+}
+
+html[data-theme="dark"] .activity-meta,
+html[data-theme="dark"] .activity-duration,
+html[data-theme="dark"] .get-started-body-text,
+html[data-theme="dark"] .overview-row-label {
+  color: #bdc8d6;
+}
+
+html[data-theme="dark"] .overview-row {
+  border-color: #243149;
+}
+
+html[data-theme="dark"] .overview-row-value {
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .dash-link {
+  color: #aebaff;
+}
+
+html[data-theme="dark"] .dash-link:hover {
+  color: #c1c9ff;
+}
+
+html[data-theme="dark"] .dashboard-error {
+  background: #351d23;
+  border-color: #71333b;
+  color: #f3a6a6;
+}
+
+
+/* =========================================================
+   DARK MODE — DATE / TIME INPUT ACCESSIBILITY FIX
+   Keeps native calendar/date controls visible in forms.
+   ========================================================= */
+
+html[data-theme="dark"] input[type="date"],
+html[data-theme="dark"] input[type="datetime-local"],
+html[data-theme="dark"] input[type="time"],
+html[data-theme="dark"] input[type="month"] {
+  background: #111827;
+  color: #e5e7eb;
+  border-color: #46566c;
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+html[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+html[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator,
+html[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.4);
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator:hover,
+html[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+html[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator:hover,
+html[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+html[data-theme="dark"] input[type="date"]:focus,
+html[data-theme="dark"] input[type="datetime-local"]:focus,
+html[data-theme="dark"] input[type="time"]:focus,
+html[data-theme="dark"] input[type="month"]:focus {
+  border-color: #8797f2;
+  box-shadow: 0 0 0 3px rgba(135, 151, 242, 0.16);
+  outline: none;
+}
