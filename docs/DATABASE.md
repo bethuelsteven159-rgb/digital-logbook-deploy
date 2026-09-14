@@ -463,3 +463,13 @@ PostgreSQL          In-Memory DB
 ```
 
 This structure allows the application to use either PostgreSQL or the in-memory database without changing the API layer.
+
+## Person 4 Feature Tables
+
+### `entry_checklist_items`
+
+Stores checklist items belonging to an entry. Items have a position for stable display order and a completed flag for tracking progress.
+
+### `entry_project_references`
+
+Stores references from an entry to another project owned by the same user. The unique constraint prevents duplicate references for the same entry/project pair.

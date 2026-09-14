@@ -41,7 +41,7 @@ async function getProfileByUserId(userId) {
 
 async function updateProfile(
   userId,
-  { name, bio },
+  { name, bio, avatarUrl },
 ) {
   const result = await db.query(
     `
@@ -49,6 +49,7 @@ async function updateProfile(
       SET
         name = $1,
         bio = $2,
+        avatar_url = CASE WHEN $4::boolean THEN $5::text ELSE avatar_url END,
         updated_at = NOW()
       WHERE id = $3
       RETURNING
@@ -61,7 +62,7 @@ async function updateProfile(
         created_at,
         updated_at
     `,
-    [name, bio, userId],
+    [name, bio, userId, avatarUrl !== undefined, avatarUrl ?? null],
   );
 
   return mapProfile(result.rows[0]);

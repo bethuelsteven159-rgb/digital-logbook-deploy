@@ -16,8 +16,21 @@ import Stats from "./pages/Stats/Stats";
 import Settings from "./pages/Settings/Settings";
 
 import { UserProvider } from "./context/UserContext.jsx";
+import { useEffect } from "react";
+import { applyTheme, loadPreferences, PREFERENCES_EVENT } from "./utils/preferences";
 
 export default function App() {
+  useEffect(() => {
+    applyTheme(loadPreferences().theme);
+
+    function handlePreferencesChanged(event) {
+      applyTheme(event.detail?.theme || loadPreferences().theme);
+    }
+
+    window.addEventListener(PREFERENCES_EVENT, handlePreferencesChanged);
+    return () => window.removeEventListener(PREFERENCES_EVENT, handlePreferencesChanged);
+  }, []);
+
   return (
     <BrowserRouter>
       <UserProvider>

@@ -1,36 +1,32 @@
-import { useState } from "react";
+import { useState } from 'react';
 
 const FIELD_TYPES = [
-  { value: "short_text", label: "Short text" },
-  { value: "long_text", label: "Long text" },
-  { value: "number", label: "Number" },
-  { value: "date", label: "Date" },
+  { value: 'short_text', label: 'Short text' },
+  { value: 'long_text', label: 'Long text' },
+  { value: 'number', label: 'Number' },
+  { value: 'date', label: 'Date' },
 ];
 
-export default function EditProjectModal({
-  project,
-  onClose,
-  onSave,
-}) {
-  const [name, setName] = useState(project?.name ?? "");
-  const [description, setDescription] = useState(project?.description ?? "");
+export default function EditProjectModal({ project, onClose, onSave }) {
+  const [name, setName] = useState(project?.name ?? '');
+  const [description, setDescription] = useState(project?.description ?? '');
   const [fields, setFields] = useState(project?.fields ?? []);
-  const [newFieldLabel, setNewFieldLabel] = useState("");
-  const [newFieldType, setNewFieldType] = useState("short_text");
-  const [error, setError] = useState("");
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+  const [newFieldType, setNewFieldType] = useState('short_text');
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   function addField() {
     const label = newFieldLabel.trim();
 
     if (!label) {
-      setError("Enter a field name first.");
+      setError('Enter a field name first.');
       return;
     }
 
     const duplicate = fields.some(
       (field) =>
-        String(field.label ?? field.name ?? "")
+        String(field.label ?? field.name ?? '')
           .trim()
           .toLowerCase() === label.toLowerCase(),
     );
@@ -46,37 +42,40 @@ export default function EditProjectModal({
         id: crypto.randomUUID(),
         label,
         type: newFieldType,
-        usedByEntries: false,
         isNew: true,
       },
     ]);
 
-    setNewFieldLabel("");
-    setNewFieldType("short_text");
-    setError("");
+    setNewFieldLabel('');
+    setNewFieldType('short_text');
+    setError('');
   }
 
   function removeField(id) {
-    setFields((prev) =>
-      prev.filter((field) => {
-        if (field.id !== id) {
-          return true;
-        }
+    setFields((prev) => prev.filter((field) => field.id !== id));
+    setError('');
+  }
 
-        if (field.usedByEntries) {
-          return true;
-        }
-
-        return false;
-      }),
-    );
+  function renameField(id, label) {
+    setFields((prev) => prev.map((field) => (field.id === id ? { ...field, label } : field)));
+    setError('');
   }
 
   async function saveProject() {
     const cleanName = name.trim();
 
     if (!cleanName) {
-      setError("Project name is required.");
+      setError('Project name is required.');
+      return;
+    }
+
+    const names = fields.map((field) => field.label.trim());
+    if (names.some((label) => !label || label.length > 100)) {
+      setError('Field names must contain 1–100 characters.');
+      return;
+    }
+    if (new Set(names.map((label) => label.toLowerCase())).size !== names.length) {
+      setError('Each field must have a unique name.');
       return;
     }
 
@@ -87,30 +86,26 @@ export default function EditProjectModal({
         field.isNew
           ? {
               clientId: field.id,
-              name: field.label,
+              name: field.label.trim(),
               fieldType: field.type,
             }
           : {
               id: field.id,
+              name: field.label.trim(),
             },
       ),
     };
 
     try {
       setSaving(true);
-      setError("");
+      setError('');
       await onSave?.(payload);
     } catch (saveError) {
-      setError(
-        saveError.message ||
-          "Failed to update project.",
-      );
+      setError(saveError.message || 'Failed to update project.');
     } finally {
       setSaving(false);
     }
   }
-
-  const hasAnyLockedField = fields.some((f) => f.usedByEntries);
 
   return (
     <div
@@ -121,12 +116,7 @@ export default function EditProjectModal({
         }
       }}
     >
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ep-modal-title"
-      >
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="ep-modal-title">
         <div className="modal-header">
           <h2 className="modal-title" id="ep-modal-title">
             Edit Project
@@ -145,10 +135,7 @@ export default function EditProjectModal({
 
         <div className="modal-body">
           <div className="form-field">
-            <label
-              className="form-label form-label-required"
-              htmlFor="ep-project-name"
-            >
+            <label className="form-label form-label-required" htmlFor="ep-project-name">
               Project name
             </label>
 
@@ -162,10 +149,7 @@ export default function EditProjectModal({
           </div>
 
           <div className="form-field">
-            <label
-              className="form-label"
-              htmlFor="ep-project-description"
-            >
+            <label className="form-label" htmlFor="ep-project-description">
               Description
             </label>
 
@@ -180,87 +164,48 @@ export default function EditProjectModal({
 
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
+              display: 'flex',
+              flexDirection: 'column',
               gap: 12,
             }}
           >
             <p className="fields-section-label">Entry fields</p>
 
-            {hasAnyLockedField && (
-              <p className="locked-note">
-                <IconLock />
-                Fields already used by an entry can't be removed.
-                Fields with no entries yet can be removed freely.
-              </p>
-            )}
+            <p className="locked-note">
+              Renaming keeps existing values. Removed fields disappear from new entry forms, but
+              their values remain in old entries. Field types cannot be changed.
+            </p>
 
             <div className="fields-list">
-              {fields.map((field) =>
-                field.usedByEntries ? (
-                  <div
-                    key={field.id}
-                    className="field-row field-row--locked"
+              {fields.map((field, index) => (
+                <div key={field.id} className="field-row">
+                  <input
+                    className="form-input field-row-name"
+                    aria-label={`Field ${index + 1} name`}
+                    value={field.label}
+                    onChange={(event) => renameField(field.id, event.target.value)}
+                    maxLength={100}
+                    disabled={saving}
+                  />
+                  <span className="field-row-type">
+                    {FIELD_TYPES.find((type) => type.value === field.type)?.label || field.type}
+                  </span>
+                  <button
+                    className="field-row-remove"
+                    onClick={() => removeField(field.id)}
+                    aria-label={`Remove ${field.label}`}
+                    type="button"
+                    disabled={saving}
                   >
-                    <IconLock className="field-row-lock" />
-
-                    <span className="field-row-name">
-                      {field.label}
-                    </span>
-
-                    <span className="field-row-type">
-                      {
-                        FIELD_TYPES.find(
-                          (t) => t.value === field.type
-                        )?.label
-                      }
-                    </span>
-
-                    <span className="field-row-badge field-row-badge--locked">
-                      In use
-                    </span>
-                  </div>
-                ) : (
-                  <div key={field.id} className="field-row">
-                    <span className="field-row-drag">
-                      <IconGrip />
-                    </span>
-
-                    <span className="field-row-name">
-                      {field.label}
-                    </span>
-
-                    <span className="field-row-type">
-                      {
-                        FIELD_TYPES.find(
-                          (t) => t.value === field.type
-                        )?.label
-                      }
-                    </span>
-
-                    <span className="field-row-badge field-row-badge--unused">
-                      Not used yet
-                    </span>
-
-                    <button
-                      className="field-row-remove"
-                      onClick={() => removeField(field.id)}
-                      aria-label={`Remove ${field.label}`}
-                      type="button"
-                    >
-                      <IconXSmall />
-                    </button>
-                  </div>
-                )
-              )}
+                    <IconXSmall />
+                  </button>
+                </div>
+              ))}
             </div>
 
             <div className="add-field-row">
               <div className="form-field add-field-name">
-                <label
-                  className="form-label"
-                  htmlFor="ep-field-label"
-                >
+                <label className="form-label" htmlFor="ep-field-label">
                   Add a field
                 </label>
 
@@ -270,11 +215,9 @@ export default function EditProjectModal({
                   type="text"
                   placeholder="Add field name"
                   value={newFieldLabel}
-                  onChange={(e) =>
-                    setNewFieldLabel(e.target.value)
-                  }
+                  onChange={(e) => setNewFieldLabel(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === 'Enter') {
                       addField();
                     }
                   }}
@@ -282,10 +225,7 @@ export default function EditProjectModal({
               </div>
 
               <div className="form-field add-field-type">
-                <label
-                  className="form-label"
-                  htmlFor="ep-field-type"
-                >
+                <label className="form-label" htmlFor="ep-field-type">
                   Type
                 </label>
 
@@ -293,9 +233,7 @@ export default function EditProjectModal({
                   id="ep-field-type"
                   className="form-select"
                   value={newFieldType}
-                  onChange={(e) =>
-                    setNewFieldType(e.target.value)
-                  }
+                  onChange={(e) => setNewFieldType(e.target.value)}
                 >
                   {FIELD_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -305,11 +243,7 @@ export default function EditProjectModal({
                 </select>
               </div>
 
-              <button
-                className="btn-add-field"
-                onClick={addField}
-                type="button"
-              >
+              <button className="btn-add-field" onClick={addField} type="button">
                 <IconPlus />
                 Add field
               </button>
@@ -324,22 +258,12 @@ export default function EditProjectModal({
         )}
 
         <div className="modal-footer">
-          <button
-            className="btn-cancel"
-            onClick={onClose}
-            type="button"
-            disabled={saving}
-          >
+          <button className="btn-cancel" onClick={onClose} type="button" disabled={saving}>
             Cancel
           </button>
 
-          <button
-            className="btn-save"
-            onClick={saveProject}
-            type="button"
-            disabled={saving}
-          >
-            {saving ? "Saving..." : "Save Changes"}
+          <button className="btn-save" onClick={saveProject} type="button" disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -509,21 +433,6 @@ export default function EditProjectModal({
           border-radius: 8px;
         }
 
-        .field-row--locked {
-          background: #f1f5f9;
-        }
-
-        .field-row-lock {
-          color: #94a3b8;
-          flex-shrink: 0;
-        }
-
-        .field-row-drag {
-          color: #cbd5e1;
-          cursor: grab;
-          flex-shrink: 0;
-        }
-
         .field-row-name {
           flex: 1;
           font-size: 13px;
@@ -543,26 +452,6 @@ export default function EditProjectModal({
           border-radius: 4px;
           padding: 2px 7px;
           flex-shrink: 0;
-        }
-
-        .field-row-badge {
-          font-size: 10px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          border-radius: 4px;
-          padding: 3px 7px;
-          flex-shrink: 0;
-        }
-
-        .field-row-badge--locked {
-          color: #92601a;
-          background: #fef0d1;
-        }
-
-        .field-row-badge--unused {
-          color: #15803d;
-          background: #dcfce7;
         }
 
         .field-row-remove {
@@ -725,24 +614,6 @@ function IconXSmall() {
   );
 }
 
-function IconGrip() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <circle cx="9" cy="5" r="1.5" />
-      <circle cx="15" cy="5" r="1.5" />
-      <circle cx="9" cy="12" r="1.5" />
-      <circle cx="15" cy="12" r="1.5" />
-      <circle cx="9" cy="19" r="1.5" />
-      <circle cx="15" cy="19" r="1.5" />
-    </svg>
-  );
-}
-
 function IconPlus() {
   return (
     <svg
@@ -757,25 +628,6 @@ function IconPlus() {
     >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function IconLock({ className }) {
-  return (
-    <svg
-      className={className}
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>
   );
 }

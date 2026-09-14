@@ -2,6 +2,7 @@ const {
   getProfileByUserId,
   updateProfile,
 } = require("../repositories/profileRepository");
+const { validateAvatarUrl } = require('../validation/profileAvatar');
 
 function getAuthenticatedUserId(req) {
   const userId = req.user?.sub;
@@ -56,15 +57,16 @@ async function patchProfile(
     const userId =
       getAuthenticatedUserId(req);
 
+    const body = req.body || {};
     const name =
-      typeof req.body.name === "string"
-        ? req.body.name.trim()
-        : "";
+      typeof body.name === 'string'
+        ? body.name.trim()
+        : '';
 
     const bio =
-      typeof req.body.bio === "string"
-        ? req.body.bio.trim()
-        : "";
+      typeof body.bio === 'string'
+        ? body.bio.trim()
+        : '';
 
     if (!name) {
       return res.status(400).json({
@@ -89,11 +91,12 @@ async function patchProfile(
       });
     }
 
-    const profile =
-      await updateProfile(userId, {
-        name,
-        bio,
-      });
+    const changes = { name, bio };
+    if (Object.prototype.hasOwnProperty.call(body, 'avatarUrl')) {
+      changes.avatarUrl = validateAvatarUrl(body.avatarUrl);
+    }
+
+    const profile = await updateProfile(userId, changes);
 
     if (!profile) {
       return res.status(404).json({
