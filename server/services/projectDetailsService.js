@@ -337,10 +337,40 @@ async function getOutstandingEntriesService({ projectId, userId }) {
 
   return entries.map(serializeEntry);
 }
+
+async function completeEntryService({
+  projectId,
+  entryId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(
+    projectId,
+    userId,
+  );
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const entry = await repository.completeEntry(
+    projectId,
+    entryId,
+  );
+
+  if (!entry) {
+    throw createHttpError(
+      404,
+      "Entry not found or already completed",
+    );
+  }
+
+  return serializeEntry(entry);
+}
 module.exports = {
   getProjectDetailsService,
   createEntryService,
   getOutstandingEntriesService,
+  completeEntryService,
   serializeEntry,
   buildLinkedEntriesMap,
 };

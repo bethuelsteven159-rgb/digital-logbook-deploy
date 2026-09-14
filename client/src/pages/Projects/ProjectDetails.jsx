@@ -22,8 +22,8 @@ import {
   createSavedFilter,
   applySavedFilter,
   deleteSavedFilter,
+  completeProjectEntry,
 } from "../../api/projectDetailsApi";
-
 import {
   setProjectArchived,
   updateProject,
@@ -51,6 +51,9 @@ export default function ProjectDetails() {
 
   const [projectActionSaving, setProjectActionSaving] =
     useState(false);
+
+  const [completingEntryId, setCompletingEntryId] =
+    useState(null);
 
   const [
     showEditProjectModal,
@@ -128,58 +131,110 @@ export default function ProjectDetails() {
     }
   }
 
+  async function handleCompleteEntry(entryId) {
+    try {
+      setCompletingEntryId(entryId);
+      setError("");
+
+      await completeProjectEntry(id, entryId);
+
+      const currentFilterId = activeFilterId;
+
+      await loadProject();
+
+      /*
+       * If the user was viewing a saved filter,
+       * refresh the filtered results as well.
+       */
+      if (currentFilterId) {
+        const results = await applySavedFilter(
+          id,
+          currentFilterId,
+        );
+
+        setFilteredEntries(results || []);
+      } else {
+        setFilteredEntries(null);
+      }
+    } catch (requestError) {
+      console.error(
+        "Failed to complete entry:",
+        requestError,
+      );
+
+      setError(
+        requestError.message ||
+          "Unable to complete entry.",
+      );
+    } finally {
+      setCompletingEntryId(null);
+    }
+  }
+
   async function handleCreateSavedFilter(payload) {
-  try {
-    const newFilter = await createSavedFilter(id, payload);
+    try {
+      const newFilter = await createSavedFilter(
+        id,
+        payload,
+      );
 
-    setSavedFilters((current) => [newFilter, ...current]);
-  } catch (submitError) {
-    console.error(
-      "Failed to create saved filter:",
-      submitError,
-    );
+      setSavedFilters((current) => [
+        newFilter,
+        ...current,
+      ]);
+    } catch (submitError) {
+      console.error(
+        "Failed to create saved filter:",
+        submitError,
+      );
+    }
   }
-}
 
-async function handleApplyFilter(filterId) {
-  if (!filterId) {
-    setActiveFilterId(null);
-    setFilteredEntries(null);
-    return;
-  }
-
-  try {
-    const results = await applySavedFilter(id, filterId);
-
-    setActiveFilterId(filterId);
-    setFilteredEntries(results || []);
-  } catch (applyError) {
-    console.error(
-      "Failed to apply saved filter:",
-      applyError,
-    );
-  }
-}
-
-async function handleDeleteFilter(filterId) {
-  try {
-    await deleteSavedFilter(filterId);
-
-    setSavedFilters((current) =>
-      current.filter((filter) => filter.id !== filterId),
-    );
-
-    if (activeFilterId === filterId) {
+  async function handleApplyFilter(filterId) {
+    if (!filterId) {
       setActiveFilterId(null);
       setFilteredEntries(null);
+      return;
     }
-  } catch (deleteError) {
-    console.error(
-      "Failed to delete saved filter:",
-      deleteError,
-    );
+
+    try {
+      const results = await applySavedFilter(
+        id,
+        filterId,
+      );
+
+      setActiveFilterId(filterId);
+      setFilteredEntries(results || []);
+    } catch (applyError) {
+      console.error(
+        "Failed to apply saved filter:",
+        applyError,
+      );
+    }
   }
-}
+
+  async function handleDeleteFilter(filterId) {
+    try {
+      await deleteSavedFilter(filterId);
+
+      setSavedFilters((current) =>
+        current.filter(
+          (filter) => filter.id !== filterId,
+        ),
+      );
+
+      if (activeFilterId === filterId) {
+        setActiveFilterId(null);
+        setFilteredEntries(null);
+      }
+    } catch (deleteError) {
+      console.error(
+        "Failed to delete saved filter:",
+        deleteError,
+      );
+    }
+  }
+
   async function handleUpdateProject(payload) {
     try {
       await updateProject(id, payload);
@@ -349,16 +404,19 @@ async function handleDeleteFilter(filterId) {
     ? details.fields
     : [];
 
- const entries =
-  filteredEntries !== null
-    ? filteredEntries
-    : Array.isArray(details.entries)
-      ? details.entries
-      : [];
+  const entries =
+    filteredEntries !== null
+      ? filteredEntries
+      : Array.isArray(details.entries)
+        ? details.entries
+        : [];
 
   const usedFieldIds = new Set(
     entries.flatMap((entry) =>
-      (Array.isArray(entry.values) ? entry.values : [])
+      (Array.isArray(entry.values)
+        ? entry.values
+        : []
+      )
         .map((value) => value.fieldId)
         .filter(Boolean),
     ),
@@ -427,13 +485,6 @@ async function handleDeleteFilter(filterId) {
           </div>
 
           <div className="page-header-actions">
-            {/*
-             * Archive belongs to project management.
-             *
-             * Keep the button and styling here.
-             * Do not implement their backend operation
-             * inside Project Details.
-             */}
             <button
               type="button"
               className="btn btn-ghost"
@@ -441,7 +492,9 @@ async function handleDeleteFilter(filterId) {
               disabled={projectActionSaving}
             >
               <IconArchive />
-              {project.archivedAt ? "Restore" : "Archive"}
+              {project.archivedAt
+                ? "Restore"
+                : "Archive"}
             </button>
 
             <button
@@ -525,14 +578,23 @@ async function handleDeleteFilter(filterId) {
           <section className="entries-section">
             <div className="entries-header entries-header-with-views">
               <div>
-                <h2 className="entries-title">Entries</h2>
+                <h2 className="entries-title">
+                  Entries
+                </h2>
+
                 <span className="entries-count">
-                  {entries.length} {entries.length === 1 ? "entry" : "entries"}
+                  {entries.length}{" "}
+                  {entries.length === 1
+                    ? "entry"
+                    : "entries"}
                 </span>
               </div>
 
               {entries.length > 0 && (
-                <div className="entry-view-switcher" aria-label="Entry view">
+                <div
+                  className="entry-view-switcher"
+                  aria-label="Entry view"
+                >
                   {[
                     ["list", "List"],
                     ["calendar", "Calendar"],
@@ -541,8 +603,14 @@ async function handleDeleteFilter(filterId) {
                     <button
                       key={value}
                       type="button"
-                      className={`view-btn ${entryView === value ? "view-btn-active" : ""}`}
-                      onClick={() => setEntryView(value)}
+                      className={`view-btn ${
+                        entryView === value
+                          ? "view-btn-active"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setEntryView(value)
+                      }
                     >
                       {label}
                     </button>
@@ -551,7 +619,7 @@ async function handleDeleteFilter(filterId) {
               )}
             </div>
 
-                          <div className="saved-filters-bar">
+            <div className="saved-filters-bar">
               <select
                 className="form-select"
                 value={activeFilterId || ""}
@@ -580,7 +648,9 @@ async function handleDeleteFilter(filterId) {
                   type="button"
                   className="btn-cancel"
                   onClick={() =>
-                    handleDeleteFilter(activeFilterId)
+                    handleDeleteFilter(
+                      activeFilterId,
+                    )
                   }
                 >
                   Delete filter
@@ -603,8 +673,10 @@ async function handleDeleteFilter(filterId) {
                     name,
                     criteria: [
                       {
-                        fieldName: "durationMinutes",
-                        operator: "greater_than",
+                        fieldName:
+                          "durationMinutes",
+                        operator:
+                          "greater_than",
                         value: 0,
                       },
                     ],
@@ -617,54 +689,186 @@ async function handleDeleteFilter(filterId) {
 
             {entries.length === 0 ? (
               <div className="entries-empty">
-                <div className="empty-icon-wrap"><IconEntryLarge /></div>
-                <p className="empty-heading">No entries yet.</p>
-                <p className="empty-body">
-                  Add your first entry to start building a record for this project. Each entry captures a piece of your work.
+                <div className="empty-icon-wrap">
+                  <IconEntryLarge />
+                </div>
+
+                <p className="empty-heading">
+                  No entries yet.
                 </p>
+
+                <p className="empty-body">
+                  Add your first entry to start
+                  building a record for this
+                  project. Each entry captures a
+                  piece of your work.
+                </p>
+
                 {!project.archivedAt && (
-                  <button type="button" className="btn btn-primary" onClick={() => setShowEntryModal(true)}>
-                    <IconPlus /> Add New Entry
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() =>
+                      setShowEntryModal(true)
+                    }
+                  >
+                    <IconPlus />
+                    Add New Entry
                   </button>
                 )}
               </div>
             ) : entryView === "calendar" ? (
-              <CalendarView entries={entries} formatLoggedTime={formatLoggedTime} />
+              <CalendarView
+                entries={entries}
+                formatLoggedTime={formatLoggedTime}
+              />
             ) : entryView === "board" ? (
-              <BoardView entries={entries} fields={fields} formatLoggedTime={formatLoggedTime} />
+              <BoardView
+                entries={entries}
+                fields={fields}
+                formatLoggedTime={formatLoggedTime}
+              />
             ) : (
               <div className="entries-list">
                 {entries.map((entry) => {
-                  const values = Array.isArray(entry.values) ? entry.values : [];
-                  const linkedEntries = Array.isArray(entry.linkedEntries) ? entry.linkedEntries : [];
+                  const values = Array.isArray(
+                    entry.values,
+                  )
+                    ? entry.values
+                    : [];
+
+                  const linkedEntries =
+                    Array.isArray(
+                      entry.linkedEntries,
+                    )
+                      ? entry.linkedEntries
+                      : [];
+
+                  const isCompleted =
+                    Boolean(entry.completedAt);
+
+                  const isCompleting =
+                    completingEntryId ===
+                    entry.id;
 
                   return (
-                    <article className="entry-row" key={entry.id}>
+                    <article
+                      className="entry-row"
+                      key={entry.id}
+                    >
                       <div className="entry-row-header">
                         <div>
-                          <h3 className="entry-row-title">{entry.name || "Logbook Entry"}</h3>
-                          <p className="entry-row-date">{formatDate(entry.occurredAt || entry.createdAt)}</p>
+                          <h3 className="entry-row-title">
+                            {entry.name ||
+                              "Logbook Entry"}
+                          </h3>
+
+                          <p className="entry-row-date">
+                            {formatDate(
+                              entry.occurredAt ||
+                                entry.createdAt,
+                            )}
+                          </p>
+
+                          {isCompleted && (
+                            <p className="entry-row-completed">
+                              Completed{" "}
+                              {formatDate(
+                                entry.completedAt,
+                              )}
+                            </p>
+                          )}
                         </div>
-                        <span className="entry-duration"><IconClockSmall />{formatLoggedTime(entry.durationMinutes)}</span>
+
+                        <div className="entry-row-actions">
+                          <span
+                            className={`entry-status ${
+                              isCompleted
+                                ? "entry-status-completed"
+                                : "entry-status-outstanding"
+                            }`}
+                          >
+                            {isCompleted
+                              ? "Completed"
+                              : "In progress"}
+                          </span>
+
+                          {!isCompleted && (
+                            <button
+                              type="button"
+                              className="btn-complete-entry"
+                              onClick={() =>
+                                handleCompleteEntry(
+                                  entry.id,
+                                )
+                              }
+                              disabled={
+                                isCompleting ||
+                                Boolean(
+                                  project.archivedAt,
+                                )
+                              }
+                            >
+                              {isCompleting
+                                ? "Completing..."
+                                : "Complete Entry"}
+                            </button>
+                          )}
+
+                          <span className="entry-duration">
+                            <IconClockSmall />
+                            {formatLoggedTime(
+                              entry.durationMinutes,
+                            )}
+                          </span>
+                        </div>
                       </div>
 
-                      {linkedEntries.length > 0 && (
+                      {linkedEntries.length >
+                        0 && (
                         <div className="entry-links">
-                          <span className="entry-links-label">Linked entries:</span>
-                          {linkedEntries.map((linked) => (
-                            <span className="entry-link-chip" key={linked.id}>{linked.name}</span>
-                          ))}
+                          <span className="entry-links-label">
+                            Linked entries:
+                          </span>
+
+                          {linkedEntries.map(
+                            (linked) => (
+                              <span
+                                className="entry-link-chip"
+                                key={linked.id}
+                              >
+                                {linked.name}
+                              </span>
+                            ),
+                          )}
                         </div>
                       )}
 
                       {values.length > 0 && (
                         <div className="entry-values">
-                          {values.map((field, index) => (
-                            <div className="entry-value" key={field.fieldId || field.id || index}>
-                              <span className="entry-value-name">{field.name || "Field"}</span>
-                              <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
-                            </div>
-                          ))}
+                          {values.map(
+                            (field, index) => (
+                              <div
+                                className="entry-value"
+                                key={
+                                  field.fieldId ||
+                                  field.id ||
+                                  index
+                                }
+                              >
+                                <span className="entry-value-name">
+                                  {field.name ||
+                                    "Field"}
+                                </span>
+
+                                <span className="entry-value-content">
+                                  <FormattedFieldValue
+                                    field={field}
+                                  />
+                                </span>
+                              </div>
+                            ),
+                          )}
                         </div>
                       )}
                     </article>
@@ -676,19 +880,18 @@ async function handleDeleteFilter(filterId) {
         </div>
       </main>
 
-      {/* Your responsibility: create entries */}
-      {showEntryModal && !project.archivedAt && (
-        <NewEntryModal
-          fields={fields}
-          entries={entries}
-          onClose={() =>
-            setShowEntryModal(false)
-          }
-          onCreate={handleCreateEntry}
-        />
-      )}
+      {showEntryModal &&
+        !project.archivedAt && (
+          <NewEntryModal
+            fields={fields}
+            entries={entries}
+            onClose={() =>
+              setShowEntryModal(false)
+            }
+            onCreate={handleCreateEntry}
+          />
+        )}
 
-      {/* Teammate responsibility: project editing */}
       {showEditProjectModal && (
         <EditProjectModal
           project={editableProject}
@@ -779,8 +982,6 @@ function ProjectDetailsStyles() {
         overflow-x: hidden;
       }
 
-      /* Breadcrumb */
-
       .breadcrumb-bar {
         display: flex;
         align-items: center;
@@ -816,8 +1017,6 @@ function ProjectDetailsStyles() {
         color: #94a3b8;
         font-weight: 400;
       }
-
-      /* Page header */
 
       .page-header {
         display: flex;
@@ -870,8 +1069,6 @@ function ProjectDetailsStyles() {
         flex-wrap: wrap;
         padding-top: 8px;
       }
-
-      /* Buttons */
 
       .btn {
         display: inline-flex;
@@ -936,16 +1133,12 @@ function ProjectDetailsStyles() {
         opacity: 0.65;
       }
 
-      /* Content */
-
       .project-content {
         padding: 24px 40px 40px;
         display: flex;
         flex-direction: column;
         gap: 24px;
       }
-
-      /* Stats */
 
       .project-stat-strip {
         background: #ffffff;
@@ -1006,8 +1199,6 @@ function ProjectDetailsStyles() {
         background: #f1f5f9;
         margin: 12px 0;
       }
-
-      /* Entries */
 
       .entries-section {
         background: #ffffff;
@@ -1115,6 +1306,78 @@ function ProjectDetailsStyles() {
         margin: 4px 0 0;
       }
 
+      .entry-row-completed {
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        color: #64748b;
+        margin: 4px 0 0;
+      }
+
+      .entry-row-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .entry-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .entry-status-outstanding {
+        background: #fff7ed;
+        color: #c2410c;
+      }
+
+      .entry-status-completed {
+        background: #f0fdf4;
+        color: #15803d;
+      }
+
+      .btn-complete-entry {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 11px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #475569;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background 0.15s ease,
+          border-color 0.15s ease,
+          color 0.15s ease;
+        white-space: nowrap;
+      }
+
+      .btn-complete-entry:hover:not(:disabled) {
+        background: #f8fafc;
+        border-color: #4f63d2;
+        color: #4f63d2;
+      }
+
+      .btn-complete-entry:focus-visible {
+        outline: 2px solid #4f63d2;
+        outline-offset: 2px;
+      }
+
+      .btn-complete-entry:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
       .entry-duration {
         display: inline-flex;
         align-items: center;
@@ -1165,8 +1428,6 @@ function ProjectDetailsStyles() {
         overflow-wrap: anywhere;
       }
 
-      /* Status / errors */
-
       .project-inline-error {
         padding: 11px 14px;
         border: 1px solid #fecaca;
@@ -1205,8 +1466,6 @@ function ProjectDetailsStyles() {
         margin: 0;
         font-size: 13px;
       }
-
-      /* Modal */
 
       .modal-overlay {
         position: fixed;
@@ -1291,8 +1550,6 @@ function ProjectDetailsStyles() {
         flex-direction: column;
         gap: 20px;
       }
-
-      /* Form */
 
       .form-field {
         display: flex;
@@ -1569,9 +1826,6 @@ function ProjectDetailsStyles() {
         opacity: 0.65;
       }
 
-      /* Responsive */
-
-
       .entries-header-with-views {
         gap: 18px;
         flex-wrap: wrap;
@@ -1600,7 +1854,9 @@ function ProjectDetailsStyles() {
       .view-btn-active {
         background: #ffffff;
         color: #1a2340;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+        box-shadow:
+          0 1px 3px
+          rgba(15, 23, 42, 0.12);
       }
 
       .entry-links {
@@ -1623,6 +1879,20 @@ function ProjectDetailsStyles() {
         background: #eef2ff;
         color: #3949ab;
         font-size: 11px;
+      }
+
+      .saved-filters-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #fbfcfe;
+      }
+
+      .saved-filters-bar .form-select {
+        width: auto;
+        min-width: 190px;
       }
 
       .calendar-toolbar,
@@ -1661,21 +1931,102 @@ function ProjectDetailsStyles() {
         background: #fff;
       }
 
-      .calendar-cell-empty { background: #f8fafc; }
-      .calendar-day-number { font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; }
-      .calendar-entry { display: grid; gap: 2px; margin-bottom: 6px; padding: 6px; border-radius: 7px; background: #eef2ff; font-size: 10px; color: #334155; }
-      .calendar-entry strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .calendar-entry span, .calendar-entry small { color: #64748b; }
+      .calendar-cell-empty {
+        background: #f8fafc;
+      }
 
-      .board-toolbar { justify-content: flex-start; }
-      .board-toolbar label { font-size: 12px; font-weight: 600; color: #475569; }
-      .board-select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-      .board-columns { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 12px; }
-      .board-column { flex: 0 0 260px; padding: 10px; border-radius: 10px; background: #f1f5f9; }
-      .board-column-header { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: #334155; font-size: 12px; }
-      .board-card { display: grid; gap: 5px; padding: 10px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 12px; }
-      .board-card span, .board-card small { color: #64748b; }
-      .view-empty { padding: 28px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 10px; }
+      .calendar-day-number {
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        margin-bottom: 6px;
+      }
+
+      .calendar-entry {
+        display: grid;
+        gap: 2px;
+        margin-bottom: 6px;
+        padding: 6px;
+        border-radius: 7px;
+        background: #eef2ff;
+        font-size: 10px;
+        color: #334155;
+      }
+
+      .calendar-entry strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .calendar-entry span,
+      .calendar-entry small {
+        color: #64748b;
+      }
+
+      .board-toolbar {
+        justify-content: flex-start;
+      }
+
+      .board-toolbar label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+      }
+
+      .board-select {
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .board-columns {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        padding: 4px 0 12px;
+      }
+
+      .board-column {
+        flex: 0 0 260px;
+        padding: 10px;
+        border-radius: 10px;
+        background: #f1f5f9;
+      }
+
+      .board-column-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+        color: #334155;
+        font-size: 12px;
+      }
+
+      .board-card {
+        display: grid;
+        gap: 5px;
+        padding: 10px;
+        margin-bottom: 8px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 12px;
+      }
+
+      .board-card span,
+      .board-card small {
+        color: #64748b;
+      }
+
+      .view-empty {
+        padding: 28px;
+        text-align: center;
+        color: #64748b;
+        border: 1px dashed #cbd5e1;
+        border-radius: 10px;
+      }
 
       @media (max-width: 900px) {
         .breadcrumb-bar,
@@ -1730,6 +2081,19 @@ function ProjectDetailsStyles() {
 
         .entry-row-header {
           flex-direction: column;
+        }
+
+        .entry-row-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .saved-filters-bar {
+          flex-wrap: wrap;
+        }
+
+        .saved-filters-bar .form-select {
+          width: 100%;
         }
       }
     `}</style>

@@ -31,8 +31,6 @@ export default function NewEntryModal({
   onCreate,
 }) {
   const [entryName, setEntryName] = useState("");
-  const [durationMinutes, setDurationMinutes] =
-    useState("");
   const [dueAt, setDueAt] = useState("");
   const [values, setValues] = useState({});
   const [newFields, setNewFields] = useState([]);
@@ -90,18 +88,18 @@ export default function NewEntryModal({
       return;
     }
 
-      setNewFields((current) => [
-    ...current,
-    {
-      clientId: crypto.randomUUID(),
-      name: cleanName,
-      type: fieldType,
-      value: "",
-      ...(fieldType === "computed"
-        ? { formula: fieldFormula.trim() }
-        : {}),
-    },
-  ]);
+    setNewFields((current) => [
+      ...current,
+      {
+        clientId: crypto.randomUUID(),
+        name: cleanName,
+        type: fieldType,
+        value: "",
+        ...(fieldType === "computed"
+          ? { formula: fieldFormula.trim() }
+          : {}),
+      },
+    ]);
 
     setFieldName("");
     setFieldType("short_text");
@@ -189,31 +187,8 @@ export default function NewEntryModal({
       return;
     }
 
-    const duration =
-      durationMinutes === ""
-        ? 0
-        : Number(durationMinutes);
-
-    if (
-      !Number.isInteger(duration) ||
-      duration < 0
-    ) {
-      setError(
-        "Time spent must be a valid number of minutes.",
-      );
-      return;
-    }
-
-    if (duration > 10080) {
-      setError(
-        "Time spent cannot exceed 10080 minutes.",
-      );
-      return;
-    }
-
     const payload = {
       name: cleanName,
-      durationMinutes: duration,
       ...(dueAt
         ? { dueAt: new Date(dueAt).toISOString() }
         : {}),
@@ -232,6 +207,7 @@ export default function NewEntryModal({
           : {}),
       })),
     };
+
     try {
       setSaving(true);
       setError("");
@@ -313,30 +289,6 @@ export default function NewEntryModal({
             <div className="form-field">
               <label
                 className="form-label"
-                htmlFor="entry-duration"
-              >
-                Time spent (minutes)
-              </label>
-
-              <input
-                id="entry-duration"
-                className="form-input"
-                type="number"
-                min="0"
-                max="10080"
-                step="1"
-                placeholder="e.g. 45"
-                value={durationMinutes}
-                onChange={(event) =>
-                  setDurationMinutes(
-                    event.target.value,
-                  )
-                }
-              />
-            </div>
-            <div className="form-field">
-              <label
-                className="form-label"
                 htmlFor="entry-due-date"
               >
                 Due date (optional)
@@ -352,6 +304,7 @@ export default function NewEntryModal({
                 }
               />
             </div>
+
             {fields.length > 0 && (
               <div className="fields-block">
                 <p className="fields-section-label">
@@ -392,24 +345,41 @@ export default function NewEntryModal({
                 <p className="fields-section-label">
                   Link related entries
                 </p>
+
                 <p className="form-help">
                   Select existing entries that are related to this work.
                 </p>
+
                 <div className="entry-link-options">
                   {entries.map((entry) => (
-                    <label className="entry-link-option" key={entry.id}>
+                    <label
+                      className="entry-link-option"
+                      key={entry.id}
+                    >
                       <input
                         type="checkbox"
-                        checked={linkedEntryIds.includes(entry.id)}
+                        checked={linkedEntryIds.includes(
+                          entry.id,
+                        )}
                         onChange={(event) => {
                           setLinkedEntryIds((current) =>
                             event.target.checked
-                              ? [...current, entry.id]
-                              : current.filter((id) => id !== entry.id),
+                              ? [
+                                  ...current,
+                                  entry.id,
+                                ]
+                              : current.filter(
+                                  (id) =>
+                                    id !== entry.id,
+                                ),
                           );
                         }}
                       />
-                      <span>{entry.name || "Logbook Entry"}</span>
+
+                      <span>
+                        {entry.name ||
+                          "Logbook Entry"}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -460,7 +430,10 @@ export default function NewEntryModal({
                       <div className="new-field-value">
                         {field.type === "computed" ? (
                           <p className="computed-field-formula">
-                            Formula: <code>{field.formula}</code>
+                            Formula:{" "}
+                            <code>
+                              {field.formula}
+                            </code>
                           </p>
                         ) : (
                           renderInput(
@@ -541,6 +514,7 @@ export default function NewEntryModal({
                     )}
                   </select>
                 </div>
+
                 {fieldType === "computed" && (
                   <div className="form-field add-field-formula">
                     <label
@@ -557,7 +531,9 @@ export default function NewEntryModal({
                       placeholder="e.g. Hours * 2"
                       value={fieldFormula}
                       onChange={(event) =>
-                        setFieldFormula(event.target.value)
+                        setFieldFormula(
+                          event.target.value,
+                        )
                       }
                     />
                   </div>
@@ -602,10 +578,33 @@ export default function NewEntryModal({
             </button>
           </div>
         </form>
+
         <style>{`
-          .form-help { margin: -4px 0 10px; font-size: 12px; color: #64748b; }
-          .entry-link-options { display: grid; gap: 8px; max-height: 150px; overflow-y: auto; padding: 4px 2px; }
-          .entry-link-option { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155; background: #fff; }
+          .form-help {
+            margin: -4px 0 10px;
+            font-size: 12px;
+            color: #64748b;
+          }
+
+          .entry-link-options {
+            display: grid;
+            gap: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 4px 2px;
+          }
+
+          .entry-link-option {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #334155;
+            background: #fff;
+          }
         `}</style>
       </div>
     </div>

@@ -25,11 +25,11 @@ const createEntrySchema = z.object({
     .max(150, "Entry name is too long"),
 
   durationMinutes: z.coerce
-    .number()
-    .int()
-    .min(0, "Duration cannot be negative")
-    .max(10080, "Duration is too large"),
-
+  .number()
+  .int()
+  .min(0, "Duration cannot be negative")
+  .max(10080, "Duration is too large")
+  .default(0),
     dueAt: z
     .string()
     .datetime({ message: "Due date must be a valid ISO date-time" })
