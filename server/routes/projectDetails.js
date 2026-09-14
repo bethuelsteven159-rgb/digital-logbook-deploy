@@ -4,6 +4,8 @@ const {
   getProjectDetails,
   createProjectEntry,
   getOutstandingEntries,
+  getIncompleteEntries,
+  markEntryComplete,
   updateEntry,
   updateChecklistItem,
   deleteChecklistItem,
@@ -27,6 +29,16 @@ router.post(
 router.get(
   "/:projectId/entries/outstanding",
   getOutstandingEntries,
+);
+
+router.get(
+  "/:projectId/entries/incomplete",
+  getIncompleteEntries,
+);
+
+router.patch(
+  "/:projectId/entries/:entryId/complete",
+  markEntryComplete,
 );
 
 router.patch(

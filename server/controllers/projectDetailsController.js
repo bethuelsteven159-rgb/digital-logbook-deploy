@@ -8,6 +8,8 @@ const {
   updateEntryReferencesService,
   updateEntryService,
   getOutstandingEntriesService,
+  getIncompleteEntriesService,
+  markEntryCompleteService,
 } = require("../services/projectDetailsService");
 
 const {
@@ -315,15 +317,51 @@ async function getOutstandingEntries(req, res, next) {
     return next(error);
   }
 }
+async function getIncompleteEntries(req, res, next) {
+  try {
+    const userId = requireUserId(req);
 
+    const data = await getIncompleteEntriesService({
+      projectId: req.params.projectId,
+      userId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+async function markEntryComplete(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+
+    const data = await markEntryCompleteService({
+      projectId: req.params.projectId,
+      userId,
+      entryId: req.params.entryId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
 module.exports = {
   getProjectDetails,
   createProjectEntry,
+  getOutstandingEntries,
+  getIncompleteEntries,
+  markEntryComplete,
   updateEntry,
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
   updateEntryProjectReferences,
   updateEntryReferences,
-  getOutstandingEntries,
 };
