@@ -10,10 +10,9 @@ Built by team **Code Cells**.
 digital-notebook_final/
 ├── .gitea/ → Gitea configuration files (e.g., pull request templates)
 ├── .vscode/ → VS Code project settings
-├── backend/ → Authentication backend service (Google OAuth, JWT)
 ├── client/ → React (Vite) frontend application
 ├── docs/ → Project documentation
-├── server/ → Main backend API server (Express.js, PostgreSQL)
+├── server/ → Backend API server (Express.js, PostgreSQL)
 ├── .gitignore → Files/folders excluded from version control
 ├── .prettierignore → Files/folders excluded from Prettier formatting
 ├── .prettierrc → Prettier configuration
@@ -33,15 +32,17 @@ npm run dev
 This starts the client, server, and backend together in one terminal. Then open:
 http://localhost:8443/digital_logbook/
 
-See the [full onboarding guide][full onboarding guide](https://unrivaled-pavlova-20058d.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
+See the [full onboarding guide](https://sprightly-sunburst-0c0d86.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
 
 ## Team — Code Cells
 
 | Section                                      | Owner    |
-| -------------------------------------------- | -------- |
+| --------------------------------------------- | -------- |
 | Project Methodology & Sprint Tracking        | Tumi     |
 | Git Workflow & Development Standards         | Bethuel  |
 | System Architecture, Backend & API           | Inga     |
 | Frontend Architecture, UI/UX & Accessibility | Morare   |
 | Requirements & User Stories                  | Simphiwe |
 | Tech Stack & Developer Onboarding            | Sino     |
+| Third-Party Code Documentation               | Sino     |
+| Testing Documentation                        | Sino     |
