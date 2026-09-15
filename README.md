@@ -10,10 +10,9 @@ Built by team **Code Cells**.
 digital-notebook_final/
 ├── .gitea/ → Gitea configuration files (e.g., pull request templates)
 ├── .vscode/ → VS Code project settings
-├── backend/ → Authentication backend service (Google OAuth, JWT)
 ├── client/ → React (Vite) frontend application
 ├── docs/ → Project documentation
-├── server/ → Main backend API server (Express.js, PostgreSQL)
+├── server/ → Backend API server (Express.js, PostgreSQL)
 ├── .gitignore → Files/folders excluded from version control
 ├── .prettierignore → Files/folders excluded from Prettier formatting
 ├── .prettierrc → Prettier configuration
@@ -38,10 +37,12 @@ See the [full onboarding guide][full onboarding guide](https://unrivaled-pavlova
 ## Team — Code Cells
 
 | Section                                      | Owner    |
-| -------------------------------------------- | -------- |
+| --------------------------------------------- | -------- |
 | Project Methodology & Sprint Tracking        | Tumi     |
 | Git Workflow & Development Standards         | Bethuel  |
 | System Architecture, Backend & API           | Inga     |
 | Frontend Architecture, UI/UX & Accessibility | Morare   |
 | Requirements & User Stories                  | Simphiwe |
 | Tech Stack & Developer Onboarding            | Sino     |
+| Third-Party Code Documentation               | Sino     |
+| Testing Documentation                        | Sino     |

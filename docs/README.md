@@ -4,6 +4,8 @@ This folder is the single source of truth for the Digital Logbook project. Each 
 
 ## Contents
 
+## Contents
+
 | Section | Owner | File |
 |---|---|---|
 | Project Methodology & Sprint Tracking | Tumi | [methodology.md](./methodology.md) |
@@ -13,6 +15,11 @@ This folder is the single source of truth for the Digital Logbook project. Each 
 | Requirements & User Stories | Simphiwe | [requirements.md](./requirements.md) |
 | Tech Stack | Sino | [tech-stack.md](./tech-stack.md) |
 | Developer Onboarding | Sino | [onboarding.md](./onboarding.md) |
+| Database Documentation | Inga | [DATABASE.md](./DATABASE.md) |
+| Roadmap | Tumi | [roadmap.md](./roadmap.md) |
+| Bug Tracking | Simphiwe | [bug-tracking.md](./bug-tracking.md) |
+| Third-Party Code Documentation | Sino | [third-party-code.md](./third-party-code.md) |
+| Testing Documentation | Sino | [testing-documentation.md](./testing-documentation.md) |
 
 ## How this folder works
 
