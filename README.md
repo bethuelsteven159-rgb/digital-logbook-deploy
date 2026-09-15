@@ -32,7 +32,7 @@ npm run dev
 This starts the client, server, and backend together in one terminal. Then open:
 http://localhost:8443/digital_logbook/
 
-See the [full onboarding guide][full onboarding guide](https://unrivaled-pavlova-20058d.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
+See the [full onboarding guide](https://sunny-paletas-f84b04.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
 
 ## Team — Code Cells
 
