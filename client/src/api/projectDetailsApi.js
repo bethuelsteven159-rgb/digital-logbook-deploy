@@ -172,3 +172,16 @@ export async function updateSavedFilter(filterId, payload) {
   });
 }
 
+
+export async function deleteProjectEntry(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
