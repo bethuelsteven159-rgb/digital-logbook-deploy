@@ -54,6 +54,27 @@ import {
   updateEntry,
 } from "../../api/entryFeaturesApi";
 
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("en-ZA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatLoggedTime(minutes = 0) {
+  const safeMinutes = Number(minutes) || 0;
+  if (safeMinutes === 0) return "0 hrs";
+  const hours = Math.floor(safeMinutes / 60);
+  const remainingMinutes = safeMinutes % 60;
+  if (hours === 0) return `${remainingMinutes} min`;
+  if (remainingMinutes === 0) return `${hours} hrs`;
+  return `${hours}h ${remainingMinutes}m`;
+}
+
 export default function ProjectDetails() {
   const { id } = useParams();
 
@@ -431,6 +452,47 @@ export default function ProjectDetails() {
     }
   }
 
+  async function handleUpdateProject(payload) {
+    try {
+      await updateProject(id, payload);
+
+      setShowEditProjectModal(false);
+      setActiveFilterId(null);
+      setFilteredEntries(null);
+      await loadProject();
+    } catch (requestError) {
+      console.error(
+        "Failed to update project:",
+        requestError,
+      );
+
+      throw requestError;
+    }
+  }
+
+  async function handleToggleArchive() {
+    try {
+      setProjectActionSaving(true);
+      setError("");
+
+      await setProjectArchived(id, !project.archivedAt);
+
+      await loadProject();
+    } catch (requestError) {
+      console.error(
+        "Failed to update archive status:",
+        requestError,
+      );
+
+      setError(
+        requestError.message ||
+          "Failed to update archive status.",
+      );
+    } finally {
+      setProjectActionSaving(false);
+    }
+  }
+
   async function handleCreateSavedFilter(payload) {
     try {
       const newFilter = await createSavedFilter(
@@ -448,6 +510,8 @@ export default function ProjectDetails() {
         submitError,
       );
     }
+  }
+
   async function handleUpdateSavedFilter(filterId, payload) {
     try {
       const updatedFilter = await updateSavedFilter(filterId, payload);
@@ -599,8 +663,6 @@ export default function ProjectDetails() {
         incompleteError,
       );
     }
-  }
-    return `${hours}h ${remainingMinutes}m`;
   }
 
   if (loading) {
@@ -1420,8 +1482,6 @@ export default function ProjectDetails() {
                               <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
                             </div>
                           ))}
-                        </div>
-                      )}
                         </div>
                       )}
 
