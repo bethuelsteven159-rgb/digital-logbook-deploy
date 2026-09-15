@@ -4,9 +4,11 @@ const {
   getProjectDetails,
   createProjectEntry,
   getOutstandingEntries,
+  completeProjectEntry,
   getIncompleteEntries,
   markEntryComplete,
   updateEntry,
+  deleteEntry,
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
@@ -51,6 +53,11 @@ router.patch(
   updateEntry,
 );
 
+router.delete(
+  "/:projectId/entries/:entryId",
+  deleteEntry,
+);
+
 /*
  * Checklist item updates
  *
@@ -75,6 +82,11 @@ router.patch(
 router.patch(
   "/:projectId/entries/:entryId/references",
   updateEntryReferences,
+);
+
+router.post(
+  "/:projectId/entries/:entryId/complete",
+  completeProjectEntry,
 );
 
 module.exports = router;

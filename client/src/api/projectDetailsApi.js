@@ -79,6 +79,23 @@ export async function createProjectEntry(
     body: JSON.stringify(payload),
   });
 }
+export async function completeProjectEntry(
+  projectId,
+  entryId,
+) {
+  if (!projectId || !entryId) {
+    throw new Error(
+      "Project ID and entry ID are required.",
+    );
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/complete`,
+    {
+      method: "POST",
+    },
+  );
+}
 export async function fetchSavedFilters(projectId) {
   if (!projectId) {
     throw new Error("Project ID is required.");
@@ -153,4 +170,18 @@ export async function updateSavedFilter(filterId, payload) {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+
+export async function deleteProjectEntry(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }

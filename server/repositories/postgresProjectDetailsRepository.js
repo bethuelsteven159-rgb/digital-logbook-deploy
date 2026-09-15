@@ -738,6 +738,58 @@ function createRepository(queryable) {
         ],
       );
 
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      createdById: row.created_by_id,
+      name: row.name,
+      durationMinutes: row.duration_minutes,
+      occurredAt: row.occurred_at,
+      dueAt: row.due_at,
+      completedAt: row.completed_at,
+      tags: row.tags || [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  },
+
+    async completeEntry(projectId, entryId) {
+      const result = await queryable.query(
+        `
+          UPDATE entries
+          SET
+            completed_at = NOW(),
+            duration_minutes = LEAST(
+              10080,
+              FLOOR(
+                EXTRACT(
+                  EPOCH FROM (NOW() - occurred_at)
+                ) / 60
+              )::INTEGER
+            ),
+            updated_at = NOW()
+          WHERE id = $1
+            AND project_id = $2
+            AND completed_at IS NULL
+          RETURNING
+            id,
+            project_id,
+            created_by_id,
+            name,
+            duration_minutes,
+            occurred_at,
+            due_at,
+            completed_at,
+            created_at,
+            updated_at
+        `,
+        [entryId, projectId],
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
       const row = result.rows[0];
 
       return {
@@ -745,12 +797,10 @@ function createRepository(queryable) {
         projectId: row.project_id,
         createdById: row.created_by_id,
         name: row.name,
-        durationMinutes:
-          row.duration_minutes,
+        durationMinutes: row.duration_minutes,
         occurredAt: row.occurred_at,
         dueAt: row.due_at,
         completedAt: row.completed_at,
-        tags: row.tags || [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       };
@@ -909,6 +959,18 @@ function createRepository(queryable) {
       );
 
       return result.rows[0] || null;
+    },
+
+    async deleteEntry(entryId, projectId) {
+      const result = await queryable.query(
+        `DELETE FROM entries
+         WHERE id = $1
+           AND project_id = $2
+         RETURNING id`,
+        [entryId, projectId],
+      );
+
+      return result.rowCount > 0;
     },
 
     async getEntryFieldValues(entryId) {

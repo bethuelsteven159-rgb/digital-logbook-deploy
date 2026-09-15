@@ -76,18 +76,18 @@ export default function NewEntryModal({
       return;
     }
 
-      setNewFields((current) => [
-    ...current,
-    {
-      clientId: crypto.randomUUID(),
-      name: cleanName,
-      type: fieldType,
-      value: "",
-      ...(fieldType === "computed"
-        ? { formula: fieldFormula.trim() }
-        : {}),
-    },
-  ]);
+    setNewFields((current) => [
+      ...current,
+      {
+        clientId: crypto.randomUUID(),
+        name: cleanName,
+        type: fieldType,
+        value: "",
+        ...(fieldType === "computed"
+          ? { formula: fieldFormula.trim() }
+          : {}),
+      },
+    ]);
 
     setFieldName("");
     setFieldType("short_text");
@@ -116,10 +116,7 @@ export default function NewEntryModal({
       return;
     }
 
-    setChecklist((current) => [
-      ...current,
-      { text },
-    ]);
+    setChecklist((current) => [...current, { text }]);
 
     setChecklistText("");
     setError("");
@@ -183,8 +180,7 @@ export default function NewEntryModal({
 
   function fieldTypeLabel(type) {
     return (
-      FIELD_TYPES.find((option) => option.value === type)?.label ||
-      type
+      FIELD_TYPES.find((option) => option.value === type)?.label || type
     );
   }
 
@@ -245,9 +241,7 @@ export default function NewEntryModal({
     }
 
     const duration =
-      durationMinutes === ""
-        ? 0
-        : Number(durationMinutes);
+      durationMinutes === "" ? 0 : Number(durationMinutes);
 
     if (!Number.isInteger(duration) || duration < 0) {
       setError("Time spent must be a valid number of minutes.");
@@ -262,12 +256,15 @@ export default function NewEntryModal({
     const payload = {
       name: cleanName,
       durationMinutes: duration,
-
       tags,
 
       ...(dueAt
         ? { dueAt: new Date(dueAt).toISOString() }
         : {}),
+
+
+      ...(dueAt ? { dueAt: new Date(dueAt).toISOString() } : {}),
+
 
       values: fields.map((field) => ({
         fieldId: field.id,
@@ -292,6 +289,7 @@ export default function NewEntryModal({
 
       linkedEntryIds,
     };
+
     try {
       setSaving(true);
       setError("");
@@ -299,8 +297,7 @@ export default function NewEntryModal({
       await onCreate(payload);
     } catch (submitError) {
       setError(
-        submitError.message ||
-          "Failed to create entry.",
+        submitError.message || "Failed to create entry.",
       );
     } finally {
       setSaving(false);
@@ -334,12 +331,19 @@ export default function NewEntryModal({
         aria-labelledby="new-entry-title"
       >
         <div className="modal-header">
-          <h2
-            className="modal-title"
-            id="new-entry-title"
-          >
-            New Entry
-          </h2>
+          <div>
+            <h2
+              className="modal-title"
+              id="new-entry-title"
+            >
+              New Entry
+            </h2>
+
+            <p className="entry-intro">
+              Record what you worked on, how long it took, and any
+              extra information you want to keep with this entry.
+            </p>
+          </div>
 
           <button
             type="button"
@@ -377,6 +381,10 @@ export default function NewEntryModal({
                 }
                 autoFocus
               />
+
+              <p className="form-help">
+                Give this piece of work a short descriptive name.
+              </p>
             </div>
 
             <div className="form-field">
@@ -400,7 +408,13 @@ export default function NewEntryModal({
                   setDurationMinutes(event.target.value)
                 }
               />
+
+              <p className="form-help">
+                Enter the total number of minutes you spent on this
+                work. For example, 1 hour = 60 minutes.
+              </p>
             </div>
+
             <div className="form-field">
               <label
                 className="form-label"
@@ -409,6 +423,21 @@ export default function NewEntryModal({
                 Due date (optional)
               </label>
 
+              <input
+                id="entry-due-date"
+                className="form-input"
+                type="datetime-local"
+                value={dueAt}
+                onChange={(event) =>
+                  setDueAt(event.target.value)
+                }
+              />
+
+              <p className="form-help">
+                Add a due date if this work still needs to be
+                completed by a specific time.
+              </p>
+            </div>
 
             <div className="form-field">
               <label
@@ -450,6 +479,11 @@ export default function NewEntryModal({
                 </button>
               </div>
 
+              <p className="form-help">
+                Optional: use tags to make related entries easier to
+                organise and find later.
+              </p>
+
               {tags.length > 0 && (
                 <div className="tag-list">
                   {tags.map((tag) => (
@@ -458,6 +492,7 @@ export default function NewEntryModal({
                       key={tag}
                     >
                       {tag}
+
                       <button
                         type="button"
                         onClick={() => removeTag(tag)}
@@ -471,22 +506,16 @@ export default function NewEntryModal({
               )}
             </div>
 
-
-              <input
-                id="entry-due-date"
-                className="form-input"
-                type="datetime-local"
-                value={dueAt}
-                onChange={(event) =>
-                  setDueAt(event.target.value)
-                }
-              />
-            </div>
-
             {fields.length > 0 && (
               <div className="fields-block">
                 <p className="fields-section-label">
                   Project fields
+                </p>
+
+                <p className="form-help">
+                  These are the extra fields already set up for this
+                  project. Complete the ones that are relevant to this
+                  entry.
                 </p>
 
                 {fields.map((field) => (
@@ -526,7 +555,10 @@ export default function NewEntryModal({
                 </p>
 
                 <p className="form-help">
-                  Select existing entries that are related to this work.
+                  Optional: select existing entries that are related
+                  to this work. For example, you can link a bug fix
+                  to the entry where the feature was originally
+                  created.
                 </p>
 
                 <div className="entry-link-options">
@@ -537,7 +569,9 @@ export default function NewEntryModal({
                     >
                       <input
                         type="checkbox"
-                        checked={linkedEntryIds.includes(entry.id)}
+                        checked={linkedEntryIds.includes(
+                          entry.id,
+                        )}
                         onChange={() =>
                           toggleLinkedEntry(entry.id)
                         }
@@ -555,6 +589,11 @@ export default function NewEntryModal({
             <div className="fields-block">
               <p className="fields-section-label">
                 Checklist
+              </p>
+
+              <p className="form-help">
+                Optional: break the work into smaller tasks that you
+                want to keep track of.
               </p>
 
               {checklist.length > 0 && (
@@ -619,6 +658,11 @@ export default function NewEntryModal({
                   Reference other projects
                 </p>
 
+                <p className="form-help">
+                  Optional: connect this entry to another project
+                  when the work is related.
+                </p>
+
                 <div className="person4-reference-list">
                   {referenceProjectOptions.map((project) => (
                     <label
@@ -637,9 +681,7 @@ export default function NewEntryModal({
                         }
                       />
 
-                      <span>
-                        {project.name}
-                      </span>
+                      <span>{project.name}</span>
                     </label>
                   ))}
                 </div>
@@ -651,6 +693,11 @@ export default function NewEntryModal({
                 <p className="fields-section-label">
                   <Link2 size={14} />
                   Reference other entries
+                </p>
+
+                <p className="form-help">
+                  Optional: reference another logbook entry that
+                  provides useful context for this work.
                 </p>
 
                 <div className="person4-reference-list">
@@ -677,7 +724,7 @@ export default function NewEntryModal({
                         {entry.projectName && (
                           <small>
                             {" "}
-                            · {entry.projectName}
+                            Â· {entry.projectName}
                           </small>
                         )}
                       </span>
@@ -689,7 +736,13 @@ export default function NewEntryModal({
 
             <div className="fields-block">
               <p className="fields-section-label">
-                Add custom fields
+                Add extra information
+              </p>
+
+              <p className="form-help">
+                Optional: create an extra field if you want to record
+                information that is not already included above, such
+                as Difficulty, Notes, Source, Mark or Status.
               </p>
 
               {newFields.length > 0 && (
@@ -709,9 +762,7 @@ export default function NewEntryModal({
                         </span>
 
                         <span className="field-row-type">
-                          {fieldTypeLabel(
-                            field.type,
-                          )}
+                          {fieldTypeLabel(field.type)}
                         </span>
 
                         <button
@@ -731,7 +782,14 @@ export default function NewEntryModal({
                       <div className="new-field-value">
                         {field.type === "computed" ? (
                           <p className="computed-field-formula">
-                            Formula: <code>{field.formula}</code>
+                            Formula:{" "}
+
+                            <code>
+                              {field.formula}
+                            </code>
+
+                            <code>{field.formula}</code>
+
                           </p>
                         ) : (
                           renderInput(
@@ -767,9 +825,7 @@ export default function NewEntryModal({
                     placeholder="e.g. Difficulty, Notes, Source…"
                     value={fieldName}
                     onChange={(event) =>
-                      setFieldName(
-                        event.target.value,
-                      )
+                      setFieldName(event.target.value)
                     }
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
@@ -778,6 +834,11 @@ export default function NewEntryModal({
                       }
                     }}
                   />
+
+                  <p className="form-help">
+                    The field name describes what extra information
+                    you want to store, for example Status or Notes.
+                  </p>
                 </div>
 
                 <div className="form-field add-field-type">
@@ -793,9 +854,7 @@ export default function NewEntryModal({
                     className="form-select"
                     value={fieldType}
                     onChange={(event) =>
-                      setFieldType(
-                        event.target.value,
-                      )
+                      setFieldType(event.target.value)
                     }
                   >
                     {FIELD_TYPES.map((type) => (
@@ -807,7 +866,13 @@ export default function NewEntryModal({
                       </option>
                     ))}
                   </select>
+
+                  <p className="form-help">
+                    Choose the kind of value that will be stored in
+                    this field.
+                  </p>
                 </div>
+
                 {fieldType === "computed" && (
                   <div className="form-field add-field-formula">
                     <label
@@ -824,7 +889,9 @@ export default function NewEntryModal({
                       placeholder="e.g. Hours * 2"
                       value={fieldFormula}
                       onChange={(event) =>
-                        setFieldFormula(event.target.value)
+                        setFieldFormula(
+                          event.target.value,
+                        )
                       }
                     />
                   </div>
@@ -842,9 +909,7 @@ export default function NewEntryModal({
             </div>
 
             {error && (
-              <p className="form-error">
-                {error}
-              </p>
+              <p className="form-error">{error}</p>
             )}
           </div>
 
@@ -871,9 +936,18 @@ export default function NewEntryModal({
         </form>
 
         <style>{`
-          .form-help {
-            margin: -4px 0 10px;
+          .entry-intro {
+            margin: 5px 0 0;
+            max-width: 520px;
             font-size: 12px;
+            line-height: 1.5;
+            color: #64748b;
+          }
+
+          .form-help {
+            margin: 6px 0 10px;
+            font-size: 12px;
+            line-height: 1.5;
             color: #64748b;
           }
 
@@ -901,3 +975,4 @@ export default function NewEntryModal({
     </div>
   );
 }
+
