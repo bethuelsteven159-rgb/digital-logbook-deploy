@@ -1,4 +1,7 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext.jsx';
+import ProfileAvatar from './ProfileAvatar.jsx';
+
 const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: IconDashboard },
     { to: "/projects", label: "Projects", icon: IconProjects },
@@ -6,8 +9,9 @@ const navItems = [
     { to: "/settings", label: "Settings", icon: IconSettings },
 ];
 export default function Sidebar({ collapsed, onToggle }) {
-    const navigate = useNavigate();
-    return (<aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
+  const navigate = useNavigate();
+  const { user } = useUser();
+  return (<aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-logo-mark">
@@ -38,11 +42,9 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* Profile */}
       <button className="sidebar-profile" onClick={() => navigate("/profile")} title={collapsed ? "Profile" : undefined} aria-label="Go to profile">
-        <div className="sidebar-avatar">
-          <IconUser />
-        </div>
+        <ProfileAvatar className="sidebar-avatar" src={user?.avatarUrl} />
         {!collapsed && (<div className="sidebar-profile-text">
-            <span className="sidebar-profile-name">My Profile</span>
+            <span className="sidebar-profile-name">{user?.name || 'My Profile'}</span>
             <span className="sidebar-profile-sub">View &amp; edit</span>
           </div>)}
       </button>
@@ -241,12 +243,6 @@ function IconSettings() {
     return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>);
-}
-function IconUser() {
-    return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-      <circle cx="12" cy="7" r="4"/>
     </svg>);
 }
 function IconChevron({ collapsed }) {

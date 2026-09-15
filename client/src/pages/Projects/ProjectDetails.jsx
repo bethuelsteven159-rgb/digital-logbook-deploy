@@ -10,8 +10,11 @@ import {
 } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
+import { X, Plus } from "lucide-react";
 import EditProjectModal from "../../components/EditProjectModal";
 import NewEntryModal from "./NewEntryModal";
+import EditEntryModal from "./EditEntryModal";
+import EntryDetailsModal from "./EntryDetailsModal";
 import CalendarView from "./CalendarView";
 import BoardView from "./BoardView";
 
@@ -23,11 +26,33 @@ import {
   applySavedFilter,
   deleteSavedFilter,
   completeProjectEntry,
+  updateSavedFilter,
+  markEntryComplete,
+  fetchOutstandingEntries,
+  fetchIncompleteEntries,
 } from "../../api/projectDetailsApi";
 import {
+  fetchProjects,
   setProjectArchived,
   updateProject,
 } from "../../api/projectsApi";
+
+import useOnlineStatus from "../../hooks/useOnlineStatus";
+import {
+  getQueueForProject,
+  addToQueue,
+  removeFromQueue,
+  updateQueueItem,
+} from "../../offline/entryQueue";
+
+import {
+  updateChecklistItem,
+  deleteChecklistItem,
+  updateProjectReferences,
+  updateEntryProjectReferences,
+  updateEntryReferences,
+  updateEntry,
+} from "../../api/entryFeaturesApi";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -39,12 +64,31 @@ export default function ProjectDetails() {
 
   const [details, setDetails] = useState(null);
 
+  const [projects, setProjects] = useState([]);
+
+  const [projectReferenceSaving, setProjectReferenceSaving] =
+    useState(false);
+
+  const [showProjectReferenceModal, setShowProjectReferenceModal] =
+    useState(false);
+
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
 
   const [showEntryModal, setShowEntryModal] =
     useState(false);
+
+  const [showEditEntryModal, setShowEditEntryModal] =
+    useState(false);
+
+  const [selectedEntryForEdit, setSelectedEntryForEdit] =
+    useState(null);
+
+  const [selectedEntryForDetails, setSelectedEntryForDetails] =
+    useState(null);
+
+  const [checklistSaving, setChecklistSaving] = useState({});
 
   const [entryView, setEntryView] =
     useState("list");
@@ -60,9 +104,25 @@ export default function ProjectDetails() {
     setShowEditProjectModal,
   ] = useState(false);
 
+  const isOnline = useOnlineStatus();
+
+  const [pendingEntries, setPendingEntries] = useState(() =>
+    getQueueForProject(id),
+  );
+
+  const [syncing, setSyncing] = useState(false);
+
   const [savedFilters, setSavedFilters] = useState([]);
   const [activeFilterId, setActiveFilterId] = useState(null);
   const [filteredEntries, setFilteredEntries] = useState(null);
+  const [entryStatusView, setEntryStatusView] = useState(null);
+
+  const [showFilterBuilder, setShowFilterBuilder] = useState(false);
+  const [editingFilterId, setEditingFilterId] = useState(null);
+  const [filterName, setFilterName] = useState("");
+  const [filterConditions, setFilterConditions] = useState([
+    { targetField: "durationMinutes", operator: "greater_than", value: "" },
+  ]);
 
   const loadProject = useCallback(async () => {
     if (!id) {
@@ -76,12 +136,20 @@ export default function ProjectDetails() {
       setError("");
 
       const data = await fetchProjectDetails(id);
-
       setDetails(data);
 
-      const filters = await fetchSavedFilters(id);
+      try {
+        const allProjects = await fetchProjects("all");
+        setProjects(Array.isArray(allProjects) ? allProjects : []);
+      } catch (projectsError) {
+        console.error("Failed to load projects for references:", projectsError);
+        setProjects([]);
+      }
+      if (typeof fetchSavedFilters === "function") {
+        const filters = await fetchSavedFilters(id);
+        setSavedFilters(filters || []);
+      }
 
-      setSavedFilters(filters || []);
     } catch (requestError) {
       console.error(
         "Failed to load project:",
@@ -101,7 +169,161 @@ export default function ProjectDetails() {
     loadProject();
   }, [loadProject]);
 
+  const syncPendingEntries = useCallback(async () => {
+    const queue = getQueueForProject(id);
+
+    if (queue.length === 0) {
+      return;
+    }
+
+    setSyncing(true);
+
+    for (const item of queue) {
+      updateQueueItem(item.localId, { status: "syncing" });
+
+      try {
+        await createProjectEntry(item.projectId, item.payload);
+
+        removeFromQueue(item.localId);
+
+        setPendingEntries((current) =>
+          current.filter(
+            (entry) => entry.localId !== item.localId,
+          ),
+        );
+      } catch (syncError) {
+        updateQueueItem(item.localId, {
+          status: "failed",
+          lastError: syncError.message || "Sync failed",
+        });
+
+        setPendingEntries((current) =>
+          current.map((entry) =>
+            entry.localId === item.localId
+              ? {
+                  ...entry,
+                  status: "failed",
+                  lastError: syncError.message,
+                }
+              : entry,
+          ),
+        );
+      }
+    }
+
+    setSyncing(false);
+    await loadProject();
+  }, [id, loadProject]);
+
+  useEffect(() => {
+    if (isOnline && pendingEntries.length > 0) {
+      syncPendingEntries();
+    }
+    // Only re-run when connectivity flips, not on every pendingEntries change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline]);
+
+  useEffect(() => {
+    if (!details || !window.location.hash) return;
+    const targetId = window.location.hash.slice(1);
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [details]);
+
+  function openEntryDetails(entry) {
+    setSelectedEntryForDetails(entry);
+  }
+
+  function openEditEntryModal(entry) {
+    setSelectedEntryForDetails(null);
+    setSelectedEntryForEdit(entry);
+    setShowEditEntryModal(true);
+  }
+
+  async function handleChecklistToggle(entryId, itemId, completed) {
+    const key = `${entryId}:${itemId}`;
+
+    try {
+      setChecklistSaving((current) => ({ ...current, [key]: true }));
+      setError("");
+
+      const updated = await updateChecklistItem(
+        id,
+        entryId,
+        itemId,
+        { completed },
+      );
+
+      setDetails((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          entries: current.entries.map((candidate) =>
+            candidate.id !== entryId
+              ? candidate
+              : {
+                  ...candidate,
+                  checklist: (candidate.checklist || []).map((item) =>
+                    item.id === itemId
+                      ? { ...item, completed: Boolean(updated?.completed ?? completed) }
+                      : item,
+                  ),
+                },
+          ),
+        };
+      });
+
+      setSelectedEntryForDetails((current) => {
+        if (!current || current.id !== entryId) return current;
+        return {
+          ...current,
+          checklist: (current.checklist || []).map((item) =>
+            item.id === itemId
+              ? { ...item, completed: Boolean(updated?.completed ?? completed) }
+              : item,
+          ),
+        };
+      });
+    } catch (requestError) {
+      setError(requestError.message || "Failed to update checklist item.");
+    } finally {
+      setChecklistSaving((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  async function handleUpdateEntry(entryId, payload) {
+    try {
+      await updateEntry(id, entryId, payload);
+      await updateEntryProjectReferences(id, entryId, payload.referenceProjectIds || []);
+      await updateEntryReferences(id, entryId, payload.referenceEntryIds || []);
+      setShowEditEntryModal(false);
+      setSelectedEntryForEdit(null);
+      await loadProject();
+    } catch (requestError) {
+      console.error("Failed to update entry:", requestError);
+      throw requestError;
+    }
+  }
+
   async function handleCreateEntry(payload) {
+    if (!isOnline) {
+      const queued = addToQueue(id, payload);
+
+      setPendingEntries((current) => [...current, queued]);
+      setShowEntryModal(false);
+
+      return;
+    }
+
     try {
       await createProjectEntry(id, payload);
 
@@ -126,6 +348,20 @@ export default function ProjectDetails() {
         "Failed to create entry:",
         requestError,
       );
+
+      // A real network failure (server unreachable) has no HTTP status.
+      // A validation/auth error (400/401/etc) does — don't silently
+      // queue those, since retrying them later would just fail again.
+      const isNetworkFailure = !requestError.status;
+
+      if (isNetworkFailure) {
+        const queued = addToQueue(id, payload);
+
+        setPendingEntries((current) => [...current, queued]);
+        setShowEntryModal(false);
+
+        return;
+      }
 
       throw requestError;
     }
@@ -171,6 +407,30 @@ export default function ProjectDetails() {
     }
   }
 
+  async function handleUpdateProjectReferences(referencedProjectIds) {
+    try {
+      setProjectReferenceSaving(true);
+      setError("");
+
+      await updateProjectReferences(id, referencedProjectIds);
+
+      setShowProjectReferenceModal(false);
+      await loadProject();
+    } catch (requestError) {
+      console.error(
+        "Failed to update project references:",
+        requestError,
+      );
+
+      setError(
+        requestError.message ||
+          "Failed to update project references.",
+      );
+    } finally {
+      setProjectReferenceSaving(false);
+    }
+  }
+
   async function handleCreateSavedFilter(payload) {
     try {
       const newFilter = await createSavedFilter(
@@ -188,6 +448,34 @@ export default function ProjectDetails() {
         submitError,
       );
     }
+  async function handleUpdateSavedFilter(filterId, payload) {
+    try {
+      const updatedFilter = await updateSavedFilter(filterId, payload);
+
+      setSavedFilters((current) =>
+        current.map((filter) =>
+          filter.id === filterId ? updatedFilter : filter,
+        ),
+      );
+    } catch (submitError) {
+      console.error(
+        "Failed to update saved filter:",
+        submitError,
+      );
+    }
+  }
+
+  function handleOpenEditFilter(filter) {
+    setEditingFilterId(filter.id);
+    setFilterName(filter.name);
+    setFilterConditions(
+      filter.criteria.map((criterion) => ({
+        targetField: criterion.fieldName || criterion.fieldId,
+        operator: criterion.operator,
+        value: criterion.value,
+      })),
+    );
+    setShowFilterBuilder(true);
   }
 
   async function handleApplyFilter(filterId) {
@@ -235,88 +523,83 @@ export default function ProjectDetails() {
     }
   }
 
-  async function handleUpdateProject(payload) {
-    try {
-      await updateProject(id, payload);
+  function addFilterCondition() {
+    setFilterConditions((current) => [
+      ...current,
+      { targetField: "durationMinutes", operator: "greater_than", value: "" },
+    ]);
+  }
 
-      setShowEditProjectModal(false);
+  function updateFilterCondition(index, updates) {
+    setFilterConditions((current) =>
+      current.map((condition, i) =>
+        i === index ? { ...condition, ...updates } : condition,
+      ),
+    );
+  }
+
+  function removeFilterCondition(index) {
+    setFilterConditions((current) =>
+      current.filter((_, i) => i !== index),
+    );
+  }
+
+  async function handleMarkComplete(entryId) {
+    try {
+      await markEntryComplete(id, entryId);
+
       await loadProject();
-    } catch (requestError) {
+    } catch (completeError) {
       console.error(
-        "Failed to update project:",
-        requestError,
+        "Failed to mark entry complete:",
+        completeError,
       );
-
-      throw requestError;
     }
   }
 
-  async function handleToggleArchive() {
-    const project = details?.project || {};
-    const shouldArchive = !project.archivedAt;
+  async function handleShowOverdue() {
+    if (entryStatusView === "overdue") {
+      setEntryStatusView(null);
+      setFilteredEntries(null);
+      setActiveFilterId(null);
+      return;
+    }
 
     try {
-      setProjectActionSaving(true);
-      setError("");
+      const results = await fetchOutstandingEntries(id);
 
-      await setProjectArchived(id, shouldArchive);
-
-      navigate(
-        shouldArchive
-          ? "/projects?tab=archived"
-          : "/projects",
-      );
-    } catch (requestError) {
+      setEntryStatusView("overdue");
+      setActiveFilterId(null);
+      setFilteredEntries(results || []);
+    } catch (outstandingError) {
       console.error(
-        "Failed to change archive status:",
-        requestError,
+        "Failed to load overdue entries:",
+        outstandingError,
       );
-
-      setError(
-        requestError.message ||
-          "Failed to update project archive status.",
-      );
-    } finally {
-      setProjectActionSaving(false);
     }
   }
 
-  function formatDate(value) {
-    if (!value) {
-      return "—";
+  async function handleShowIncomplete() {
+    if (entryStatusView === "incomplete") {
+      setEntryStatusView(null);
+      setFilteredEntries(null);
+      setActiveFilterId(null);
+      return;
     }
 
-    const date = new Date(value);
+    try {
+      const results = await fetchIncompleteEntries(id);
 
-    if (Number.isNaN(date.getTime())) {
-      return "—";
+      setEntryStatusView("incomplete");
+      setActiveFilterId(null);
+      setFilteredEntries(results || []);
+    } catch (incompleteError) {
+      console.error(
+        "Failed to load incomplete entries:",
+        incompleteError,
+      );
     }
-
-    return new Intl.DateTimeFormat("en-ZA", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(date);
   }
-
-  function formatLoggedTime(minutes = 0) {
-    const safeMinutes = Number(minutes) || 0;
-
-    if (safeMinutes === 0) {
-      return "0 hrs";
-    }
-
-    const hours = Math.floor(safeMinutes / 60);
-    const remainingMinutes = safeMinutes % 60;
-
-    if (hours === 0) {
-      return `${remainingMinutes} min`;
-    }
-
-    if (remainingMinutes === 0) {
-      return `${hours} hrs`;
-    }
-
     return `${hours}h ${remainingMinutes}m`;
   }
 
@@ -411,6 +694,20 @@ export default function ProjectDetails() {
         ? details.entries
         : [];
 
+  const displayEntries = [
+    ...pendingEntries.map((item) => ({
+      id: item.localId,
+      name: item.payload.name,
+      durationMinutes: item.payload.durationMinutes,
+      tags: item.payload.tags || [],
+      occurredAt: item.createdAt,
+      values: [],
+      isPending: true,
+      syncStatus: item.status,
+    })),
+    ...entries,
+  ];
+
   const usedFieldIds = new Set(
     entries.flatMap((entry) =>
       (Array.isArray(entry.values)
@@ -429,7 +726,6 @@ export default function ProjectDetails() {
       id: field.id,
       label: field.name,
       type: field.fieldType,
-      usedByEntries: usedFieldIds.has(field.id),
     })),
   };
 
@@ -574,6 +870,47 @@ export default function ProjectDetails() {
             />
           </div>
 
+          {/* Project references */}
+          <section className="references-section">
+            <div className="references-section-header">
+              <div>
+                <h2 className="entries-title">Project references</h2>
+                <p className="references-description">
+                  Projects related to this project.
+                </p>
+              </div>
+
+              {!project.archivedAt && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => setShowProjectReferenceModal(true)}
+                  disabled={projectReferenceSaving}
+                >
+                  <IconLink />
+                  Manage references
+                </button>
+              )}
+            </div>
+
+            {Array.isArray(details.references) && details.references.length > 0 ? (
+              <div className="entry-reference-list project-reference-list">
+                {details.references.map((reference) => (
+                  <button
+                    type="button"
+                    className="entry-reference-link"
+                    key={reference.id}
+                    onClick={() => navigate(`/projects/${reference.referencedProjectId}`)}
+                  >
+                    {reference.referencedProjectName}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="references-empty">No project references.</p>
+            )}
+          </section>
+
           {/* Entries */}
           <section className="entries-section">
             <div className="entries-header entries-header-with-views">
@@ -633,61 +970,290 @@ export default function ProjectDetails() {
                   All entries
                 </option>
 
-                {savedFilters.map((filter) => (
-                  <option
-                    key={filter.id}
-                    value={filter.id}
-                  >
-                    {filter.name}
-                  </option>
-                ))}
-              </select>
+    {savedFilters.map((filter) => (
+      <option
+        key={filter.id}
+        value={filter.id}
+      >
+        {filter.name}
+      </option>
+    ))}
+  </select>
 
               {activeFilterId && (
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={() =>
-                    handleDeleteFilter(
-                      activeFilterId,
-                    )
-                  }
-                >
-                  Delete filter
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => {
+                      const filter = savedFilters.find(
+                        (f) => f.id === activeFilterId,
+                      );
+
+                      if (filter) {
+                        handleOpenEditFilter(filter);
+                      }
+                    }}
+                  >
+                    Edit filter
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() =>
+                      handleDeleteFilter(activeFilterId)
+                    }
+                  >
+                    Delete filter
+                  </button>
+                </>
               )}
 
               <button
                 type="button"
                 className="btn-add-field"
-                onClick={() => {
-                  const name = window.prompt(
-                    "Filter name:",
-                  );
-
-                  if (!name) {
-                    return;
-                  }
-
-                  handleCreateSavedFilter({
-                    name,
-                    criteria: [
-                      {
-                        fieldName:
-                          "durationMinutes",
-                        operator:
-                          "greater_than",
-                        value: 0,
-                      },
-                    ],
-                  });
-                }}
+                onClick={() => setShowFilterBuilder(true)}
               >
                 + New filter
               </button>
             </div>
 
-            {entries.length === 0 ? (
+            <button
+              type="button"
+              className={
+                entryStatusView === "overdue"
+                  ? "btn-save"
+                  : "btn-cancel"
+              }
+              onClick={handleShowOverdue}
+            >
+              {entryStatusView === "overdue"
+                ? "Showing overdue only"
+                : "Show overdue only"}
+            </button>
+
+            <button
+              type="button"
+              className={
+                entryStatusView === "incomplete"
+                  ? "btn-save"
+                  : "btn-cancel"
+              }
+              onClick={handleShowIncomplete}
+            >
+              {entryStatusView === "incomplete"
+                ? "Showing incomplete only"
+                : "Show incomplete only"}
+            </button>
+
+{showFilterBuilder && (
+  <div className="filter-builder">
+  <div className="form-field">
+    <label className="form-label">
+      Filter name
+    </label>
+
+    <input
+      className="form-input"
+      type="text"
+      value={filterName}
+      onChange={(event) =>
+        setFilterName(event.target.value)
+      }
+      placeholder="e.g. Long entries"
+    />
+  </div>
+
+  {filterConditions.map((condition, index) => (
+    <div className="filter-condition-row" key={index}>
+      <div className="form-field">
+        <label className="form-label">
+          Field
+        </label>
+
+        <select
+          className="form-select"
+          value={condition.targetField}
+          onChange={(event) =>
+            updateFilterCondition(index, {
+              targetField: event.target.value,
+            })
+          }
+        >
+          <option value="name">Entry name</option>
+          <option value="durationMinutes">
+            Time spent (minutes)
+          </option>
+
+          {fields.map((field) => (
+            <option
+              key={field.id}
+              value={field.id}
+            >
+              {field.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-field">
+        <label className="form-label">
+          Condition
+        </label>
+
+        <select
+          className="form-select"
+          value={condition.operator}
+          onChange={(event) =>
+            updateFilterCondition(index, {
+              operator: event.target.value,
+            })
+          }
+        >
+          <option value="equals">Equals</option>
+          <option value="not_equals">Not equals</option>
+          <option value="contains">Contains</option>
+          <option value="greater_than">
+            Greater than
+          </option>
+          <option value="less_than">
+            Less than
+          </option>
+        </select>
+      </div>
+
+      <div className="form-field">
+        <label className="form-label">
+          Value
+        </label>
+
+        <input
+          className="form-input"
+          type="text"
+          value={condition.value}
+          onChange={(event) =>
+            updateFilterCondition(index, {
+              value: event.target.value,
+            })
+          }
+          placeholder="e.g. 10"
+        />
+      </div>
+
+      {filterConditions.length > 1 && (
+        <button
+          type="button"
+          className="field-row-remove"
+          onClick={() => removeFilterCondition(index)}
+          aria-label="Remove condition"
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  ))}
+
+  <button
+    type="button"
+    className="btn-add-field"
+    onClick={addFilterCondition}
+  >
+    <Plus size={14} />
+    Add condition
+  </button>
+
+ <div className="filter-builder-actions">
+   <button
+  type="button"
+  className="btn-cancel"
+  onClick={() => {
+    setShowFilterBuilder(false);
+    setEditingFilterId(null);
+    setFilterName("");
+    setFilterConditions([
+      { targetField: "durationMinutes", operator: "greater_than", value: "" },
+    ]);
+  }}
+>
+  Cancel
+</button>
+
+    <button
+  type="button"
+  className="btn-save"
+  onClick={() => {
+    if (!filterName.trim()) {
+      return;
+    }
+
+    const criteria = filterConditions.map((condition) => {
+      const isBuiltIn =
+        condition.targetField === "name" ||
+        condition.targetField === "durationMinutes";
+
+      return isBuiltIn
+        ? {
+            fieldName: condition.targetField,
+            operator: condition.operator,
+            value: condition.value,
+          }
+        : {
+            fieldId: condition.targetField,
+            operator: condition.operator,
+            value: condition.value,
+          };
+    });
+
+    if (editingFilterId) {
+      handleUpdateSavedFilter(editingFilterId, {
+        name: filterName.trim(),
+        criteria,
+      });
+    } else {
+      handleCreateSavedFilter({
+        name: filterName.trim(),
+        criteria,
+      });
+    }
+
+    setShowFilterBuilder(false);
+    setEditingFilterId(null);
+    setFilterName("");
+    setFilterConditions([
+      { targetField: "durationMinutes", operator: "greater_than", value: "" },
+    ]);
+  }}
+>
+  {editingFilterId ? "Update filter" : "Save filter"}
+</button>
+  </div>
+</div>
+)}
+            {(pendingEntries.length > 0 || !isOnline) && (
+              <div className="offline-banner">
+                {!isOnline && (
+                  <span>
+                    You're offline — new entries will
+                    be saved locally.
+                  </span>
+                )}
+
+                {isOnline && pendingEntries.length > 0 && (
+                  <span>
+                    {syncing
+                      ? "Syncing…"
+                      : `${pendingEntries.length} entr${
+                          pendingEntries.length === 1
+                            ? "y"
+                            : "ies"
+                        } waiting to sync`}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {displayEntries.length === 0 ? (
               <div className="entries-empty">
                 <div className="empty-icon-wrap">
                   <IconEntryLarge />
@@ -730,37 +1296,43 @@ export default function ProjectDetails() {
               />
             ) : (
               <div className="entries-list">
-                {entries.map((entry) => {
+                {displayEntries.map((entry) => {
                   const values = Array.isArray(
                     entry.values,
                   )
                     ? entry.values
                     : [];
+                  const linkedEntries = Array.isArray(entry.linkedEntries) ? entry.linkedEntries : [];
+                  const checklist = Array.isArray(entry.checklist) ? entry.checklist : [];
+                  const completedChecklist = checklist.filter((item) => item.completed).length;
 
-                  const linkedEntries =
-                    Array.isArray(
-                      entry.linkedEntries,
-                    )
-                      ? entry.linkedEntries
-                      : [];
-
-                  const isCompleted =
-                    Boolean(entry.completedAt);
-
-                  const isCompleting =
-                    completingEntryId ===
-                    entry.id;
+                  const isOverdue =
+                    entry.dueAt &&
+                    !entry.completedAt &&
+                    new Date(entry.dueAt) < new Date();
 
                   return (
-                    <article
-                      className="entry-row"
+                    <button
+                      type="button"
+                      className="entry-row entry-row-clickable"
+                      id={`entry-${entry.id}`}
                       key={entry.id}
+                      onClick={() => openEntryDetails(entry)}
                     >
                       <div className="entry-row-header">
                         <div>
                           <h3 className="entry-row-title">
                             {entry.name ||
                               "Logbook Entry"}
+
+                            {entry.isPending && (
+                              <span className="entry-pending-badge">
+                                {entry.syncStatus ===
+                                "failed"
+                                  ? "Sync failed"
+                                  : "Pending sync"}
+                              </span>
+                            )}
                           </h3>
 
                           <p className="entry-row-date">
@@ -770,62 +1342,39 @@ export default function ProjectDetails() {
                             )}
                           </p>
 
-                          {isCompleted && (
-                            <p className="entry-row-completed">
-                              Completed{" "}
-                              {formatDate(
-                                entry.completedAt,
-                              )}
+                          {entry.dueAt && (
+                            <p
+                              className={
+                                isOverdue
+                                  ? "entry-due-date entry-due-overdue"
+                                  : "entry-due-date"
+                              }
+                            >
+                              {entry.completedAt
+                                ? "Completed"
+                                : isOverdue
+                                  ? `Overdue - was due ${formatDate(entry.dueAt)}`
+                                  : `Due ${formatDate(entry.dueAt)}`}
                             </p>
                           )}
                         </div>
-
-                        <div className="entry-row-actions">
-                          <span
-                            className={`entry-status ${
-                              isCompleted
-                                ? "entry-status-completed"
-                                : "entry-status-outstanding"
-                            }`}
-                          >
-                            {isCompleted
-                              ? "Completed"
-                              : "In progress"}
-                          </span>
-
-                          {!isCompleted && (
-                            <button
-                              type="button"
-                              className="btn-complete-entry"
-                              onClick={() =>
-                                handleCompleteEntry(
-                                  entry.id,
-                                )
-                              }
-                              disabled={
-                                isCompleting ||
-                                Boolean(
-                                  project.archivedAt,
-                                )
-                              }
-                            >
-                              {isCompleting
-                                ? "Completing..."
-                                : "Complete Entry"}
-                            </button>
-                          )}
-
-                          <span className="entry-duration">
-                            <IconClockSmall />
-                            {formatLoggedTime(
-                              entry.durationMinutes,
-                            )}
-                          </span>
-                        </div>
                       </div>
 
-                      {linkedEntries.length >
-                        0 && (
+                      {Array.isArray(entry.tags) &&
+                        entry.tags.length > 0 && (
+                          <div className="entry-tags">
+                            {entry.tags.map((tag) => (
+                              <span
+                                className="entry-tag"
+                                key={tag}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                      {linkedEntries.length > 0 && (
                         <div className="entry-links">
                           <span className="entry-links-label">
                             Linked entries:
@@ -844,34 +1393,40 @@ export default function ProjectDetails() {
                         </div>
                       )}
 
-                      {values.length > 0 && (
-                        <div className="entry-values">
-                          {values.map(
-                            (field, index) => (
-                              <div
-                                className="entry-value"
-                                key={
-                                  field.fieldId ||
-                                  field.id ||
-                                  index
-                                }
-                              >
-                                <span className="entry-value-name">
-                                  {field.name ||
-                                    "Field"}
-                                </span>
+                      <div className="entry-row-summary">
+                        <span>{values.length} {values.length === 1 ? "field" : "fields"}</span>
+                        <span>{checklist.length ? `${completedChecklist}/${checklist.length} checklist` : "No checklist"}</span>
+                        {entry.dueAt && <span>Due {formatDate(entry.dueAt)}</span>}
+                      </div>
 
-                                <span className="entry-value-content">
-                                  <FormattedFieldValue
-                                    field={field}
-                                  />
-                                </span>
-                              </div>
-                            ),
-                          )}
+                      {entry.dueAt && !entry.completedAt && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="btn-cancel"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleMarkComplete(entry.id);
+                          }}
+                        >
+                          Mark as complete
+                        </span>
+                      )}
+                      {values.length > 0 && (
+                        <div className="entry-values entry-values-preview">
+                          {values.slice(0, 3).map((field, index) => (
+                            <div className="entry-value" key={field.fieldId || field.id || index}>
+                              <span className="entry-value-name">{field.name || "Field"}{field.archived ? " (removed)" : ""}</span>
+                              <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
+                            </div>
+                          ))}
                         </div>
                       )}
-                    </article>
+                        </div>
+                      )}
+
+                      <div className="entry-row-open-hint">Click entry to view full contents <span>→</span></div>
+                    </button>
                   );
                 })}
               </div>
@@ -880,18 +1435,69 @@ export default function ProjectDetails() {
         </div>
       </main>
 
-      {showEntryModal &&
-        !project.archivedAt && (
-          <NewEntryModal
-            fields={fields}
-            entries={entries}
-            onClose={() =>
-              setShowEntryModal(false)
-            }
-            onCreate={handleCreateEntry}
-          />
-        )}
+      {selectedEntryForDetails && (
+        <EntryDetailsModal
+          entry={selectedEntryForDetails}
+          archived={Boolean(project.archivedAt)}
+          onClose={() => setSelectedEntryForDetails(null)}
+          onEdit={() => openEditEntryModal(selectedEntryForDetails)}
+          onChecklistToggle={handleChecklistToggle}
+          checklistSaving={checklistSaving}
+          onProjectReferenceClick={(projectId) => {
+            setSelectedEntryForDetails(null);
+            navigate(`/projects/${projectId}`);
+          }}
+        />
+      )}
 
+      {showEditEntryModal && selectedEntryForEdit && !project.archivedAt && (
+        <EditEntryModal
+          entry={selectedEntryForEdit}
+          fields={fields}
+          projects={projects}
+          entries={entries}
+          onClose={() => {
+            setShowEditEntryModal(false);
+            setSelectedEntryForEdit(null);
+          }}
+          onSave={(payload) =>
+            handleUpdateEntry(selectedEntryForEdit.id, payload)
+          }
+        />
+      )}
+
+      {showEntryModal && !project.archivedAt && (
+        <NewEntryModal
+          fields={fields}
+          projects={projects}
+          entries={entries}
+          currentProjectId={project.id}
+          onClose={() =>
+            setShowEntryModal(false)
+          }
+          onCreate={handleCreateEntry}
+        />
+      )}
+
+      {showProjectReferenceModal && (
+        <ReferenceSelectionModal
+          title="Project references"
+          description="Select the projects that this project should reference."
+          options={projects.filter((candidate) => candidate.id !== project.id)}
+          selectedIds={
+            Array.isArray(details.references)
+              ? details.references.map(
+                  (reference) => reference.referencedProjectId,
+                )
+              : []
+          }
+          getOptionId={(option) => option.id}
+          getOptionLabel={(option) => option.name || "Untitled Project"}
+          onClose={() => setShowProjectReferenceModal(false)}
+          onSave={handleUpdateProjectReferences}
+          saving={projectReferenceSaving}
+        />
+      )}
       {showEditProjectModal && (
         <EditProjectModal
           project={editableProject}
@@ -903,6 +1509,123 @@ export default function ProjectDetails() {
       )}
 
       <ProjectDetailsStyles />
+    </div>
+  );
+}
+
+function ReferenceSelectionModal({
+  title,
+  description,
+  options,
+  selectedIds,
+  getOptionId,
+  getOptionLabel,
+  onClose,
+  onSave,
+  saving = false,
+}) {
+  const [selected, setSelected] = useState(
+    Array.isArray(selectedIds) ? selectedIds : [],
+  );
+
+  function toggle(id) {
+    setSelected((current) =>
+      current.includes(id)
+        ? current.filter((currentId) => currentId !== id)
+        : [...current, id],
+    );
+  }
+
+  return (
+    <div
+      className="modal-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !saving) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="modal reference-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reference-modal-title"
+      >
+        <div className="modal-header">
+          <div>
+            <h2 className="modal-title" id="reference-modal-title">
+              {title}
+            </h2>
+            {description && (
+              <p className="reference-modal-description">
+                {description}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Close"
+            disabled={saving}
+          >
+            <IconXSmall />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {options.length === 0 ? (
+            <div className="references-empty-modal">
+              No other items are available to reference.
+            </div>
+          ) : (
+            <div className="reference-selection-list">
+              {options.map((option) => {
+                const optionId = getOptionId(option);
+                const checked = selected.includes(optionId);
+
+                return (
+                  <label
+                    className={`reference-selection-option${
+                      checked ? " reference-selection-option--selected" : ""
+                    }`}
+                    key={optionId}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(optionId)}
+                      disabled={saving}
+                    />
+                    <span>{getOptionLabel(option)}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="btn-save"
+            onClick={() => onSave(selected)}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save references"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1306,76 +2029,17 @@ function ProjectDetailsStyles() {
         margin: 4px 0 0;
       }
 
-      .entry-row-completed {
+      .entry-due-date {
         font-family: 'Inter', sans-serif;
-        font-size: 11px;
+        font-size: 12px;
         color: #64748b;
         margin: 4px 0 0;
-      }
-
-      .entry-row-actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .entry-status {
-        display: inline-flex;
-        align-items: center;
-        padding: 5px 9px;
-        border-radius: 999px;
-        font-family: 'Inter', sans-serif;
-        font-size: 11px;
         font-weight: 600;
-        white-space: nowrap;
       }
 
-      .entry-status-outstanding {
-        background: #fff7ed;
-        color: #c2410c;
+      .entry-due-overdue {
+        color: #dc2626;
       }
-
-      .entry-status-completed {
-        background: #f0fdf4;
-        color: #15803d;
-      }
-
-      .btn-complete-entry {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 6px 11px;
-        border: 1px solid #cbd5e1;
-        border-radius: 7px;
-        background: #ffffff;
-        color: #475569;
-        font-family: 'Inter', sans-serif;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-        transition:
-          background 0.15s ease,
-          border-color 0.15s ease,
-          color 0.15s ease;
-        white-space: nowrap;
-      }
-
-      .btn-complete-entry:hover:not(:disabled) {
-        background: #f8fafc;
-        border-color: #4f63d2;
-        color: #4f63d2;
-      }
-
-      .btn-complete-entry:focus-visible {
-        outline: 2px solid #4f63d2;
-        outline-offset: 2px;
-      }
-
-      .btn-complete-entry:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
       }
 
       .entry-duration {
@@ -1390,6 +2054,52 @@ function ProjectDetailsStyles() {
         font-size: 12px;
         font-weight: 500;
         white-space: nowrap;
+      }
+
+      .entry-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .entry-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .entry-pending-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 10px;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+
+      .offline-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
       }
 
       .entry-values {
@@ -2071,6 +2781,14 @@ function ProjectDetailsStyles() {
           flex-wrap: wrap;
         }
 
+        .edit-entry-reference-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .edit-entry-new-field-grid {
+          grid-template-columns: 1fr;
+        }
+
         .add-field-type {
           width: 100%;
         }
@@ -2096,6 +2814,526 @@ function ProjectDetailsStyles() {
           width: 100%;
         }
       }
+      .entry-feature-block {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .entry-feature-heading {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 8px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .entry-checklist {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .entry-checklist-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #334155;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .entry-checklist-item input {
+        width: 15px;
+        height: 15px;
+        accent-color: #4f63d2;
+      }
+
+      .entry-checklist-item--done span {
+        color: #94a3b8;
+        text-decoration: line-through;
+      }
+
+      .entry-checklist-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #334155;
+        font-size: 13px;
+        min-width: 0;
+      }
+
+      .entry-checklist-row > span {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .entry-checklist-edit-input {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 5px 7px;
+        font: 400 12px 'Inter', sans-serif;
+      }
+
+      .entry-checklist-actions {
+        display: flex;
+        gap: 5px;
+        margin-left: auto;
+      }
+
+      .entry-checklist-action {
+        border: 0;
+        background: transparent;
+        color: #4f63d2;
+        font: 500 11px 'Inter', sans-serif;
+        cursor: pointer;
+        padding: 2px 3px;
+      }
+
+      .entry-checklist-delete {
+        color: #b91c1c;
+      }
+
+      .entry-reference-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .entry-reference-link {
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #4f63d2;
+        border-radius: 7px;
+        padding: 6px 9px;
+        font: 500 12px 'Inter', sans-serif;
+        cursor: pointer;
+      }
+
+      .entry-reference-link:hover {
+        background: #eef2ff;
+        border-color: #c7d2fe;
+      }
+      .edit-entry-add-field {
+        white-space: nowrap;
+      }
+
+      .edit-entry-new-field-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 160px;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .edit-entry-reference-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .edit-entry-reference-section {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+      }
+
+      .edit-entry-section-heading {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 3px;
+      }
+
+      .edit-entry-reference-options {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        max-height: 150px;
+        overflow: auto;
+        margin-top: 10px;
+      }
+
+      .edit-entry-check-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #334155;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .edit-entry-check-option input {
+        accent-color: #4f63d2;
+      }
+
+      .edit-entry-muted {
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .edit-entry-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 14px;
+        color: #64748b;
+        font-size: 11px;
+      }
+
+      .references-section {
+        margin-top: 28px;
+        margin-bottom: 28px;
+        padding: 20px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+      }
+
+      .references-section-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .references-description {
+        margin: 4px 0 0;
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .references-empty {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      .project-reference-list {
+        margin-top: 4px;
+      }
+
+      .btn-small {
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
+      .entry-reference-manage {
+        margin-top: 10px;
+      }
+
+      .entry-reference-manage-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        padding: 0;
+        font: 500 12px 'Inter', sans-serif;
+        cursor: pointer;
+      }
+
+      .entry-reference-manage-button:hover {
+        color: #4f63d2;
+      }
+
+      .entry-reference-manage-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .reference-modal {
+        max-width: 520px;
+      }
+
+      .reference-modal-description {
+        margin: 5px 0 0;
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .reference-selection-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 360px;
+        overflow-y: auto;
+      }
+
+      .reference-selection-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        padding: 9px 11px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        color: #334155;
+        background: #ffffff;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .reference-selection-option:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+
+      .reference-selection-option--selected {
+        background: #f8faff;
+        border-color: #c7d2fe;
+      }
+
+      .reference-selection-option input {
+        width: 15px;
+        height: 15px;
+        accent-color: #4f63d2;
+      }
+
+      .references-empty-modal {
+        padding: 28px 12px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      .entry-row-clickable {
+        width: 100%;
+        appearance: none;
+        border: 0;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .entry-row-clickable:focus-visible {
+        outline: 2px solid #4f63d2;
+        outline-offset: -2px;
+      }
+
+      .entry-row-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .entry-row-summary span {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 11px;
+      }
+
+      .entry-values-preview {
+        margin-top: 12px;
+      }
+
+      .entry-row-open-hint {
+        margin-top: 13px;
+        color: #4f63d2;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .entry-row-clickable:hover .entry-row-open-hint {
+        text-decoration: underline;
+      }
+
+      .entry-details-modal {
+        max-width: 720px;
+      }
+
+      .entry-details-body {
+        overflow-y: auto;
+      }
+
+      .entry-details-eyebrow {
+        margin: 0 0 4px;
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .entry-details-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .entry-details-meta-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+      }
+
+      .entry-details-meta-card span {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+      }
+
+      .entry-details-meta-card strong {
+        color: #1a2340;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .entry-details-section {
+        padding: 17px 0;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .entry-details-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+
+      .entry-details-section-heading {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 11px;
+        color: #1a2340;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .entry-details-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 9px;
+      }
+
+      .entry-details-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 11px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 9px;
+        background: #f8fafc;
+      }
+
+      .entry-details-field span,
+      .entry-details-reference-label {
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .entry-details-field strong {
+        color: #334155;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      .entry-details-checklist {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .entry-details-checklist-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        color: #334155;
+        font-size: 13px;
+      }
+
+      .entry-details-checklist-item.is-complete {
+        color: #94a3b8;
+        text-decoration: line-through;
+      }
+
+      .entry-details-checkmark {
+        width: 18px;
+        flex: 0 0 18px;
+        color: #4f63d2;
+        font-weight: 700;
+      }
+
+      .entry-details-reference-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .entry-details-reference-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .entry-details-empty {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .edit-entry-basic-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .checklist-edit-checkbox {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        accent-color: #4f63d2;
+      }
+
+      .person4-list-row {
+        align-items: center;
+      }
+
+      .person4-list-row .form-input {
+        min-width: 0;
+      }
+
+      .person4-list-row-locked {
+        background: #f8fafc;
+      }
+
+      @media (max-width: 700px) {
+        .entry-details-meta-grid,
+        .edit-entry-basic-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
     `}</style>
   );
 }
@@ -2103,6 +3341,24 @@ function ProjectDetailsStyles() {
 /* =========================================================
  * ICONS
  * ======================================================= */
+
+function IconLink() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function CheckSquare({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="m8 12 2.5 2.5L16 9" />
+    </svg>
+  );
+}
 
 function IconChevronRight() {
   return (

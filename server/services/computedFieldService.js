@@ -1,7 +1,29 @@
-const { evaluate } = require("mathjs");
+const { evaluate, parse, SymbolNode } = require('mathjs');
+
+function fieldSymbol(id) {
+  return `field_${id.replace(/-/g, '')}`;
+}
+
+function bindFormulaToFields(formula, fields) {
+  if (!formula) return formula;
+  const symbols = new Map(fields.map((field) => [
+    field.name.trim().replace(/[^a-zA-Z0-9_]/g, '_'),
+    fieldSymbol(field.id),
+  ]));
+  try {
+    return parse(formula).transform((node, path, parent) => {
+      if (node.isSymbolNode && symbols.has(node.name) && !(parent?.isFunctionNode && path === 'fn')) {
+        return new SymbolNode(symbols.get(node.name));
+      }
+      return node;
+    }).toString();
+  } catch {
+    return formula;
+  }
+}
 
 function buildScope(values) {
-  const scope = {};
+  const scope = new Map();
 
   for (const value of values) {
     if (!value.name) {
@@ -18,7 +40,8 @@ function buildScope(values) {
         value.value !== "" &&
         !Number.isNaN(Number(value.value)))
     ) {
-      scope[safeKey] = Number(value.value);
+      scope.set(safeKey, Number(value.value));
+      if (value.fieldId) scope.set(fieldSymbol(value.fieldId), Number(value.value));
     }
   }
 
@@ -47,4 +70,5 @@ function evaluateFormula(formula, values) {
 
 module.exports = {
   evaluateFormula,
+  bindFormulaToFields,
 };

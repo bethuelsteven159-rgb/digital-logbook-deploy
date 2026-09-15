@@ -1,7 +1,5 @@
 const { z } = require("zod");
 
-// These values match the LIVE PostgreSQL
-// project_fields_field_type_check constraint.
 const fieldTypeSchema = z.enum([
   "short_text",
   "long_text",
@@ -17,6 +15,10 @@ const customValueSchema = z.union([
   z.null(),
 ]);
 
+const checklistItemSchema = z.object({
+  text: z.string().trim().min(1).max(300),
+});
+
 const createEntrySchema = z.object({
   name: z
     .string()
@@ -25,15 +27,32 @@ const createEntrySchema = z.object({
     .max(150, "Entry name is too long"),
 
   durationMinutes: z.coerce
-  .number()
-  .int()
-  .min(0, "Duration cannot be negative")
-  .max(10080, "Duration is too large")
-  .default(0),
-    dueAt: z
+    .number()
+    .int()
+    .min(0, "Duration cannot be negative")
+    .max(10080, "Duration is too large")
+    .default(0),
+
+  tags: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(30),
+    )
+    .max(10, "Too many tags")
+    .default([])
+    .transform((tags) => [
+      ...new Set(tags.map((tag) => tag.toLowerCase())),
+    ]),
+
+  dueAt: z
+
     .string()
     .datetime({ message: "Due date must be a valid ISO date-time" })
     .optional(),
+
 
   values: z
     .array(
@@ -49,18 +68,167 @@ const createEntrySchema = z.object({
     .default([]),
 
   newFields: z
-  .array(
-    z.object({
-      clientId: z.string().min(1),
-      name: z.string().trim().min(1).max(100),
-      type: fieldTypeSchema,
-      value: customValueSchema.optional(),
-      formula: z.string().trim().max(500).optional(),
-    }),
-  )
+    .array(
+      z.object({
+        clientId: z.string().min(1),
+        name: z.string().trim().min(1).max(100),
+        type: fieldTypeSchema,
+        value: customValueSchema.optional(),
+        formula: z.string().trim().max(500).optional(),
+      }),
+    )
     .default([]),
+
+  checklist: z
+    .array(checklistItemSchema)
+    .max(100)
+    .default([]),
+
+  referenceProjectIds: z
+    .array(z.string().uuid())
+    .max(100)
+    .default([]),
+
+  referenceEntryIds: z
+    .array(z.string().uuid())
+    .max(100)
+    .default([]),
+}).superRefine((data, ctx) => {
+  if (
+    new Set(data.referenceProjectIds).size !==
+    data.referenceProjectIds.length
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["referenceProjectIds"],
+      message:
+        "Duplicate referenced projects are not allowed",
+    });
+  }
+
+  if (
+    new Set(data.referenceEntryIds).size !==
+    data.referenceEntryIds.length
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["referenceEntryIds"],
+      message:
+        "Duplicate referenced entries are not allowed",
+    });
+  }
+});
+
+const updateEntrySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Entry name is required")
+    .max(150, "Entry name is too long"),
+
+  durationMinutes: z.coerce
+    .number()
+    .int()
+    .min(0, "Duration cannot be negative")
+    .max(10080, "Duration is too large"),
+
+  dueAt: z
+    .string()
+    .datetime({ message: "Due date must be a valid ISO date-time" })
+    .nullable()
+    .optional(),
+
+  fieldIds: z
+    .array(z.string().uuid())
+    .max(100)
+    .default([]),
+
+  values: z
+    .array(
+      z.object({
+        fieldId: z.string().uuid(),
+        value: customValueSchema,
+      }),
+    )
+    .default([]),
+
+  newFields: z
+    .array(
+      z.object({
+        clientId: z.string().min(1),
+        name: z.string().trim().min(1).max(100),
+        type: fieldTypeSchema,
+        value: customValueSchema.optional(),
+        formula: z.string().trim().max(500).optional(),
+      }),
+    )
+    .default([]),
+  checklistItems: z.array(
+    z.object({
+      id: z.string().uuid(),
+      text: z.string().trim().min(1).max(300),
+      completed: z.boolean(),
+    }),
+  ).max(100).optional(),
+
+  newChecklistItems: z.array(checklistItemSchema).max(100).default([]),
+}).superRefine((data, ctx) => {
+  const fieldIdSet = new Set(data.fieldIds);
+  const valueIds = data.values.map((item) => item.fieldId);
+  if (new Set(valueIds).size !== valueIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["values"],
+      message: "Duplicate field values are not allowed",
+    });
+  }
+  for (const fieldId of valueIds) {
+    if (!fieldIdSet.has(fieldId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["values"],
+        message: "Every submitted value must belong to a selected field",
+      });
+      break;
+    }
+  }
+});
+
+const updateChecklistSchema = z
+  .object({
+    text: z.string().trim().min(1).max(300).optional(),
+    completed: z.boolean().optional(),
+  })
+  .refine(
+    (data) => data.text !== undefined || data.completed !== undefined,
+    {
+      message: "At least one checklist value must be provided",
+    },
+  );
+
+const updateProjectReferencesSchema = z.object({
+  projectIds: z
+    .array(z.string().uuid())
+    .max(100),
+});
+
+const updateEntryReferencesSchema = z.object({
+  entryIds: z
+    .array(z.string().uuid())
+    .max(100),
+});
+
+const updateEntryProjectReferencesSchema = z.object({
+  projectIds: z
+    .array(z.string().uuid())
+    .max(100),
 });
 
 module.exports = {
   createEntrySchema,
+  updateEntrySchema,
+  updateChecklistSchema,
+  updateProjectReferencesSchema,
+  updateEntryReferencesSchema,
+  updateEntryProjectReferencesSchema,
 };

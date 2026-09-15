@@ -4,8 +4,6 @@ A customisable, offline-first digital logbook that lets students capture project
 
 Built by team **Code Cells**.
 
-📄 Full documentation: [Documentation Website](https://effortless-tartufo-a533a9.netlify.app/) — architecture, tech stack, requirements, workflow, and onboarding.
-
 ## Project Structure
 
 ```
