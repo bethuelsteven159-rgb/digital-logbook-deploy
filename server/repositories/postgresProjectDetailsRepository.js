@@ -737,6 +737,7 @@ function createRepository(queryable) {
           data.tags || [],
         ],
       );
+      const row = result.rows[0];
 
     return {
       id: row.id,
