@@ -962,9 +962,9 @@ export default function ProjectDetails() {
                     type="button"
                     className="entry-reference-link"
                     key={reference.id}
-                    onClick={() => navigate(`/projects/${reference.referencedProjectId}`)}
+                    onClick={() => navigate(`/projects/${reference.projectId}`)}
                   >
-                    {reference.referencedProjectName}
+                    {reference.projectName}
                   </button>
                 ))}
               </div>
@@ -1547,7 +1547,7 @@ export default function ProjectDetails() {
           selectedIds={
             Array.isArray(details.references)
               ? details.references.map(
-                  (reference) => reference.referencedProjectId,
+                  (reference) => reference.projectId,
                 )
               : []
           }
