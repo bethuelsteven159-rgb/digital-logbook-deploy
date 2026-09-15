@@ -6,6 +6,7 @@ const repository = require("../repositories/projectDetailsRepository");
 const {
   createEntryService,
   getProjectDetailsService,
+  deleteEntryService,
 } = require("../services/projectDetailsService");
 
 function makeTransactionRepo(overrides = {}) {
@@ -208,5 +209,43 @@ describe("getProjectDetailsService - tags", () => {
     });
 
     expect(result.entries[0].tags).toEqual([]);
+  });
+});
+
+
+describe("deleteEntryService", () => {
+  test("deletes an entry owned by the signed-in user", async () => {
+    repository.getOwnedProject = vi.fn().mockResolvedValue({
+      id: "project-1",
+      ownerId: "user-1",
+    });
+    repository.getOwnedEntry = vi.fn().mockResolvedValue({
+      id: "entry-1",
+    });
+    repository.deleteEntry = vi.fn().mockResolvedValue(true);
+
+    const result = await deleteEntryService({
+      projectId: "project-1",
+      entryId: "entry-1",
+      userId: "user-1",
+    });
+
+    expect(repository.deleteEntry).toHaveBeenCalledWith(
+      "entry-1",
+      "project-1",
+    );
+    expect(result).toEqual({ id: "entry-1", deleted: true });
+  });
+
+  test("rejects deletion when the project is not owned by the user", async () => {
+    repository.getOwnedProject = vi.fn().mockResolvedValue(null);
+
+    await expect(
+      deleteEntryService({
+        projectId: "project-1",
+        entryId: "entry-1",
+        userId: "user-1",
+      }),
+    ).rejects.toMatchObject({ statusCode: 404 });
   });
 });

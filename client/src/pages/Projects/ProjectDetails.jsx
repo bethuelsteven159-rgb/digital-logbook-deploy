@@ -20,6 +20,7 @@ import BoardView from "./BoardView";
 
 import {
   createProjectEntry,
+  deleteProjectEntry,
   fetchProjectDetails,
   fetchSavedFilters,
   createSavedFilter,
@@ -110,6 +111,8 @@ export default function ProjectDetails() {
     useState(null);
 
   const [checklistSaving, setChecklistSaving] = useState({});
+
+  const [entryDeleteSaving, setEntryDeleteSaving] = useState(false);
 
   const [entryView, setEntryView] =
     useState("list");
@@ -332,6 +335,30 @@ export default function ProjectDetails() {
     } catch (requestError) {
       console.error("Failed to update entry:", requestError);
       throw requestError;
+    }
+  }
+
+  async function handleDeleteEntry(entry) {
+    if (!entry?.id) {
+      return;
+    }
+
+    try {
+      setEntryDeleteSaving(true);
+      setError("");
+
+      await deleteProjectEntry(id, entry.id);
+
+      setSelectedEntryForDetails(null);
+      setSelectedEntryForEdit(null);
+      setShowEditEntryModal(false);
+
+      await loadProject();
+    } catch (requestError) {
+      console.error("Failed to delete entry:", requestError);
+      setError(requestError.message || "Failed to delete entry.");
+    } finally {
+      setEntryDeleteSaving(false);
     }
   }
 
@@ -1501,6 +1528,8 @@ export default function ProjectDetails() {
           archived={Boolean(project.archivedAt)}
           onClose={() => setSelectedEntryForDetails(null)}
           onEdit={() => openEditEntryModal(selectedEntryForDetails)}
+          onDelete={handleDeleteEntry}
+          deleteSaving={entryDeleteSaving}
           onChecklistToggle={handleChecklistToggle}
           checklistSaving={checklistSaving}
           onProjectReferenceClick={(projectId) => {

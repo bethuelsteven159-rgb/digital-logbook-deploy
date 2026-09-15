@@ -171,3 +171,4 @@ export async function updateSavedFilter(filterId, payload) {
     body: JSON.stringify(payload),
   });
 }
+

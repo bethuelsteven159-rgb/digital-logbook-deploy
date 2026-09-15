@@ -8,6 +8,7 @@ const {
   getIncompleteEntries,
   markEntryComplete,
   updateEntry,
+  deleteEntry,
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
@@ -50,6 +51,11 @@ router.patch(
 router.patch(
   "/:projectId/entries/:entryId",
   updateEntry,
+);
+
+router.delete(
+  "/:projectId/entries/:entryId",
+  deleteEntry,
 );
 
 /*

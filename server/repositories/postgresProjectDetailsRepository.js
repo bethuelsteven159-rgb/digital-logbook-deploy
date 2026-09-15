@@ -961,6 +961,18 @@ function createRepository(queryable) {
       return result.rows[0] || null;
     },
 
+    async deleteEntry(entryId, projectId) {
+      const result = await queryable.query(
+        `DELETE FROM entries
+         WHERE id = $1
+           AND project_id = $2
+         RETURNING id`,
+        [entryId, projectId],
+      );
+
+      return result.rowCount > 0;
+    },
+
     async getEntryFieldValues(entryId) {
       const result = await queryable.query(
         `SELECT id, entry_id, field_id, value_text,
