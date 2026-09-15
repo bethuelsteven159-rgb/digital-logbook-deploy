@@ -4,6 +4,7 @@ const {
   getProjectDetails,
   createProjectEntry,
   getOutstandingEntries,
+  completeProjectEntry,
   getIncompleteEntries,
   markEntryComplete,
   updateEntry,
@@ -81,6 +82,11 @@ router.patch(
 router.patch(
   "/:projectId/entries/:entryId/references",
   updateEntryReferences,
+);
+
+router.post(
+  "/:projectId/entries/:entryId/complete",
+  completeProjectEntry,
 );
 
 module.exports = router;

@@ -9,6 +9,7 @@ const {
   updateEntryService,
   deleteEntryService,
   getOutstandingEntriesService,
+  completeEntryService,
   getIncompleteEntriesService,
   markEntryCompleteService,
 } = require("../services/projectDetailsService");
@@ -372,10 +373,29 @@ async function markEntryComplete(req, res, next) {
     return next(error);
   }
 }
+async function completeProjectEntry(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+
+    const data = await completeEntryService({
+      projectId: req.params.projectId,
+      entryId: req.params.entryId,
+      userId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
 module.exports = {
   getProjectDetails,
   createProjectEntry,
   getOutstandingEntries,
+  completeProjectEntry,
   getIncompleteEntries,
   markEntryComplete,
   updateEntry,

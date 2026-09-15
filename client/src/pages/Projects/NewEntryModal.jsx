@@ -256,10 +256,15 @@ export default function NewEntryModal({
     const payload = {
       name: cleanName,
       durationMinutes: duration,
-
       tags,
 
+      ...(dueAt
+        ? { dueAt: new Date(dueAt).toISOString() }
+        : {}),
+
+
       ...(dueAt ? { dueAt: new Date(dueAt).toISOString() } : {}),
+
 
       values: fields.map((field) => ({
         fieldId: field.id,
@@ -719,7 +724,7 @@ export default function NewEntryModal({
                         {entry.projectName && (
                           <small>
                             {" "}
-                            · {entry.projectName}
+                            Â· {entry.projectName}
                           </small>
                         )}
                       </span>
@@ -778,7 +783,13 @@ export default function NewEntryModal({
                         {field.type === "computed" ? (
                           <p className="computed-field-formula">
                             Formula:{" "}
+
+                            <code>
+                              {field.formula}
+                            </code>
+
                             <code>{field.formula}</code>
+
                           </p>
                         ) : (
                           renderInput(
@@ -964,3 +975,4 @@ export default function NewEntryModal({
     </div>
   );
 }
+
