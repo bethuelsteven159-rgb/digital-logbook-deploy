@@ -20,6 +20,7 @@ This folder is the single source of truth for the Digital Logbook project. Each 
 | Bug Tracking | Simphiwe | [bug-tracking.md](./bug-tracking.md) |
 | Third-Party Code Documentation | Sino | [third-party-code.md](./third-party-code.md) |
 | Testing Documentation | Sino | [testing-documentation.md](./testing-documentation.md) |
+| API Reference | Simphiwe | [API.md](./API.md) |
 
 ## How this folder works
 
