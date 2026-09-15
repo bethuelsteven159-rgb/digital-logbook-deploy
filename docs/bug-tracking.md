@@ -131,7 +131,7 @@ The production application appeared blank/unusable even though the frontend had 
 
 **Evidence:**
 
-![BUG-004 evidence - Netlify router basename mismatch](images/bug-evidence/bug-004-netlify-router-basename.png)
+![BUG-004 evidence - Netlify router basename mismatch](images/router-basename-warning.png)
 
 **Resolution:**
 
@@ -168,7 +168,7 @@ Google authentication and API requests failed in production even though the fron
 
 **Evidence:**
 
-![BUG-005 evidence - deployed frontend calling localhost backend](images/bug-evidence/bug-005-production-localhost-api.png)
+![BUG-005 evidence - deployed frontend calling localhost backend](images/frontend-localhost-api-error.png)
 
 **Resolution:**
 
@@ -203,7 +203,7 @@ The frontend development/build process could not continue because `ProjectDetail
 
 **Evidence:**
 
-![BUG-006 evidence - CalendarView module import failure](images/bug-evidence/bug-006-calendar-view-import.png)
+![BUG-006 evidence - CalendarView module import failure](images/calendar-view-import-error.png)
 
 **Resolution:**
 The missing/incomplete integration files were restored to the branch and the relevant Project Details views were integrated together. The client build was then run successfully.
@@ -233,7 +233,7 @@ The user could reach the entry form, but the save/create operation could not com
 
 **Evidence:**
 
-![BUG-007 evidence - db.connect is not a function](images/bug-evidence/bug-007-db-connect.png)
+![BUG-007 evidence - db.connect is not a function](images/db-connect-error.png)
 
 **Resolution:**
 The team aligned the backend/database access implementation and ensured that the deployed backend and frontend were using compatible versions of the code. The production services were redeployed and the affected flow was re-tested.
@@ -267,7 +267,7 @@ This became a stakeholder/process concern because the team had already agreed th
 
 **Evidence:**
 
-![BUG-008 evidence - Render deployment failure notification](images/bug-evidence/bug-008-render-deploy-failed.jpeg)
+![BUG-008 evidence - Render deployment failure notification](images/render-deploy-failed.jpeg)
 
 **Resolution:**
 
@@ -340,11 +340,11 @@ The following screenshots are retained as supporting evidence for the major Spri
 
 | Evidence File | Related Bug | What It Demonstrates |
 |---|---|---|
-| `images/bug-evidence/bug-004-netlify-router-basename.png` | BUG-004 | Router basename mismatch on Netlify |
-| `images/bug-evidence/bug-005-production-localhost-api.png` | BUG-005 | Production frontend attempting to call `localhost:5000` |
-| `images/bug-evidence/bug-006-calendar-view-import.png` | BUG-006 | Vite failing to resolve `CalendarView` |
-| `images/bug-evidence/bug-007-db-connect.png` | BUG-007 | `db.connect is not a function` during entry creation |
-| `images/bug-evidence/bug-008-render-deploy-failed.jpeg` | BUG-008 | Render deployment failure notification |
+| `images/router-basename-warning.png` | BUG-004 | Router basename mismatch on Netlify |
+| `images/frontend-localhost-api-error.png` | BUG-005 | Production frontend attempting to call `localhost:5000` |
+| `images/calendar-view-import-error.png` | BUG-006 | Vite failing to resolve `CalendarView` |
+| `images/db-connect-error.png` | BUG-007 | `db.connect is not a function` during entry creation |
+| `images/render-deploy-failed.jpeg` | BUG-008 | Render deployment failure notification |
 
 The browser favicon `404` shown in one screenshot is not tracked as a major bug because it did not block core application functionality.
 
