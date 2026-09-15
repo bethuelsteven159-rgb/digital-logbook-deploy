@@ -79,6 +79,17 @@ export async function createProjectEntry(
     body: JSON.stringify(payload),
   });
 }
+
+export async function deleteProjectEntry(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(`/api/projects/${projectId}/entries/${entryId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function fetchSavedFilters(projectId) {
   if (!projectId) {
     throw new Error("Project ID is required.");
