@@ -1362,6 +1362,31 @@ async function updateEntryService({
   );
 }
 
+async function deleteEntryService({ projectId, entryId, userId }) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const ownedEntry = await repository.getOwnedEntry(entryId, userId);
+
+  if (!ownedEntry) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const deleted = await repository.deleteEntry(entryId, projectId);
+
+  if (!deleted) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  return {
+    id: entryId,
+    deleted: true,
+  };
+}
+
 async function updateChecklistItemService({
   entryId,
   itemId,
@@ -1455,6 +1480,7 @@ module.exports = {
   updateEntryProjectReferencesService,
   updateEntryReferencesService,
   updateEntryService,
+  deleteEntryService,
   serializeEntry,
   buildLinkedEntriesMap,
 };

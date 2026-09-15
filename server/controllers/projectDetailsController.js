@@ -7,6 +7,7 @@ const {
   updateEntryProjectReferencesService,
   updateEntryReferencesService,
   updateEntryService,
+  deleteEntryService,
   getOutstandingEntriesService,
   getIncompleteEntriesService,
   markEntryCompleteService,
@@ -128,6 +129,25 @@ async function updateEntry(req, res, next) {
     });
 
     return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteEntry(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+
+    const data = await deleteEntryService({
+      projectId: req.params.projectId,
+      entryId: req.params.entryId,
+      userId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
   } catch (error) {
     return next(error);
   }
@@ -359,6 +379,7 @@ module.exports = {
   getIncompleteEntries,
   markEntryComplete,
   updateEntry,
+  deleteEntry,
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
