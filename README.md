@@ -32,7 +32,7 @@ npm run dev
 This starts the client, server, and backend together in one terminal. Then open:
 http://localhost:8443/digital_logbook/
 
-See the [full onboarding guide](https://sprightly-sunburst-0c0d86.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
+See the [full onboarding guide](https://musical-croissant-1e96ff.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
 
 ## Team — Code Cells
 
@@ -46,3 +46,4 @@ See the [full onboarding guide](https://sprightly-sunburst-0c0d86.netlify.app/#/
 | Tech Stack & Developer Onboarding            | Sino     |
 | Third-Party Code Documentation               | Sino     |
 | Testing Documentation                        | Sino     |
+| API Documentation                            | Simphiwe |
