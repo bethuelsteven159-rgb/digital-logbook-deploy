@@ -1,8 +1,9 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import { fetchDashboard } from "../../api/dashboardApi";
 
@@ -63,6 +64,24 @@ export default function Dashboard() {
     useState(0);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const restartOnboarding = useCallback(() => {
+    setOnboardingStep(0);
+    setShowOnboarding(true);
+  }, []);
+
+  useEffect(() => {
+    if (location.state?.openOnboarding !== true) return;
+
+    restartOnboarding();
+    const remainingState = { ...location.state };
+    delete remainingState.openOnboarding;
+    navigate(
+      { pathname: location.pathname, search: location.search, hash: location.hash },
+      { replace: true, state: remainingState },
+    );
+  }, [location, navigate, restartOnboarding]);
 
   useEffect(() => {
     try {
@@ -153,11 +172,6 @@ export default function Dashboard() {
 
     setShowOnboarding(false);
     setOnboardingStep(0);
-  }
-
-  function restartOnboarding() {
-    setOnboardingStep(0);
-    setShowOnboarding(true);
   }
 
   function nextOnboardingStep() {
