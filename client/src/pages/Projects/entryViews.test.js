@@ -29,3 +29,51 @@ test("entry-link helper returns linked entry summaries supplied by the API", () 
   const entry = { linkedEntries: [{ id: "2", name: "Follow-up work" }] };
   assert.deepEqual(getLinkedEntrySummaries(entry), [{ id: "2", name: "Follow-up work" }]);
 });
+
+
+test("board grouping preserves a plain object and entry order", () => {
+  const entries = [
+    { id: "1", values: [{ fieldId: "status", value: "To Do" }] },
+    { id: "2", values: [{ fieldId: "status", value: "Done" }] },
+    { id: "3", values: [{ fieldId: "status", value: "To Do" }] },
+  ];
+  const groups = groupEntriesByField(entries, "status");
+  assert.equal(Object.getPrototypeOf(groups), Object.prototype);
+  assert.deepEqual(Object.entries(groups), [
+    ["To Do", [entries[0], entries[2]]],
+    ["Done", [entries[1]]],
+  ]);
+});
+
+for (const value of ["constructor", "__proto__", "prototype", "toString", "hasOwnProperty", "valueOf"]) {
+  test(`board groups the property name ${value} safely`, () => {
+    const entries = [
+      { id: "1", values: [{ fieldId: "status", value }] },
+      { id: "2", values: [{ fieldId: "status", value }] },
+    ];
+    const groups = groupEntriesByField(entries, "status");
+    assert.equal(Object.getPrototypeOf(groups), Object.prototype);
+    assert.deepEqual(Object.entries(groups), [[value, entries]]);
+    assert.deepEqual(groups[value], entries);
+  });
+}
+
+test("board groups empty and missing values as Unassigned without losing zero or false", () => {
+  const unassigned = [
+    { values: [{ fieldId: "status", value: "" }] },
+    { values: [{ fieldId: "status", value: null }] },
+    { values: [{ fieldId: "status" }] },
+    { values: [{ fieldId: "other", value: "Done" }] },
+    { values: [] },
+    {},
+  ];
+  const zero = { values: [{ fieldId: "status", value: 0 }] };
+  const falsy = { values: [{ fieldId: "status", value: false }] };
+  const groups = groupEntriesByField([...unassigned, zero, falsy], "status");
+  assert.deepEqual(groups, { Unassigned: unassigned, "0": [zero], false: [falsy] });
+});
+
+test("board grouping returns an empty plain object for empty or omitted entries", () => {
+  assert.deepEqual(groupEntriesByField([], "status"), {});
+  assert.deepEqual(groupEntriesByField(), {});
+});

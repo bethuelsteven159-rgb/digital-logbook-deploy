@@ -26,12 +26,13 @@ export function getFieldDisplayValue(entry, fieldId) {
 }
 
 export function groupEntriesByField(entries = [], fieldId) {
-  return entries.reduce((groups, entry) => {
+  const groups = new Map();
+  for (const entry of entries) {
     const key = getFieldDisplayValue(entry, fieldId);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(entry);
-    return groups;
-  }, {});
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  }
+  return Object.fromEntries(groups);
 }
 
 export function getLinkedEntrySummaries(entry) {
