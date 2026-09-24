@@ -4,6 +4,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
 import Login from "./pages/Login/Login.jsx";
@@ -28,6 +29,23 @@ import {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    function openOnboarding() {
+      const onDashboard = location.pathname === "/dashboard";
+      navigate("/dashboard", {
+        replace: onDashboard,
+        state: {
+          ...(onDashboard ? location.state : {}),
+          openOnboarding: true,
+        },
+      });
+    }
+
+    window.addEventListener("digitalLogbookOpenOnboarding", openOnboarding);
+    return () => window.removeEventListener("digitalLogbookOpenOnboarding", openOnboarding);
+  }, [location.pathname, location.state, navigate]);
 
   const showHelpAssistant = location.pathname !== "/login";
 
