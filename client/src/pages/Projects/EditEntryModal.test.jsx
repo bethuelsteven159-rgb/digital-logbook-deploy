@@ -17,7 +17,7 @@ const baseEntry = {
     { id: 'check-2', text: 'Submit report', completed: true },
   ],
   references: [{ projectId: 'project-2' }],
-  entryReferences: [{ referencedEntryId: 'entry-2' }],
+  entryReferences: [{ id: 'relationship-2', entryId: 'entry-2', entryName: 'Existing linked entry', projectId: 'project-1', projectName: 'Current project' }],
 };
 
 const baseFields = [
@@ -559,5 +559,49 @@ describe('EditEntryModal', () => {
     expect(
       props.onClose,
     ).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('EditEntryModal public entry-reference contract', () => {
+  it('selects existing public entryIds and preserves them when only the name changes', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    expect(screen.getByLabelText('Existing linked entry')).toBeChecked();
+    expect(screen.getByLabelText('Another entry')).not.toBeChecked();
+    await user.clear(screen.getByLabelText('Entry name'));
+    await user.type(screen.getByLabelText('Entry name'), 'Renamed only');
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Renamed only', referenceEntryIds: ['entry-2'],
+    }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).not.toContain('relationship-2');
+  });
+
+  it('submits target entry IDs when selecting and deselecting references', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    await user.click(screen.getByLabelText('Existing linked entry'));
+    await user.click(screen.getByLabelText('Another entry'));
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).toEqual(['entry-3']);
+  });
+
+  it('allows clearing all existing references', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    await user.click(screen.getByLabelText('Existing linked entry'));
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).toEqual([]);
+  });
+
+  it.each(['empty', 'missing'])('supports %s reference lists', async (kind) => {
+    const user = userEvent.setup();
+    const entry = { ...baseEntry, entryReferences: [] };
+    if (kind === 'missing') delete entry.entryReferences;
+    const props = renderModal({ entry });
+    expect(screen.getByLabelText('Existing linked entry')).not.toBeChecked();
+    expect(screen.getByLabelText('Another entry')).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).toEqual([]);
   });
 });

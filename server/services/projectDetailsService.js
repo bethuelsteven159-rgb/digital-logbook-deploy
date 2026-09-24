@@ -520,7 +520,7 @@ async function createEntryService({ projectId, userId, data }) {
         );
       }
 
-      await tx.createEntryEntryReferences(
+      await tx.createEntryReferences(
         entry.id,
         referenceEntryIds,
       );
@@ -949,14 +949,14 @@ async function updateEntryReferencesService({
         );
 
       if (idsToAdd.length > 0) {
-        await tx.createEntryEntryReferences(
+        await tx.createEntryReferences(
           entryId,
           idsToAdd,
         );
       }
 
       if (idsToRemove.length > 0) {
-        await tx.removeEntryEntryReferences(
+        await tx.removeEntryReferences(
           entryId,
           idsToRemove,
         );

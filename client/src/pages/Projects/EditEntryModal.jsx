@@ -68,7 +68,7 @@ export default function EditEntryModal({
       (entry?.references || []).map((reference) => reference.projectId).filter(Boolean),
     );
     setReferenceEntryIds(
-      (entry?.entryReferences || []).map((reference) => reference.referencedEntryId).filter(Boolean),
+      (entry?.entryReferences || []).map((reference) => reference.entryId).filter(Boolean),
     );
     setChecklistItems(
       (entry?.checklist || []).map((item) => ({
