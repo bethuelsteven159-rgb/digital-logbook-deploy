@@ -1,12 +1,14 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("../repositories/projectDetailsRepository");
+// The service uses CommonJS require; stub its actual repository object below.
+const db = require("../db");
 
 const repository = require("../repositories/projectDetailsRepository");
 const {
   createEntryService,
   getProjectDetailsService,
   deleteEntryService,
+  updateEntryReferencesService,
 } = require("../services/projectDetailsService");
 
 function makeTransactionRepo(overrides = {}) {
@@ -33,7 +35,8 @@ function makeTransactionRepo(overrides = {}) {
     getEntriesByIdsForProject: vi.fn().mockResolvedValue([]),
     createChecklistItems: vi.fn().mockResolvedValue(0),
     createEntryProjectReferences: vi.fn().mockResolvedValue(0),
-    createEntryEntryReferences: vi.fn().mockResolvedValue(0),
+    createEntryReferences: vi.fn().mockResolvedValue(0),
+    removeEntryReferences: vi.fn().mockResolvedValue(0),
     createEntryLinks: vi.fn().mockResolvedValue(0),
     getEntryById: vi.fn().mockResolvedValue({
       id: "entry-1",
@@ -53,6 +56,17 @@ function makeTransactionRepo(overrides = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(db, "query").mockImplementation(() => { throw new Error("Unexpected real database query"); });
+  vi.spyOn(db, "connect").mockImplementation(() => { throw new Error("Unexpected real database connection"); });
+});
+
+afterEach(() => {
+  try {
+    expect(db.query).not.toHaveBeenCalled();
+    expect(db.connect).not.toHaveBeenCalled();
+  } finally {
+    vi.restoreAllMocks();
+  }
 });
 
 describe("createEntryService - tags", () => {
@@ -247,5 +261,111 @@ describe("deleteEntryService", () => {
         userId: "user-1",
       }),
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+
+describe("entry-reference contract", () => {
+  function internalReference(target) {
+    return {
+      id: `relationship-${target}`,
+      referencedEntryId: target,
+      referencedEntryName: `Name ${target}`,
+      referencedProjectId: "project-2",
+      referencedProjectName: "Other project",
+    };
+  }
+
+  function referenceTransaction(existing = []) {
+    let targets = [...existing];
+    const tx = makeTransactionRepo({
+      getOwnedEntry: vi.fn().mockResolvedValue({ id: "entry-1" }),
+      getOwnedEntryIds: vi.fn(async (ids) => ids),
+      getEntryById: vi.fn(async () => ({
+        id: "entry-1",
+        entryReferences: targets.map(internalReference),
+      })),
+      createEntryReferences: vi.fn(async (_id, ids) => { targets.push(...ids); }),
+      removeEntryReferences: vi.fn(async (_id, ids) => {
+        targets = targets.filter((id) => !ids.includes(id));
+      }),
+    });
+    repository.withTransaction = vi.fn((work) => work(tx));
+    return tx;
+  }
+
+  function create(referenceEntryIds) {
+    return createEntryService({
+      projectId: "project-1", userId: "user-1",
+      data: { name: "Work", durationMinutes: 30, values: [], newFields: [], referenceEntryIds },
+    });
+  }
+
+  function update(entryIds) {
+    return updateEntryReferencesService({ entryId: "entry-1", userId: "user-1", entryIds });
+  }
+
+  test("transaction reference methods match the real repository interface", () => {
+    const tx = makeTransactionRepo();
+    for (const name of ["createEntryReferences", "removeEntryReferences"]) {
+      expect(typeof repository[name]).toBe("function");
+      expect(typeof tx[name]).toBe("function");
+    }
+    expect(tx.createEntryEntryReferences).toBeUndefined();
+    expect(tx.removeEntryEntryReferences).toBeUndefined();
+  });
+
+  test("creates references and serializes target IDs using the public entryId property", async () => {
+    const tx = referenceTransaction();
+    const result = await create(["entry-2"]);
+    expect(tx.getOwnedEntryIds).toHaveBeenCalledWith(["entry-2"], "user-1");
+    expect(tx.createEntryReferences).toHaveBeenCalledWith("entry-1", ["entry-2"]);
+    expect(result.entryReferences).toEqual([{
+      id: "relationship-entry-2", entryId: "entry-2", entryName: "Name entry-2",
+      projectId: "project-2", projectName: "Other project",
+    }]);
+  });
+
+  test.each([
+    ["adds", ["entry-2"], ["entry-2", "entry-3"], ["entry-3"], []],
+    ["removes", ["entry-2", "entry-3"], ["entry-2"], [], ["entry-3"]],
+    ["replaces", ["entry-2"], ["entry-3"], ["entry-3"], ["entry-2"]],
+    ["clears", ["entry-2", "entry-3"], [], [], ["entry-2", "entry-3"]],
+    ["preserves unchanged", ["entry-2"], ["entry-2"], [], []],
+  ])("%s references", async (_label, existing, desired, added, removed) => {
+    const tx = referenceTransaction(existing);
+    const result = await update(desired);
+    if (added.length) expect(tx.createEntryReferences).toHaveBeenCalledWith("entry-1", added);
+    else expect(tx.createEntryReferences).not.toHaveBeenCalled();
+    if (removed.length) expect(tx.removeEntryReferences).toHaveBeenCalledWith("entry-1", removed);
+    else expect(tx.removeEntryReferences).not.toHaveBeenCalled();
+    expect(result.entryReferences.map((ref) => ref.entryId)).toEqual(desired);
+    for (const ref of result.entryReferences) expect(ref).not.toHaveProperty("referencedEntryId");
+  });
+
+  test.each(["create", "update"])("%s rejects self references", async (operation) => {
+    const tx = referenceTransaction();
+    await expect((operation === "create" ? create : update)(["entry-1"]))
+      .rejects.toMatchObject({ statusCode: 400, message: "An entry cannot reference itself" });
+    expect(tx.createEntryReferences).not.toHaveBeenCalled();
+    expect(tx.removeEntryReferences).not.toHaveBeenCalled();
+  });
+
+  test.each(["create", "update"])("%s rejects targets not owned by the user", async (operation) => {
+    const tx = referenceTransaction();
+    tx.getOwnedEntryIds.mockResolvedValue([]);
+    await expect((operation === "create" ? create : update)(["entry-2"]))
+      .rejects.toMatchObject({ statusCode: 400, message: "One of the referenced entries does not belong to you" });
+    expect(tx.createEntryReferences).not.toHaveBeenCalled();
+    expect(tx.removeEntryReferences).not.toHaveBeenCalled();
+  });
+
+  test("update rejects a source entry not owned by the user", async () => {
+    const tx = referenceTransaction();
+    tx.getOwnedEntry.mockResolvedValue(null);
+    await expect(update(["entry-2"])).rejects.toMatchObject({ statusCode: 404 });
+    expect(tx.getOwnedEntryIds).not.toHaveBeenCalled();
+    expect(tx.createEntryReferences).not.toHaveBeenCalled();
+    expect(tx.removeEntryReferences).not.toHaveBeenCalled();
   });
 });
