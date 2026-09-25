@@ -281,6 +281,7 @@ describe("entry-reference contract", () => {
     const tx = makeTransactionRepo({
       getOwnedEntry: vi.fn().mockResolvedValue({ id: "entry-1" }),
       getOwnedEntryIds: vi.fn(async (ids) => ids),
+      getEntryReferences: vi.fn(async () => targets.map(internalReference)),
       getEntryById: vi.fn(async () => ({
         id: "entry-1",
         entryReferences: targets.map(internalReference),

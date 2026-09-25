@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Lock, Plus, Save, Trash2, X } from "lucide-react";
 
+export function toLocalDateTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 const FIELD_TYPES = [
   { value: "short_text", label: "Short text" },
   { value: "long_text", label: "Long text" },
@@ -37,7 +45,7 @@ export default function EditEntryModal({
 }) {
   const [entryName, setEntryName] = useState(entry?.name || "");
   const [durationMinutes, setDurationMinutes] = useState(entry?.durationMinutes ?? 0);
-  const [dueAt, setDueAt] = useState(entry?.dueAt ? String(entry.dueAt).slice(0, 16) : "");
+  const [dueAt, setDueAt] = useState(toLocalDateTime(entry?.dueAt));
   const [values, setValues] = useState({});
   const [selectedFieldIds, setSelectedFieldIds] = useState([]);
   const [newFields, setNewFields] = useState([]);
@@ -60,7 +68,7 @@ export default function EditEntryModal({
   useEffect(() => {
     setEntryName(entry?.name || "");
     setDurationMinutes(entry?.durationMinutes ?? 0);
-    setDueAt(entry?.dueAt ? String(entry.dueAt).slice(0, 16) : "");
+    setDueAt(toLocalDateTime(entry?.dueAt));
     setValues(entryValueMap);
     setSelectedFieldIds((fields || []).map((field) => field.id));
     setNewFields([]);
@@ -219,7 +227,9 @@ export default function EditEntryModal({
     const payload = {
       name: cleanName,
       durationMinutes: duration,
-      dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+      dueAt: !dueAt ? null : dueAt === toLocalDateTime(entry?.dueAt)
+        ? new Date(entry.dueAt).toISOString()
+        : new Date(dueAt).toISOString(),
       fieldIds: selectedFields.map((field) => field.id),
       values: selectedFields.map((field) => ({ fieldId: field.id, value: values[field.id] ?? "" })),
       newFields: cleanedNewFields,
