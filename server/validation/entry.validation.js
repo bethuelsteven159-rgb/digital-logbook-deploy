@@ -120,6 +120,9 @@ const createEntrySchema = z.object({
 });
 
 const updateEntrySchema = z.object({
+  // Omission preserves existing references; an explicit empty list clears them.
+  referenceProjectIds: z.array(z.string().uuid()).max(100).optional(),
+  referenceEntryIds: z.array(z.string().uuid()).max(100).optional(),
   name: z
     .string()
     .trim()

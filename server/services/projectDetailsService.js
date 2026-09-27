@@ -738,9 +738,8 @@ async function updateEntryProjectReferencesService({
   entryId,
   userId,
   projectIds,
-}) {
-  return repository.withTransaction(
-    async (tx) => {
+}, transaction = null) {
+  const work = async (tx) => {
       const ownedEntry =
         await tx.getOwnedEntry(
           entryId,
@@ -850,17 +849,16 @@ async function updateEntryProjectReferencesService({
       return tx.getEntryProjectReferences(
         entryId,
       );
-    },
-  );
+    };
+  return transaction ? work(transaction) : repository.withTransaction(work);
 }
 
 async function updateEntryReferencesService({
   entryId,
   userId,
   entryIds,
-}) {
-  return repository.withTransaction(
-    async (tx) => {
+}, transaction = null) {
+  const work = async (tx) => {
       const ownedEntry =
         await tx.getOwnedEntry(
           entryId,
@@ -922,7 +920,7 @@ async function updateEntryReferencesService({
       }
 
       const existingIds = new Set(
-        (currentEntry.entryReferences || [])
+        (await tx.getEntryReferences(entryId))
           .map(
             (reference) =>
               reference.referencedEntryId,
@@ -967,11 +965,12 @@ async function updateEntryReferencesService({
           entryId,
         );
 
+      updatedEntry.entryReferences = await tx.getEntryReferences(entryId);
       return serializeEntry(
         updatedEntry,
       );
-    },
-  );
+    };
+  return transaction ? work(transaction) : repository.withTransaction(work);
 }
 
 async function updateEntryService({
@@ -1346,6 +1345,17 @@ async function updateEntryService({
           entryId,
           linkedEntryIds,
         );
+      }
+
+      if (data.referenceProjectIds !== undefined) {
+        await updateEntryProjectReferencesService({
+          entryId, userId, projectIds: data.referenceProjectIds,
+        }, tx);
+      }
+      if (data.referenceEntryIds !== undefined) {
+        await updateEntryReferencesService({
+          entryId, userId, entryIds: data.referenceEntryIds,
+        }, tx);
       }
 
       return {
