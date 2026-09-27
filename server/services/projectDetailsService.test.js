@@ -226,6 +226,209 @@ describe("getProjectDetailsService - tags", () => {
   });
 });
 
+describe("computed fields (US-105)", () => {
+  const hours = {
+    id: "field-hours",
+    projectId: "project-1",
+    name: "Hours",
+    fieldType: "number",
+    formula: null,
+    position: 0,
+    archivedAt: null,
+  };
+  const rate = {
+    id: "field-rate",
+    projectId: "project-1",
+    name: "Rate",
+    fieldType: "number",
+    formula: null,
+    position: 1,
+    archivedAt: null,
+  };
+  const total = {
+    id: "field-total",
+    projectId: "project-1",
+    name: "Total",
+    fieldType: "computed",
+    formula: "Hours * Rate",
+    position: 2,
+    archivedAt: null,
+  };
+
+  function entryValue(field, valueNumber) {
+    return {
+      fieldId: field.id,
+      valueNumber,
+      valueText: null,
+      valueDate: null,
+      field: {
+        name: field.name,
+        fieldType: field.fieldType,
+        archivedAt: field.archivedAt,
+      },
+    };
+  }
+
+  function entryRow(overrides = {}) {
+    return {
+      id: "entry-1",
+      name: "Lab Session",
+      durationMinutes: 30,
+      occurredAt: "2026-09-12T00:00:00.000Z",
+      createdAt: "2026-09-01T00:00:00.000Z",
+      values: [],
+      ...overrides,
+    };
+  }
+
+  function mockProjectDetails({ fields, entries }) {
+    repository.getOwnedProject = vi.fn().mockResolvedValue({
+      id: "project-1",
+      name: "My Project",
+      description: null,
+      startDate: null,
+      endDate: null,
+      archivedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    repository.getProjectFields = vi.fn().mockResolvedValue(fields);
+    repository.getProjectStats = vi.fn().mockResolvedValue({
+      totalEntries: entries.length,
+      loggedMinutes: 30,
+      lastActivity: "2026-09-12T00:00:00.000Z",
+    });
+    repository.getProjectEntries = vi.fn().mockResolvedValue(entries);
+    repository.getProjectReferences = vi.fn().mockResolvedValue([]);
+    repository.getProjectEntryLinks = vi.fn().mockResolvedValue([]);
+  }
+
+  function computedValueOf(result) {
+    return result.entries[0].values.find((value) => value.type === "computed");
+  }
+
+  test("attaches computed values to entries returned by getProjectDetailsService", async () => {
+    mockProjectDetails({
+      fields: [hours, rate, total],
+      entries: [entryRow({ values: [entryValue(hours, "3"), entryValue(rate, "20")] })],
+    });
+
+    const result = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
+
+    expect(result.entries[0].values.map((value) => value.name)).toEqual([
+      "Hours",
+      "Rate",
+      "Total",
+    ]);
+    expect(computedValueOf(result)).toMatchObject({
+      fieldId: "field-total",
+      name: "Total",
+      archived: false,
+      value: 60,
+    });
+  });
+
+  test("recalculates computed values from current source values on every read", async () => {
+    mockProjectDetails({
+      fields: [hours, rate, total],
+      entries: [entryRow({ values: [entryValue(hours, "3"), entryValue(rate, "20")] })],
+    });
+
+    const first = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
+
+    repository.getProjectEntries.mockResolvedValue([
+      entryRow({ values: [entryValue(hours, "4"), entryValue(rate, "25")] }),
+    ]);
+    const second = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
+
+    expect(computedValueOf(first).value).toBe(60);
+    expect(computedValueOf(second).value).toBe(100);
+  });
+
+  test("returns a null computed value when a source value is missing", async () => {
+    mockProjectDetails({
+      fields: [hours, rate, total],
+      entries: [entryRow({ values: [entryValue(hours, "3")] })],
+    });
+
+    const result = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
+
+    expect(computedValueOf(result).value).toBeNull();
+  });
+
+  test("keeps archived computed fields for historical entries and hides them from newer entries", async () => {
+    const archivedTotal = { ...total, archivedAt: "2026-08-15T00:00:00.000Z" };
+    mockProjectDetails({
+      fields: [hours, rate, archivedTotal],
+      entries: [
+        entryRow({
+          id: "entry-old",
+          createdAt: "2026-08-01T00:00:00.000Z",
+          values: [entryValue(hours, "3"), entryValue(rate, "20")],
+        }),
+        entryRow({
+          id: "entry-new",
+          createdAt: "2026-09-01T00:00:00.000Z",
+          values: [entryValue(hours, "3"), entryValue(rate, "20")],
+        }),
+      ],
+    });
+
+    const result = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
+    const oldEntry = result.entries.find((entry) => entry.id === "entry-old");
+    const newEntry = result.entries.find((entry) => entry.id === "entry-new");
+
+    expect(oldEntry.values.find((value) => value.fieldId === "field-total")).toMatchObject({
+      type: "computed",
+      archived: true,
+      value: 60,
+    });
+    expect(newEntry.values.some((value) => value.fieldId === "field-total")).toBe(false);
+    expect(result.fields.some((field) => field.id === "field-total")).toBe(false);
+  });
+
+  test("createEntryService persists a new computed field formula and returns its computed value", async () => {
+    const txRepo = makeTransactionRepo({
+      getProjectFields: vi.fn()
+        .mockResolvedValueOnce([hours, rate])
+        .mockResolvedValueOnce([hours, rate, total]),
+      createProjectField: vi.fn().mockResolvedValue(total),
+      getEntryById: vi.fn().mockResolvedValue(
+        entryRow({ values: [entryValue(hours, "3"), entryValue(rate, "20")] }),
+      ),
+    });
+
+    repository.withTransaction = vi.fn((work) => work(txRepo));
+
+    const result = await createEntryService({
+      projectId: "project-1",
+      userId: "user-1",
+      data: {
+        name: "Lab Session",
+        durationMinutes: 30,
+        tags: [],
+        values: [
+          { fieldId: "field-hours", value: 3 },
+          { fieldId: "field-rate", value: 20 },
+        ],
+        newFields: [{ name: "Total", type: "computed", formula: "Hours * Rate" }],
+      },
+    });
+
+    expect(txRepo.createProjectField).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "project-1",
+        name: "Total",
+        fieldType: "computed",
+        formula: "Hours * Rate",
+      }),
+    );
+    expect(result.values.find((value) => value.fieldId === "field-total")).toMatchObject({
+      type: "computed",
+      value: 60,
+    });
+  });
+});
+
 
 describe("deleteEntryService", () => {
   test("deletes an entry owned by the signed-in user", async () => {
@@ -281,6 +484,7 @@ describe("entry-reference contract", () => {
     const tx = makeTransactionRepo({
       getOwnedEntry: vi.fn().mockResolvedValue({ id: "entry-1" }),
       getOwnedEntryIds: vi.fn(async (ids) => ids),
+      getEntryReferences: vi.fn(async () => targets.map(internalReference)),
       getEntryById: vi.fn(async () => ({
         id: "entry-1",
         entryReferences: targets.map(internalReference),

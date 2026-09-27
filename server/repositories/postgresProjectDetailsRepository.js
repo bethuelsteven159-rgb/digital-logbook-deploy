@@ -1096,8 +1096,11 @@ function createRepository(queryable) {
       values,
     ) {
       await queryable.query(
-        `DELETE FROM entry_field_values
-         WHERE entry_id = $1`,
+        `DELETE FROM entry_field_values v
+         USING project_fields f
+         WHERE v.entry_id = $1
+           AND v.field_id = f.id
+           AND f.archived_at IS NULL`,
         [entryId],
       );
 

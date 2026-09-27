@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import EditEntryModal from './EditEntryModal';
+import EditEntryModal, { toLocalDateTime } from './EditEntryModal';
 
 const baseEntry = {
   id: 'entry-1',
@@ -87,7 +87,7 @@ describe('EditEntryModal', () => {
 
     expect(
       screen.getByLabelText('Due date (optional)'),
-    ).toHaveValue('2026-09-12T12:00');
+    ).toHaveValue(toLocalDateTime(baseEntry.dueAt));
 
     expect(
       screen.getByDisplayValue('Finish notes'),
@@ -603,5 +603,39 @@ describe('EditEntryModal public entry-reference contract', () => {
     expect(screen.getByLabelText('Another entry')).not.toBeChecked();
     await user.click(screen.getByRole('button', { name: /Save changes/i }));
     expect(props.onSave.mock.calls[0][0].referenceEntryIds).toEqual([]);
+  });
+});
+
+
+describe('due date timezone safety', () => {
+  it('formats the runtime local clock components, including date boundaries', () => {
+    const instant = new Date(2026, 8, 13, 0, 15).toISOString();
+    expect(toLocalDateTime(instant)).toBe('2026-09-13T00:15');
+    expect(toLocalDateTime(null)).toBe('');
+  });
+
+  it('preserves the exact instant, seconds and milliseconds when unchanged', async () => {
+    const user = userEvent.setup();
+    const instant = new Date(2026, 8, 12, 14, 30, 25, 123).toISOString();
+    const props = renderModal({ entry: { ...baseEntry, dueAt: instant } });
+    expect(screen.getByLabelText('Due date (optional)')).toHaveValue('2026-09-12T14:30');
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].dueAt).toBe(instant);
+  });
+
+  it('converts a changed local due date to the API ISO instant', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    fireEvent.change(screen.getByLabelText('Due date (optional)'), { target: { value: '2026-09-15T09:45' } });
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].dueAt).toBe(new Date(2026, 8, 15, 9, 45).toISOString());
+  });
+
+  it.each([null, '2026-09-12T12:00:00Z'])('supports empty or cleared due dates starting from %s', async (dueAt) => {
+    const user = userEvent.setup();
+    const props = renderModal({ entry: { ...baseEntry, dueAt } });
+    fireEvent.change(screen.getByLabelText('Due date (optional)'), { target: { value: '' } });
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].dueAt).toBeNull();
   });
 });

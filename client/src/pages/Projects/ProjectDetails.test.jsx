@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -100,7 +101,9 @@ vi.mock('./EditEntryModal', () => ({
   default: ({
     onClose,
     onSave,
-  }) => (
+  }) => {
+    const [saveError, setSaveError] = useState('');
+    return (
     <div
       role="dialog"
       aria-label="Edit Entry test modal"
@@ -119,12 +122,13 @@ vi.mock('./EditEntryModal', () => ({
             newChecklistItems: [],
             referenceProjectIds: ['project-2'],
             referenceEntryIds: ['entry-2'],
-          })
+          }).catch((error) => setSaveError(error.message))
         }
       >
         Save mocked edit
       </button>
 
+      {saveError && <p role="alert">{saveError}</p>}
       <button
         type="button"
         onClick={onClose}
@@ -132,7 +136,8 @@ vi.mock('./EditEntryModal', () => ({
         Close edit
       </button>
     </div>
-  ),
+  );
+  },
 }));
 
 const project = {
@@ -334,25 +339,35 @@ describe('ProjectDetails entry flow', () => {
           durationMinutes: 60,
           checklistItems: [],
           newChecklistItems: [],
+          referenceProjectIds: ['project-2'],
+          referenceEntryIds: ['entry-2'],
         }),
       ),
     );
 
-    expect(
-      apiMocks.updateEntryProjectReferences,
-    ).toHaveBeenCalledWith(
-      'project-1',
-      'entry-1',
-      ['project-2'],
-    );
+    expect(apiMocks.updateEntry).toHaveBeenCalledTimes(1);
+    expect(apiMocks.updateEntryProjectReferences).not.toHaveBeenCalled();
+    expect(apiMocks.updateEntryReferences).not.toHaveBeenCalled();
+    await waitFor(() => expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2));
+  });
 
-    expect(
-      apiMocks.updateEntryReferences,
-    ).toHaveBeenCalledWith(
-      'project-1',
-      'entry-1',
-      ['entry-2'],
-    );
+  it.each(['project references', 'entry references'])('keeps the persisted entry and editor available after atomic failure in %s', async (stage) => {
+    const user = userEvent.setup();
+    apiMocks.updateEntry.mockRejectedValueOnce(new Error(`${stage} could not be saved`));
+    renderPage();
+    await screen.findByText('First entry');
+    await user.click(screen.getByRole('button', { name: /Click entry to view full contents/i }));
+    await user.click(screen.getByRole('button', { name: /^Edit entry$/i }));
+    await user.click(screen.getByRole('button', { name: 'Save mocked edit' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(`${stage} could not be saved`);
+    expect(screen.getByText('First entry')).toBeInTheDocument();
+    expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(1);
+    expect(apiMocks.updateEntryProjectReferences).not.toHaveBeenCalled();
+    expect(apiMocks.updateEntryReferences).not.toHaveBeenCalled();
+    // The transaction failed without persisting changes; retry uses one request.
+    await user.click(screen.getByRole('button', { name: 'Save mocked edit' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Entry test modal' })).not.toBeInTheDocument());
+    expect(apiMocks.updateEntry).toHaveBeenCalledTimes(2);
   });
 
   it('keeps archived entries viewable but disables editing', async () => {
