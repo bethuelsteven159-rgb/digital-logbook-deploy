@@ -21,6 +21,7 @@ import BoardView from "./BoardView";
 
 import {
   createProjectEntry,
+  deleteProjectEntry,
   fetchProjectDetails,
   fetchSavedFilters,
   createSavedFilter,
@@ -50,8 +51,6 @@ import {
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
-  updateEntryProjectReferences,
-  updateEntryReferences,
   updateEntry,
 } from "../../api/entryFeaturesApi";
 export default function ProjectDetails() {
@@ -90,6 +89,9 @@ export default function ProjectDetails() {
 
   const [selectedEntryForHistory, setSelectedEntryForHistory] =
     useState(null);
+
+  const [entryDeleteSaving, setEntryDeleteSaving] =
+    useState(false);
 
   const [checklistSaving, setChecklistSaving] = useState({});
 
@@ -303,14 +305,36 @@ export default function ProjectDetails() {
   async function handleUpdateEntry(entryId, payload) {
     try {
       await updateEntry(id, entryId, payload);
-      await updateEntryProjectReferences(id, entryId, payload.referenceProjectIds || []);
-      await updateEntryReferences(id, entryId, payload.referenceEntryIds || []);
       setShowEditEntryModal(false);
       setSelectedEntryForEdit(null);
       await loadProject();
     } catch (requestError) {
       console.error("Failed to update entry:", requestError);
       throw requestError;
+    }
+  }
+
+  async function handleDeleteEntry(entry) {
+    if (!entry?.id) {
+      return;
+    }
+
+    try {
+      setEntryDeleteSaving(true);
+      setError("");
+
+      await deleteProjectEntry(id, entry.id);
+
+      setSelectedEntryForDetails(null);
+      setSelectedEntryForEdit(null);
+      setShowEditEntryModal(false);
+
+      await loadProject();
+    } catch (requestError) {
+      console.error("Failed to delete entry:", requestError);
+      setError(requestError.message || "Failed to delete entry.");
+    } finally {
+      setEntryDeleteSaving(false);
     }
   }
 
