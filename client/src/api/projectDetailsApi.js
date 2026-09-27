@@ -66,6 +66,29 @@ export async function fetchProjectDetails(projectId) {
   return request(`/api/projects/${projectId}`);
 }
 
+export async function searchProjectEntries(projectId, filters = {}) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  const params = new URLSearchParams();
+  if (filters.query?.trim()) params.set("q", filters.query.trim());
+  if (filters.fromDate) params.set("fromDate", filters.fromDate);
+  if (filters.toDate) params.set("toDate", filters.toDate);
+  if (filters.minDuration !== undefined && filters.minDuration !== null && filters.minDuration !== "") params.set("minDuration", filters.minDuration);
+  if (filters.maxDuration !== undefined && filters.maxDuration !== null && filters.maxDuration !== "") params.set("maxDuration", filters.maxDuration);
+  if (typeof filters.completed === "boolean") params.set("completed", String(filters.completed));
+  if (filters.sort) params.set("sort", filters.sort);
+
+  const customFields = Array.isArray(filters.customFields)
+    ? filters.customFields.filter((filter) => filter?.fieldId && String(filter.value ?? "").trim())
+    : [];
+  if (customFields.length) params.set("customFields", JSON.stringify(customFields));
+
+  const query = params.toString();
+  return request(`/api/projects/${projectId}/entries/search${query ? `?${query}` : ""}`);
+}
+
 export async function createProjectEntry(
   projectId,
   payload,

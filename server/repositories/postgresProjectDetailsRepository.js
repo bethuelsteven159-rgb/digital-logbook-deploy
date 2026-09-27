@@ -354,6 +354,110 @@ function createRepository(queryable) {
       );
     },
 
+    async searchProjectEntries(projectId, filters = {}) {
+      const {
+        query,
+        fromDate,
+        toDate,
+        minDuration,
+        maxDuration,
+        completed,
+        customFields = [],
+        sort = "newest",
+      } = filters;
+
+      const conditions = ["e.project_id = $1"];
+      const params = [projectId];
+
+      const addParam = (value) => {
+        params.push(value);
+        return `$${params.length}`;
+      };
+
+      if (query) {
+        const search = addParam(`%${query}%`);
+        conditions.push(`(
+          e.name ILIKE ${search}
+          OR COALESCE(array_to_string(e.tags, ' '), '') ILIKE ${search}
+          OR EXISTS (
+            SELECT 1
+            FROM entry_field_values sv
+            WHERE sv.entry_id = e.id
+              AND (
+                COALESCE(sv.value_text, '') ILIKE ${search}
+                OR COALESCE(sv.value_number::text, '') ILIKE ${search}
+                OR COALESCE(sv.value_date::text, '') ILIKE ${search}
+              )
+          )
+        )`);
+      }
+
+      if (fromDate) {
+        const value = addParam(fromDate);
+        conditions.push(`e.occurred_at >= ${value}::date`);
+      }
+
+      if (toDate) {
+        const value = addParam(toDate);
+        conditions.push(`e.occurred_at < (${value}::date + INTERVAL '1 day')`);
+      }
+
+      if (minDuration !== null && minDuration !== undefined) {
+        const value = addParam(minDuration);
+        conditions.push(`e.duration_minutes >= ${value}`);
+      }
+
+      if (maxDuration !== null && maxDuration !== undefined) {
+        const value = addParam(maxDuration);
+        conditions.push(`e.duration_minutes <= ${value}`);
+      }
+
+      if (completed === true) conditions.push("e.completed_at IS NOT NULL");
+      if (completed === false) conditions.push("e.completed_at IS NULL");
+
+      for (const filter of customFields) {
+        const fieldId = addParam(filter.fieldId);
+        const value = addParam(`%${filter.value}%`);
+        conditions.push(`EXISTS (
+          SELECT 1
+          FROM entry_field_values fv
+          WHERE fv.entry_id = e.id
+            AND fv.field_id = ${fieldId}::uuid
+            AND (
+              COALESCE(fv.value_text, '') ILIKE ${value}
+              OR COALESCE(fv.value_number::text, '') ILIKE ${value}
+              OR COALESCE(fv.value_date::text, '') ILIKE ${value}
+            )
+        )`);
+      }
+
+      const orderBy = {
+        newest: "e.occurred_at DESC, e.created_at DESC",
+        oldest: "e.occurred_at ASC, e.created_at ASC",
+        name: "e.name ASC, e.occurred_at DESC",
+        duration: "e.duration_minutes DESC, e.occurred_at DESC",
+      }[sort] || "e.occurred_at DESC, e.created_at DESC";
+
+      const result = await queryable.query(
+        `SELECT e.id AS entry_id, e.project_id, e.created_by_id,
+                e.name AS entry_name, e.duration_minutes, e.occurred_at,
+                e.tags, e.due_at, e.completed_at,
+                e.created_at AS entry_created_at, e.updated_at AS entry_updated_at,
+                v.id AS value_id, v.field_id, v.value_text, v.value_number,
+                v.value_date, v.created_at AS value_created_at,
+                f.name AS field_name, f.archived_at AS field_archived_at,
+                f.field_type
+         FROM entries e
+         LEFT JOIN entry_field_values v ON v.entry_id = e.id
+         LEFT JOIN project_fields f ON f.id = v.field_id
+         WHERE ${conditions.join("\n           AND ")}
+         ORDER BY ${orderBy}, v.created_at ASC`,
+        params,
+      );
+
+      return attachEntryFeatures(queryable, groupEntries(result.rows));
+    },
+
     async getOutstandingEntries(projectId) {
       const result = await queryable.query(
         `SELECT e.id AS entry_id,
