@@ -12,3 +12,4 @@
 - [Bug Tracking](bug-tracking.md)
 - [Third-Party Code Documentation](third-party-code.md)
 - [Testing Documentation](testing-documentation.md)
+- [Performance Benchmark — Custom Statistics](performance.md)
