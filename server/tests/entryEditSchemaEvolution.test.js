@@ -372,6 +372,21 @@ function createClient({
       );
       return { rows: [], rowCount: 1 };
     }
+  if (sql.startsWith('INSERT INTO entry_revisions ')) {
+    assert.match(sql, /VALUES \(\$1, \$2, \$3, \$4::jsonb\) RETURNING/);
+    const [entryId, projectId, changedById, snapshot] = parameters;
+    return {
+      rows: [{
+        id: uuid(nextId++),
+        entry_id: entryId,
+        project_id: projectId,
+        changed_by_id: changedById,
+        snapshot,
+        created_at: client.now,
+      }],
+      rowCount: 1,
+    };
+  }
     throw new Error(`Unexpected SQL in entry edit schema evolution test: ${sql}`);
   };
   return client;
