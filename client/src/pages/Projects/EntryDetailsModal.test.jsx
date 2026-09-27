@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EntryDetailsModal from './EntryDetailsModal';
-
+process.env.TZ = 'Africa/Johannesburg';
 const entry = {
   id: 'entry-1',
   name: 'Practice session',
