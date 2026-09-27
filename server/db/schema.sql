@@ -114,3 +114,24 @@ CREATE TABLE IF NOT EXISTS saved_filters (
 
 CREATE INDEX IF NOT EXISTS idx_saved_filters_owner ON saved_filters (owner_id);
 CREATE INDEX IF NOT EXISTS idx_saved_filters_project ON saved_filters (project_id);
+
+
+-- =========================================================
+-- CUSTOM STATISTICS (user-defined expressions)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS custom_statistics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    expression TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_statistics_owner
+    ON custom_statistics (owner_id);
+
+CREATE INDEX IF NOT EXISTS idx_custom_statistics_project
+    ON custom_statistics (project_id);
