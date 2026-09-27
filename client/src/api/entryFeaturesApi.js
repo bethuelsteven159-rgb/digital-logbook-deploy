@@ -143,3 +143,35 @@ export async function updateEntry(
     },
   );
 }
+
+export async function fetchEntryRevisions(
+  projectId,
+  entryId,
+) {
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/revisions`,
+  );
+}
+
+export async function fetchEntryRevision(
+  projectId,
+  entryId,
+  revisionId,
+) {
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/revisions/${revisionId}`,
+  );
+}
+
+export async function restoreEntryRevision(
+  projectId,
+  entryId,
+  revisionId,
+) {
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/revisions/${revisionId}/restore`,
+    {
+      method: "POST",
+    },
+  );
+}

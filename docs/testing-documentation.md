@@ -10,6 +10,7 @@
 - Profile picture uploads — valid image formats, and rejection of malformed, oversized, or disguised uploads (`tests/profilePictures.test.js`)
 - Entry-to-entry links (`tests/projectDetailsLinks.test.js`)
 - Project field editing — adding, renaming, removing, and archiving fields without breaking existing entries or computed formulas (`tests/projectFields.test.js`)
+- Entry revision history — creation, listing, viewing, and restoring past entry versions (`services/projectDetailsService.revisions.test.js`)
 
 Running `npm test` from `server/` executes all of the above, combining Vitest and Node's native test runner in one command.
 

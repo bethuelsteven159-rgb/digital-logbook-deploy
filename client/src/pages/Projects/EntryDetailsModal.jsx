@@ -50,6 +50,7 @@ export default function EntryDetailsModal({
   onClose,
   onEdit,
   onDelete,
+  onHistory,
   deleteSaving = false,
   onProjectReferenceClick,
   onChecklistToggle,
@@ -248,9 +249,12 @@ export default function EntryDetailsModal({
             )}
           </div>
 
-          <div style={{ display: "flex", gap: "8px" }}>
+                   <div style={{ display: "flex", gap: "8px" }}>
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={deleteSaving}>
               Close
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => onHistory?.(entry)} disabled={deleteSaving}>
+              History
             </button>
             {!archived && (
               <button type="button" className="btn btn-primary" onClick={onEdit} disabled={deleteSaving}>

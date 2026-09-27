@@ -14,6 +14,9 @@ const {
   updateProjectReferences,
   updateEntryProjectReferences,
   updateEntryReferences,
+  getEntryRevisions,
+  getEntryRevision,
+  restoreEntryRevision,
 } = require("../controllers/projectDetailsController");
 
 const router = express.Router();
@@ -87,6 +90,21 @@ router.patch(
 router.post(
   "/:projectId/entries/:entryId/complete",
   completeProjectEntry,
+);
+
+router.get(
+  "/:projectId/entries/:entryId/revisions",
+  getEntryRevisions,
+);
+
+router.get(
+  "/:projectId/entries/:entryId/revisions/:revisionId",
+  getEntryRevision,
+);
+
+router.post(
+  "/:projectId/entries/:entryId/revisions/:revisionId/restore",
+  restoreEntryRevision,
 );
 
 module.exports = router;
