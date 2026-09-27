@@ -1216,6 +1216,13 @@ async function updateEntryService({
           data,
         );
 
+      await tx.createEntryRevision({
+        entryId,
+        projectId,
+        changedById: userId,
+        snapshot: serializeEntry(entry),
+      });
+
       await tx.replaceEntryFieldValues(
         entryId,
         convertedValues,
@@ -1372,6 +1379,137 @@ async function updateEntryService({
   );
 }
 
+async function getEntryRevisionsService({
+  projectId,
+  entryId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const entry = await repository.getEntryById(entryId);
+
+  if (!entry || entry.projectId !== projectId) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const revisions = await repository.getEntryRevisions(entryId);
+
+  return revisions.map((revision) => ({
+    id: revision.id,
+    createdAt: revision.createdAt,
+    changedById: revision.changedById,
+    name: revision.snapshot.name,
+    durationMinutes: revision.snapshot.durationMinutes,
+  }));
+}
+
+async function getEntryRevisionService({
+  projectId,
+  entryId,
+  revisionId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const entry = await repository.getEntryById(entryId);
+
+  if (!entry || entry.projectId !== projectId) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const revision = await repository.getEntryRevisionById(revisionId);
+
+  if (!revision || revision.entryId !== entryId) {
+    throw createHttpError(404, "Revision not found");
+  }
+
+  return revision.snapshot;
+}
+
+async function restoreEntryRevisionService({
+  projectId,
+  entryId,
+  revisionId,
+  userId,
+}) {
+  return repository.withTransaction(async (tx) => {
+    const project = await tx.getOwnedProject(projectId, userId);
+
+    if (!project) {
+      throw createHttpError(404, "Project not found");
+    }
+
+    if (project.archivedAt) {
+      throw createHttpError(
+        409,
+        "Archived projects cannot be edited",
+      );
+    }
+
+    const entry = await tx.getEntryById(entryId);
+
+    if (!entry || entry.projectId !== projectId) {
+      throw createHttpError(404, "Entry not found");
+    }
+
+    const revision = await tx.getEntryRevisionById(revisionId);
+
+    if (!revision || revision.entryId !== entryId) {
+      throw createHttpError(404, "Revision not found");
+    }
+
+    // Snapshot the current (pre-restore) state first, so restoring
+    // never destroys the version we're restoring from.
+    await tx.createEntryRevision({
+      entryId,
+      projectId,
+      changedById: userId,
+      snapshot: serializeEntry(entry),
+    });
+
+    const fields = await tx.getProjectFields(projectId, {
+      includeArchived: true,
+    });
+
+    const fieldMap = new Map(
+      fields.map((field) => [field.id, field]),
+    );
+
+    const restoredValues = (revision.snapshot.values || [])
+      .filter((value) => fieldMap.has(value.fieldId))
+      .map((value) => {
+        const field = fieldMap.get(value.fieldId);
+        const converted = convertValue(field, value.value);
+
+        return converted
+          ? { entryId, fieldId: value.fieldId, ...converted }
+          : null;
+      })
+      .filter(Boolean);
+
+    await tx.updateEntry(entryId, {
+      name: revision.snapshot.name,
+      durationMinutes: revision.snapshot.durationMinutes,
+      dueAt: revision.snapshot.dueAt,
+    });
+
+    await tx.replaceEntryFieldValues(entryId, restoredValues);
+
+    return attachComputedFields(
+      serializeEntry(await tx.getEntryById(entryId)),
+      fields,
+    );
+  });
+}
+
 async function deleteEntryService({ projectId, entryId, userId }) {
   const project = await repository.getOwnedProject(projectId, userId);
 
@@ -1521,6 +1659,9 @@ module.exports = {
   updateEntryReferencesService,
   updateEntryService,
   deleteEntryService,
+  getEntryRevisionsService,
+  getEntryRevisionService,
+  restoreEntryRevisionService,
   serializeEntry,
   buildLinkedEntriesMap,
 };
