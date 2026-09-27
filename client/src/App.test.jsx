@@ -1,13 +1,19 @@
+// @vitest-environment jsdom
+import "@testing-library/jest-dom/vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { StrictMode } from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
-import { fetchDashboard } from "./api/dashboardApi";
+import { fetchDashboard, fetchQuote } from "./api/dashboardApi";
 
-vi.mock("./api/dashboardApi", () => ({ fetchDashboard: vi.fn() }));
+vi.mock("./api/dashboardApi", () => ({
+  fetchDashboard: vi.fn(),
+  fetchQuote: vi.fn(),
+}));
 vi.mock("./context/UserContext.jsx", () => ({ UserProvider: ({ children }) => children }));
 vi.mock("./components/Sidebar", () => ({ default: () => null }));
-vi.mock("./pages/Login/Login.jsx", () => ({ default: () => null }));
+vi.mock("./pages/LogIn/Login.jsx", () => ({ default: () => null }));
 vi.mock("./pages/Projects/Projects", () => ({ default: () => <div>Projects page</div> }));
 vi.mock("./pages/Projects/ProjectDetails", () => ({ default: () => null }));
 vi.mock("./pages/Profile/Profile", () => ({ default: () => null }));
@@ -22,6 +28,7 @@ beforeEach(() => {
   localStorage.setItem(completionKey, "true");
   window.history.replaceState(null, "", "/dashboard");
   fetchDashboard.mockResolvedValue({});
+  fetchQuote.mockResolvedValue(null);
 });
 afterEach(() => {
   cleanup();

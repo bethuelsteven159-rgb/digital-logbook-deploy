@@ -1,16 +1,23 @@
+// @vitest-environment jsdom
+import "@testing-library/jest-dom/vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Dashboard from "./Dashboard";
-import { fetchDashboard } from "../../api/dashboardApi";
+import { fetchDashboard, fetchQuote } from "../../api/dashboardApi";
 
-vi.mock("../../api/dashboardApi", () => ({ fetchDashboard: vi.fn() }));
+vi.mock("../../api/dashboardApi", () => ({
+  fetchDashboard: vi.fn(),
+  fetchQuote: vi.fn(),
+}));
 vi.mock("../../components/Sidebar", () => ({ default: () => null }));
 const completionKey = "digitalLogbookOnboardingComplete";
 
 beforeEach(() => {
   localStorage.clear();
   fetchDashboard.mockResolvedValue({});
+  fetchQuote.mockResolvedValue(null);
 });
 afterEach(() => { cleanup(); localStorage.clear(); });
 

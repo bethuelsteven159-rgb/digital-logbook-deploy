@@ -7,7 +7,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import Login from "./pages/Login/Login.jsx";
+import Login from "./pages/LogIn/Login.jsx";
 import Dashboard from "./pages/Dashboard/Dashboard";
 
 import Projects from "./pages/Projects/Projects";
