@@ -78,6 +78,19 @@ function mapEntryReference(row) {
   };
 }
 
+function mapEntryRevision(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    entryId: row.entry_id,
+    projectId: row.project_id,
+    changedById: row.changed_by_id,
+    snapshot: row.snapshot,
+    createdAt: row.created_at,
+  };
+}
+
 function mapEntryRow(row) {
   return {
     id: row.entry_id,
@@ -1116,6 +1129,55 @@ function createRepository(queryable) {
       );
 
       return result.rows[0] || null;
+    },
+
+    async createEntryRevision({
+      entryId,
+      projectId,
+      changedById,
+      snapshot,
+    }) {
+      const result = await queryable.query(
+        `INSERT INTO entry_revisions
+           (entry_id, project_id, changed_by_id, snapshot)
+         VALUES ($1, $2, $3, $4::jsonb)
+         RETURNING id, entry_id, project_id, changed_by_id,
+                   snapshot, created_at`,
+        [
+          entryId,
+          projectId,
+          changedById,
+          JSON.stringify(snapshot),
+        ],
+      );
+
+      return mapEntryRevision(result.rows[0]);
+    },
+
+    async getEntryRevisions(entryId) {
+      const result = await queryable.query(
+        `SELECT id, entry_id, project_id, changed_by_id,
+                snapshot, created_at
+         FROM entry_revisions
+         WHERE entry_id = $1
+         ORDER BY created_at DESC`,
+        [entryId],
+      );
+
+      return result.rows.map(mapEntryRevision);
+    },
+
+    async getEntryRevisionById(revisionId) {
+      const result = await queryable.query(
+        `SELECT id, entry_id, project_id, changed_by_id,
+                snapshot, created_at
+         FROM entry_revisions
+         WHERE id = $1
+         LIMIT 1`,
+        [revisionId],
+      );
+
+      return mapEntryRevision(result.rows[0]);
     },
   };
 }
