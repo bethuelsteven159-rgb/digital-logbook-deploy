@@ -50,8 +50,6 @@ import {
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
-  updateEntryProjectReferences,
-  updateEntryReferences,
   updateEntry,
 } from "../../api/entryFeaturesApi";
 
@@ -327,8 +325,6 @@ export default function ProjectDetails() {
   async function handleUpdateEntry(entryId, payload) {
     try {
       await updateEntry(id, entryId, payload);
-      await updateEntryProjectReferences(id, entryId, payload.referenceProjectIds || []);
-      await updateEntryReferences(id, entryId, payload.referenceEntryIds || []);
       setShowEditEntryModal(false);
       setSelectedEntryForEdit(null);
       await loadProject();
