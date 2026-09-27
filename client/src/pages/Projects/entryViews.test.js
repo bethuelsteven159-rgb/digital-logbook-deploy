@@ -73,6 +73,33 @@ test("board groups empty and missing values as Unassigned without losing zero or
   assert.deepEqual(groups, { Unassigned: unassigned, "0": [zero], false: [falsy] });
 });
 
+test("board grouping supports date and computed field values", () => {
+  const entries = [
+    {
+      values: [
+        { fieldId: "date", value: "2026-09-01" },
+        { fieldId: "total", value: 60 },
+      ],
+    },
+    {
+      values: [
+        { fieldId: "date", value: "2026-09-02" },
+        { fieldId: "total", value: 60 },
+      ],
+    },
+    { values: [{ fieldId: "total", value: null }] },
+  ];
+  assert.deepEqual(groupEntriesByField(entries, "date"), {
+    "2026-09-01": [entries[0]],
+    "2026-09-02": [entries[1]],
+    Unassigned: [entries[2]],
+  });
+  assert.deepEqual(groupEntriesByField(entries, "total"), {
+    "60": [entries[0], entries[1]],
+    Unassigned: [entries[2]],
+  });
+});
+
 test("board grouping returns an empty plain object for empty or omitted entries", () => {
   assert.deepEqual(groupEntriesByField([], "status"), {});
   assert.deepEqual(groupEntriesByField(), {});
