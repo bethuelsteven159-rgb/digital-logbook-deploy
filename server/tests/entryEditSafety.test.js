@@ -75,6 +75,16 @@ function harness(t, failure) {
         state[key] = state[key].filter(target => !args[1].includes(target)); return rows([]);
       }
     }
+    if (sql.startsWith("INSERT INTO entry_revisions")) {
+     return rows([{
+       id: id(11),
+       entry_id: args[0],
+       project_id: args[1],
+       changed_by_id: args[2],
+       snapshot: args[3],
+       created_at: "2026-01-01",
+     }]);
+   }
     throw new Error(`Unexpected SQL: ${sql}`);
   };
   const release = t.mock.fn();
