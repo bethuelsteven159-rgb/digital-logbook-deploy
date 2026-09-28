@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
 
     -- Profile feature support.
     bio TEXT,
+    dashboard_layout JSONB,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -3,6 +3,55 @@ const db = require("../db");
 
 const router = express.Router();
 
+const ALLOWED_DASHBOARD_STATISTICS = new Set([
+  "loggedMinutes",
+  "activeProjects",
+  "totalEntries",
+  "thisWeekMinutes",
+  "projectsCreated",
+  "projectsArchived",
+  "entriesLogged",
+  "averageSessionMinutes",
+]);
+
+function getAuthenticatedUserId(req) {
+  return req.user?.id || req.user?.sub;
+}
+
+function validateDashboardLayout(layout) {
+  if (!Array.isArray(layout)) {
+    return "Dashboard layout must be an array";
+  }
+
+  if (layout.length > 12) {
+    return "Dashboard layout cannot contain more than 12 widgets";
+  }
+
+  const ids = new Set();
+
+  for (const widget of layout) {
+    if (!widget || typeof widget !== "object" || Array.isArray(widget)) {
+      return "Each dashboard widget must be an object";
+    }
+
+    if (typeof widget.id !== "string" || widget.id.trim().length === 0 || widget.id.length > 80) {
+      return "Each dashboard widget must have a valid id";
+    }
+
+    if (ids.has(widget.id)) {
+      return "Dashboard widget ids must be unique";
+    }
+
+    ids.add(widget.id);
+
+    if (!ALLOWED_DASHBOARD_STATISTICS.has(widget.statisticId)) {
+      return "Dashboard widget contains an unsupported statistic";
+    }
+  }
+
+  return null;
+}
+
 /*
  * GET /api/dashboard
  *
@@ -18,7 +67,7 @@ router.get("/", async (req, res, next) => {
      * Supporting both here lets the dashboard read the
      * authenticated user without changing the auth team's code.
      */
-    const userId = req.user?.id || req.user?.sub;
+    const userId = getAuthenticatedUserId(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -100,7 +149,18 @@ router.get("/", async (req, res, next) => {
       [userId],
     );
 
+    const layoutResult = await db.query(
+      `
+        SELECT dashboard_layout
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [userId],
+    );
+
     const summary = summaryResult.rows[0] || {};
+    const storedLayout = layoutResult.rows[0]?.dashboard_layout;
 
     return res.status(200).json({
       success: true,
@@ -127,6 +187,8 @@ router.get("/", async (req, res, next) => {
             Number(summary.average_session_minutes) || 0,
         },
 
+        layout: Array.isArray(storedLayout) ? storedLayout : null,
+
         recentActivity: recentResult.rows.map(
           (row) => ({
             entryId: row.entry_id,
@@ -138,6 +200,63 @@ router.get("/", async (req, res, next) => {
             occurredAt: row.occurred_at,
           }),
         ),
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+
+/*
+ * PUT /api/dashboard
+ *
+ * Persists the authenticated user's custom dashboard layout.
+ */
+router.put("/", async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID was not found",
+      });
+    }
+
+    const layout = req.body?.layout;
+    const validationError = validateDashboardLayout(layout);
+
+    if (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError,
+      });
+    }
+
+    const result = await db.query(
+      `
+        UPDATE users
+        SET
+          dashboard_layout = $1::jsonb,
+          updated_at = NOW()
+        WHERE id = $2
+        RETURNING dashboard_layout
+      `,
+      [JSON.stringify(layout), userId],
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        layout: result.rows[0].dashboard_layout,
       },
     });
   } catch (error) {
