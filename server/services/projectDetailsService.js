@@ -1402,8 +1402,8 @@ async function getEntryRevisionsService({
     id: revision.id,
     createdAt: revision.createdAt,
     changedById: revision.changedById,
-    name: revision.snapshot.name,
-    durationMinutes: revision.snapshot.durationMinutes,
+    name: revision.name,
+    durationMinutes: revision.durationMinutes,
   }));
 }
 

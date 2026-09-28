@@ -172,10 +172,16 @@ function harness(failure) {
       sql.includes("FROM entry_revisions") &&
       sql.includes("WHERE entry_id = $1")
     ) {
-      return rows(
+        return rows(
         state.revisions
           .filter((r) => r.entry_id === args[0])
-          .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
+          .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+          .slice(0, args[1])
+          .map((r) => ({
+            ...r,
+            name: r.snapshot.name,
+            duration_minutes: r.snapshot.durationMinutes,
+          })),
       );
     }
     if (
