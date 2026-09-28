@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-const { createEntrySchema } = require("../validation/entry.validation");
+const { createEntrySchema, updateEntrySchema } = require("../validation/entry.validation");
 
 describe("createEntrySchema", () => {
   const baseInput = {
@@ -121,5 +121,26 @@ describe("createEntrySchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("updateEntrySchema - Morare Sprint 3 tag QA", () => {
+  test("normalises edited tags and permits removing all tags", () => {
+    const base = {
+      name: "Edited entry",
+      durationMinutes: 15,
+      fieldIds: [],
+      values: [],
+      newFields: [],
+      tags: [" Research ", "C++", "research"],
+    };
+
+    const parsed = updateEntrySchema.safeParse(base);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data.tags).toEqual(["research", "c++"]);
+
+    const cleared = updateEntrySchema.safeParse({ ...base, tags: [] });
+    expect(cleared.success).toBe(true);
+    expect(cleared.data.tags).toEqual([]);
   });
 });
