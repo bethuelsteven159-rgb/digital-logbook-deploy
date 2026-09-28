@@ -40,3 +40,42 @@ export async function fetchDashboard() {
 
   return body.data;
 }
+
+
+export async function saveDashboardLayout(layout) {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("You are not signed in.");
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/dashboard`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ layout }),
+    },
+  );
+
+  const contentType = response.headers.get("content-type");
+
+  if (!contentType?.includes("application/json")) {
+    throw new Error(
+      "Dashboard API returned a non-JSON response.",
+    );
+  }
+
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      body.message || "Failed to save dashboard layout.",
+    );
+  }
+
+  return body.data?.layout ?? [];
+}
