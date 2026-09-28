@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   updateEntryProjectReferences: vi.fn(),
   updateEntryReferences: vi.fn(),
   updateEntry: vi.fn(),
+  generateDueRecurringEntries: vi.fn(),
 }));
 
 vi.mock('../../api/projectDetailsApi', () => ({
@@ -40,6 +41,11 @@ vi.mock('../../api/entryFeaturesApi', () => ({
   updateEntryReferences:
     apiMocks.updateEntryReferences,
   updateEntry: apiMocks.updateEntry,
+}));
+
+vi.mock('../../api/recurringEntriesApi', () => ({
+  generateDueRecurringEntries:
+    apiMocks.generateDueRecurringEntries,
 }));
 
 vi.mock('../../components/Sidebar', () => ({
@@ -179,6 +185,34 @@ vi.mock('./EditEntryModal', () => ({
   },
 }));
 
+vi.mock('./RecurringEntriesModal', () => ({
+  default: ({
+    projectId,
+    onClose,
+    onChanged,
+  }) => (
+    <div
+      role="dialog"
+      aria-label="Recurring entries test modal"
+      data-project-id={projectId}
+    >
+      <button
+        type="button"
+        onClick={() => onChanged?.()}
+      >
+        Make recurring change
+      </button>
+
+      <button
+        type="button"
+        onClick={onClose}
+      >
+        Close recurring
+      </button>
+    </div>
+  ),
+}));
+
 const project = {
   id: 'project-1',
   name: 'Project One',
@@ -266,6 +300,11 @@ describe('ProjectDetails entry flow', () => {
         archivedAt: null,
       },
     ]);
+
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
 
     apiMocks.updateEntry.mockResolvedValue({});
     apiMocks.updateEntryProjectReferences.mockResolvedValue(
@@ -540,6 +579,11 @@ describe('ProjectDetails offline capture and sync', () => {
     apiMocks.fetchProjects.mockResolvedValue([
       project,
     ]);
+
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
   });
 
   afterEach(() => {
@@ -745,5 +789,172 @@ describe('ProjectDetails offline capture and sync', () => {
     } finally {
       console.error = consoleError;
     }
+  });
+});
+
+describe('ProjectDetails recurring entries', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    apiMocks.fetchSavedFilters.mockResolvedValue(
+      [],
+    );
+
+    apiMocks.fetchProjectDetails.mockResolvedValue(
+      detailsResponse(),
+    );
+
+    apiMocks.fetchProjects.mockResolvedValue([project]);
+
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
+  });
+
+  it('generates due recurring entries once and reports the count', async () => {
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 2,
+      generatedEntries: [
+        {
+          id: 'entry-8',
+          definitionId: 'def-1',
+          recurrenceDate: '2026-09-27',
+        },
+        {
+          id: 'entry-9',
+          definitionId: 'def-1',
+          recurrenceDate: '2026-09-28',
+        },
+      ],
+    });
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledWith('project-1');
+
+    expect(
+      screen.getByText(
+        '2 recurring entries were generated.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('does not regenerate when the modal opens and closes without changes', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /^Recurring$/,
+      }),
+    );
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Recurring entries test modal',
+      }),
+    ).toHaveAttribute(
+      'data-project-id',
+      'project-1',
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Close recurring',
+      }),
+    );
+
+    expect(
+      screen.queryByRole('dialog', {
+        name: 'Recurring entries test modal',
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      apiMocks.fetchProjectDetails,
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('regenerates exactly once after a recurring change and does not loop', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /^Recurring$/,
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Make recurring change',
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Close recurring',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        apiMocks.generateDueRecurringEntries,
+      ).toHaveBeenCalledTimes(2),
+    );
+
+    await waitFor(() =>
+      expect(
+        apiMocks.fetchProjectDetails,
+      ).toHaveBeenCalledTimes(2),
+    );
+
+    // A refresh loop would keep issuing generation and
+    // detail requests; both counts must stay exact.
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      apiMocks.fetchProjectDetails,
+    ).toHaveBeenCalledTimes(2);
+  });
+
+  it('hides the recurring button for archived projects but still generates due entries', async () => {
+    apiMocks.fetchProjectDetails.mockResolvedValue(
+      detailsResponse({
+        archivedAt: '2026-09-27T10:00:00Z',
+      }),
+    );
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    expect(
+      screen.queryByRole('button', {
+        name: /^Recurring$/,
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(1);
   });
 });
