@@ -91,6 +91,17 @@ function mapEntryRevision(row) {
   };
 }
 
+function mapEntryRevisionSummary(row) {
+  return {
+    id: row.id,
+    entryId: row.entry_id,
+    projectId: row.project_id,
+    changedById: row.changed_by_id,
+    name: row.name,
+    durationMinutes: row.duration_minutes,
+    createdAt: row.created_at,
+  };
+}
 function mapEntryRow(row) {
   return {
     id: row.entry_id,
@@ -1063,16 +1074,18 @@ function createRepository(queryable) {
          SET name = $2,
              duration_minutes = $3,
              due_at = $4,
+             tags = $5,
              updated_at = NOW()
          WHERE id = $1
          RETURNING id, project_id, created_by_id, name,
-                   duration_minutes, occurred_at, due_at, completed_at,
+                   duration_minutes, occurred_at, due_at, completed_at, tags,
                    created_at, updated_at`,
         [
           entryId,
           data.name,
           data.durationMinutes,
           data.dueAt ?? null,
+          data.tags || [],
         ],
       );
 
@@ -1258,19 +1271,20 @@ function createRepository(queryable) {
       return mapEntryRevision(result.rows[0]);
     },
 
-    async getEntryRevisions(entryId) {
+      async getEntryRevisions(entryId, limit = 100) {
       const result = await queryable.query(
-        `SELECT id, entry_id, project_id, changed_by_id,
-                snapshot, created_at
+        `SELECT id, entry_id, project_id, changed_by_id, created_at,
+                snapshot->>'name' AS name,
+                (snapshot->>'durationMinutes')::int AS duration_minutes
          FROM entry_revisions
          WHERE entry_id = $1
-         ORDER BY created_at DESC`,
-        [entryId],
+         ORDER BY created_at DESC
+         LIMIT $2`,
+        [entryId, limit],
       );
 
-      return result.rows.map(mapEntryRevision);
+      return result.rows.map(mapEntryRevisionSummary);
     },
-
     async getEntryRevisionById(revisionId) {
       const result = await queryable.query(
         `SELECT id, entry_id, project_id, changed_by_id,

@@ -46,6 +46,8 @@ export default function EditEntryModal({
   const [entryName, setEntryName] = useState(entry?.name || "");
   const [durationMinutes, setDurationMinutes] = useState(entry?.durationMinutes ?? 0);
   const [dueAt, setDueAt] = useState(toLocalDateTime(entry?.dueAt));
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState(entry?.tags || []);
   const [values, setValues] = useState({});
   const [selectedFieldIds, setSelectedFieldIds] = useState([]);
   const [newFields, setNewFields] = useState([]);
@@ -69,6 +71,8 @@ export default function EditEntryModal({
     setEntryName(entry?.name || "");
     setDurationMinutes(entry?.durationMinutes ?? 0);
     setDueAt(toLocalDateTime(entry?.dueAt));
+    setTagInput("");
+    setTags(Array.isArray(entry?.tags) ? entry.tags : []);
     setValues(entryValueMap);
     setSelectedFieldIds((fields || []).map((field) => field.id));
     setNewFields([]);
@@ -92,6 +96,30 @@ export default function EditEntryModal({
 
   function updateValue(fieldId, value) {
     setValues((current) => ({ ...current, [fieldId]: value }));
+  }
+
+  function addTag() {
+    const clean = tagInput.trim().toLowerCase();
+    if (!clean) return;
+    if (clean.length > 30) {
+      setError("Tags cannot exceed 30 characters.");
+      return;
+    }
+    if (tags.includes(clean)) {
+      setTagInput("");
+      return;
+    }
+    if (tags.length >= 10) {
+      setError("You can add up to 10 tags.");
+      return;
+    }
+    setTags((current) => [...current, clean]);
+    setTagInput("");
+    setError("");
+  }
+
+  function removeTag(tag) {
+    setTags((current) => current.filter((candidate) => candidate !== tag));
   }
 
   function removeField(field) {
@@ -230,6 +258,7 @@ export default function EditEntryModal({
       dueAt: !dueAt ? null : dueAt === toLocalDateTime(entry?.dueAt)
         ? new Date(entry.dueAt).toISOString()
         : new Date(dueAt).toISOString(),
+      tags,
       fieldIds: selectedFields.map((field) => field.id),
       values: selectedFields.map((field) => ({ fieldId: field.id, value: values[field.id] ?? "" })),
       newFields: cleanedNewFields,
@@ -271,6 +300,43 @@ export default function EditEntryModal({
             <div className="form-field">
               <label className="form-label form-label-required" htmlFor="edit-entry-name">Entry name</label>
               <input id="edit-entry-name" className="form-input" type="text" maxLength={150} value={entryName} onChange={(e) => setEntryName(e.target.value)} autoFocus disabled={saving} />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="edit-entry-tags">Tags</label>
+              <div className="tag-input-row">
+                <input
+                  id="edit-entry-tags"
+                  className="form-input"
+                  type="text"
+                  maxLength={30}
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === ",") {
+                      event.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="Add a tag"
+                  disabled={saving}
+                />
+                <button type="button" className="btn-add-field" onClick={addTag} disabled={saving || !tagInput.trim()} aria-label="Add tag">
+                  <Plus size={14} /> Add
+                </button>
+              </div>
+              {tags.length > 0 && (
+                <div className="tag-list">
+                  {tags.map((tag) => (
+                    <span className="tag-chip" key={tag}>
+                      {tag}
+                      <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove ${tag}`} disabled={saving}>
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="edit-entry-basic-grid">

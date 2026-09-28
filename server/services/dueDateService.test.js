@@ -49,3 +49,19 @@ describe("isOverdue", () => {
     expect(isOverdue(entry, now)).toBe(false);
   });
 });
+
+describe("Morare Sprint 3 due-date QA", () => {
+  const now = new Date("2026-09-28T12:00:00.000Z");
+
+  it("treats unfinished past-due work as overdue", () => {
+    expect(isOverdue({ dueAt: "2026-09-27T12:00:00.000Z", completedAt: null }, now)).toBe(true);
+  });
+
+  it("treats unfinished future work as upcoming rather than overdue", () => {
+    expect(isOverdue({ dueAt: "2026-09-29T12:00:00.000Z", completedAt: null }, now)).toBe(false);
+  });
+
+  it("stops reporting an overdue item as overdue after completion", () => {
+    expect(isOverdue({ dueAt: "2026-09-27T12:00:00.000Z", completedAt: "2026-09-28T11:00:00.000Z" }, now)).toBe(false);
+  });
+});

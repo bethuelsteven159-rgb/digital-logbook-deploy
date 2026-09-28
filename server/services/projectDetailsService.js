@@ -1213,7 +1213,10 @@ async function updateEntryService({
       const updatedRow =
         await tx.updateEntry(
           entryId,
-          data,
+          {
+            ...data,
+            tags: data.tags ?? entry.tags ?? [],
+          },
         );
 
       await tx.createEntryRevision({
@@ -1374,6 +1377,10 @@ async function updateEntryService({
           updatedRow.occurred_at,
         updatedAt:
           updatedRow.updated_at,
+        dueAt:
+          updatedRow.due_at,
+        tags:
+          updatedRow.tags || [],
       };
     },
   );
@@ -1402,8 +1409,8 @@ async function getEntryRevisionsService({
     id: revision.id,
     createdAt: revision.createdAt,
     changedById: revision.changedById,
-    name: revision.snapshot.name,
-    durationMinutes: revision.snapshot.durationMinutes,
+    name: revision.name,
+    durationMinutes: revision.durationMinutes,
   }));
 }
 
@@ -1484,7 +1491,14 @@ async function restoreEntryRevisionService({
     );
 
     const restoredValues = (revision.snapshot.values || [])
-      .filter((value) => fieldMap.has(value.fieldId))
+      // Archived fields keep their stored values untouched (they can't be
+      // edited), and re-inserting them would violate the unique
+      // (entry_id, field_id) constraint.
+      .filter(
+        (value) =>
+          fieldMap.has(value.fieldId) &&
+          !fieldMap.get(value.fieldId).archivedAt,
+      )
       .map((value) => {
         const field = fieldMap.get(value.fieldId);
         const converted = convertValue(field, value.value);
