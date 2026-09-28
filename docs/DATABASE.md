@@ -248,6 +248,7 @@ Entries support:
 * project references
 * links to other entries
 * custom field values
+* recurring occurrences
 
 | Column             | Type           | Constraints                                                             | Description                                |
 | :----------------- | :------------- | :---------------------------------------------------------------------- | :----------------------------------------- |
@@ -258,10 +259,14 @@ Entries support:
 | `duration_minutes` | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(duration_minutes BETWEEN 0 AND 10080)` | Time spent on the entry                    |
 | `occurred_at`      | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                            | Date and time when the activity occurred   |
 | `due_at`           | `TIMESTAMPTZ`  | `NULL`                                                                  | Optional due date/time for unfinished work |
+| `recurring_definition_id` | `UUID`  | `NULL`, `REFERENCES recurring_entry_definitions(id) ON DELETE SET NULL` | Optional link to the recurring definition that generated the entry |
+| `recurrence_date`  | `DATE`         | `NULL`                                                                  | Occurrence date for an entry generated from a recurring definition |
 | `created_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                            | Date and time the entry was created        |
 | `updated_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                            | Date and time the entry was last updated   |
 
 Due dates are part of the current entry workflow, with `dueAt` included in the entry payload when supplied.
+
+Entries generated from a recurring definition are normal entries that additionally carry `recurring_definition_id` and `recurrence_date`. Both columns, along with the duplicate-prevention index described below, are added by `server/sql/20260928_recurring_entries.sql`.
 
 ---
 
@@ -338,6 +343,40 @@ uq_entry_project_reference (entry_id, project_id)
 ```
 
 The current entry interface distinguishes these project references from references/links to individual entries.
+
+---
+
+### `recurring_entry_definitions`
+
+Stores the recurrence rules used by US-A06 to generate repeating entries. Created by `server/sql/20260928_recurring_entries.sql`.
+
+A definition stores the template (name, duration, tags, checklist) and the schedule (frequency, interval, start/end dates, enabled flag).
+
+| Column             | Type           | Constraints                                                          | Description                                                            |
+| :----------------- | :------------- | :------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| `id`               | `UUID`         | `PRIMARY KEY`, Default: `gen_random_uuid()`                          | Unique definition identifier                                           |
+| `project_id`       | `UUID`         | `NOT NULL`, `REFERENCES projects(id) ON DELETE CASCADE`              | Project that owns the definition                                       |
+| `created_by_id`    | `UUID`         | `NOT NULL`, `REFERENCES users(id) ON DELETE RESTRICT`                | User who created the definition                                        |
+| `name`             | `VARCHAR(150)` | `NOT NULL`                                                           | Template name copied onto generated entries                            |
+| `duration_minutes` | `INTEGER`      | `NOT NULL`, Default: `0`, `CHECK(duration_minutes BETWEEN 0 AND 10080)` | Template duration copied onto generated entries                     |
+| `tags`             | `TEXT[]`       | `NOT NULL`, Default: `'{}'`                                          | Template tags copied onto generated entries                            |
+| `checklist`        | `JSONB`        | `NOT NULL`, Default: `'[]'`                                          | Template checklist items, stored as `[{"text": "..."}]`                |
+| `frequency`        | `VARCHAR(10)`  | `NOT NULL`, `CHECK(frequency IN ('daily','weekly','monthly'))`       | Recurrence frequency                                                   |
+| `interval_count`   | `INTEGER`      | `NOT NULL`, Default: `1`, `CHECK(interval_count BETWEEN 1 AND 365)`  | Number of days/weeks/months between occurrences                        |
+| `starts_on`        | `DATE`         | `NOT NULL`                                                           | First possible occurrence date                                         |
+| `ends_on`          | `DATE`         | `NULL`                                                               | Optional last occurrence date                                          |
+| `enabled`          | `BOOLEAN`      | `NOT NULL`, Default: `TRUE`                                          | Whether the generator processes this definition                        |
+| `last_generated_on` | `DATE`        | `NULL`                                                               | Watermark: last occurrence date processed by the generator             |
+| `created_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                         | Date and time the definition was created                               |
+| `updated_at`       | `TIMESTAMPTZ`  | `NOT NULL`, Default: `NOW()`                                         | Date and time the definition was last updated                          |
+
+The date range is constrained:
+
+```sql
+chk_recurring_definition_date_range (ends_on IS NULL OR ends_on >= starts_on)
+```
+
+Generated occurrences are normal rows in `entries` linked through `entries.recurring_definition_id` and `entries.recurrence_date`. The `last_generated_on` watermark advances only forward, so a deleted occurrence is never recreated on the next generation run.
 
 ---
 
@@ -423,6 +462,15 @@ ON entry_field_values (entry_id);
 
 CREATE INDEX idx_values_field
 ON entry_field_values (field_id);
+
+CREATE INDEX idx_recurring_definitions_project_id
+ON recurring_entry_definitions (project_id);
+
+CREATE INDEX idx_recurring_definitions_project_enabled
+ON recurring_entry_definitions (project_id, enabled);
+
+CREATE INDEX idx_entries_recurring_definition_id
+ON entries (recurring_definition_id);
 ```
 
 Supporting feature tables should also be indexed on their foreign-key columns where defined by the database schema.
@@ -436,6 +484,9 @@ Supporting feature tables should also be indexed on their foreign-key columns wh
 | `idx_entries_project` | `entries.project_id`          | Quickly find entries belonging to a project        |
 | `idx_values_entry`    | `entry_field_values.entry_id` | Quickly find custom values belonging to an entry   |
 | `idx_values_field`    | `entry_field_values.field_id` | Quickly find values associated with a custom field |
+| `idx_recurring_definitions_project_id` | `recurring_entry_definitions.project_id` | Quickly find recurring definitions belonging to a project |
+| `idx_recurring_definitions_project_enabled` | `recurring_entry_definitions.project_id, enabled` | Quickly load the enabled definitions processed during generation |
+| `idx_entries_recurring_definition_id` | `entries.recurring_definition_id` | Quickly find entries generated by a recurring definition |
 
 ---
 
@@ -555,6 +606,13 @@ uq_entry_project_reference (entry_id, project_id)
 
 Tags are prevented from being duplicated on an individual entry.
 
+Generated recurring occurrences are unique per definition and occurrence date. The partial index only applies to generated entries, so manually created entries are unaffected:
+
+```sql
+uq_entries_recurring_occurrence (recurring_definition_id, recurrence_date)
+WHERE recurring_definition_id IS NOT NULL
+```
+
 ---
 
 ## 6. Delete Behaviour
@@ -571,6 +629,7 @@ The relationship can be represented as:
 User
  └── Projects
       ├── Project Fields
+      ├── Recurring Entry Definitions
       └── Entries
            ├── Entry Field Values
            ├── Checklist Items
@@ -579,9 +638,11 @@ User
            └── Tags
 ```
 
-Deleting a project therefore removes its associated project fields and entries.
+Deleting a project therefore removes its associated project fields, recurring entry definitions and entries.
 
 Deleting an entry removes its associated entry field values, checklist items, project references, links and tag associations.
+
+Deleting a recurring entry definition keeps its generated entries (`entries.recurring_definition_id` is cleared through `ON DELETE SET NULL`).
 
 ### Restrict Delete
 
@@ -815,6 +876,30 @@ Saved filters store a user's filter configuration so that previously configured 
 
 ---
 
+## Advanced Feature Data
+
+### US-A06: Recurring Entries
+
+Recurring entries are scheduled templates that generate regular log entries. Rules live in `recurring_entry_definitions`; generated occurrences are ordinary entries whose `recurring_definition_id` points at the rule and whose `recurrence_date` records which occurrence date they represent.
+
+Occurrence dates are computed in UTC:
+
+* `daily` steps forward by `interval_count` days;
+* `weekly` steps forward by `interval_count × 7` days;
+* `monthly` steps forward by `interval_count` months, anchored to the start day (a definition starting on the 31st clamps to 28/29 February and then returns to the 31st).
+
+Generation happens through `POST /api/projects/:projectId/recurring-entries/generate-due`, which runs in a single transaction: it selects the due occurrence dates after `last_generated_on` up to today across all enabled definitions, sorts them oldest first (ties broken by definition id), inserts at most 100 occurrences per request in total, and advances each definition's watermark only through the occurrences actually processed, leaving any remaining backlog for the next request. Duplicate prevention is database-backed through the partial unique index `uq_entries_recurring_occurrence`, so repeated or concurrent generation runs cannot create the same occurrence twice. Because the watermark never moves backwards, an occurrence that was deleted is not recreated.
+
+V1 limitations:
+
+* generated entries do not trigger automation rules;
+* only `daily`, `weekly` and `monthly` frequencies are supported;
+* no reminders or notifications are produced.
+
+The migration (`server/sql/20260928_recurring_entries.sql`) adds `recurring_entry_definitions`, the two `entries` columns and the supporting indexes. It is applied through `server/scripts/applyRecurringEntriesMigration.js` and has not been run against a production database.
+
+---
+
 ## 12. Feature-to-Database Summary
 
 | User Story | Feature                   | Main Data Used                                    |
@@ -832,5 +917,6 @@ Saved filters store a user's filter configuration so that previously configured 
 | US-111     | Unfinished work/due dates | `entries`, `due_at`                               |
 | US-108     | Saved filters             | Saved-filter data                                 |
 | US-113     | Export/import             | Existing logbook entities                         |
+| US-A06     | Recurring entries         | `recurring_entry_definitions`, `entries.recurring_definition_id`, `entries.recurrence_date` |
 
 This data model supports the implemented feature set while keeping the core logbook record centred around users, projects, project fields, entries and entry field values.

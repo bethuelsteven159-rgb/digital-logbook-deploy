@@ -74,6 +74,11 @@ All API responses follow a consistent pattern:
 | 31 | GET | `/api/logbook/export` | Yes |
 | 32 | POST | `/api/logbook/import` | Yes |
 | 33 | GET | `/api/dashboard` | Yes |
+| 34 | POST | `/api/projects/:projectId/recurring-entries` | Yes |
+| 35 | GET | `/api/projects/:projectId/recurring-entries` | Yes |
+| 36 | PATCH | `/api/projects/recurring-entries/:definitionId` | Yes |
+| 37 | DELETE | `/api/projects/recurring-entries/:definitionId` | Yes |
+| 38 | POST | `/api/projects/:projectId/recurring-entries/generate-due` | Yes |
 
 ---
 
@@ -956,6 +961,147 @@ The `recentActivity` array contains up to 5 most recent entries across all proje
 
 ---
 
+## 11. Recurring Entries
+
+**Route file:** `server/routes/recurringEntries.js`
+**Controller:** `server/controllers/recurringEntryController.js`
+**Auth:** Required (all endpoints)
+
+Recurring entry definitions store a repeating template. Generated occurrences are normal rows in `entries`, linked back through `entries.recurringDefinitionId` (`recurring_definition_id`) and their occurrence date (`recurrence_date`).
+
+**V1 semantics**
+
+* `daily` — every `intervalCount` days, starting from `startsOn`.
+* `weekly` — every `intervalCount` weeks (7-day steps), starting from `startsOn`.
+* `monthly` — every `intervalCount` months, anchored to the start day (for example, starting on the 31st yields 31 Jan → 28/29 Feb → 31 Mar).
+* Generation is catch-up based: `POST .../generate-due` creates entries for missing occurrence dates after `lastGeneratedOn` up to today, limited to **100 occurrences per request across all of the project's definitions combined**. Occurrences are generated oldest due date first (ties broken by definition id); anything beyond the cap is left for the next `generate-due` request, and each definition's `lastGeneratedOn` only advances through the occurrences actually processed in that request.
+* Generation is idempotent. A partial unique index on `(recurring_definition_id, recurrence_date)` rejects duplicates even under concurrent requests, and the `lastGeneratedOn` watermark only moves forward, so an occurrence that was deleted is never recreated.
+* GET endpoints stay read-only; generation only happens through the dedicated POST endpoint, which the client calls while loading/refreshing the project details page.
+* V1 limitation: generated entries do **not** trigger automation rules.
+
+### `POST /api/projects/:projectId/recurring-entries`
+
+Create a recurring entry definition.
+
+**Body:**
+```json
+{
+  "name": "Morning journal",
+  "durationMinutes": 20,
+  "tags": ["journal"],
+  "checklist": [{ "text": "Write three lines" }],
+  "frequency": "daily",
+  "intervalCount": 1,
+  "startsOn": "2026-09-01",
+  "endsOn": null,
+  "enabled": true
+}
+```
+
+`name`, `frequency` (`daily` | `weekly` | `monthly`) and `startsOn` are required. The remaining fields default to `durationMinutes: 0`, `tags: []`, `checklist: []`, `intervalCount: 1`, `endsOn: null`, `enabled: true`.
+
+**Response 201:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "projectId": "uuid",
+    "name": "Morning journal",
+    "durationMinutes": 20,
+    "tags": ["journal"],
+    "checklist": [{ "text": "Write three lines" }],
+    "frequency": "daily",
+    "intervalCount": 1,
+    "startsOn": "2026-09-01",
+    "endsOn": null,
+    "enabled": true,
+    "lastGeneratedOn": null,
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  }
+}
+```
+
+**Errors:** `400` invalid body, `404` project not found, `409` archived project.
+
+### `GET /api/projects/:projectId/recurring-entries`
+
+List recurring entry definitions for an owned project, most recently created first.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "projectId": "uuid",
+      "name": "Morning journal",
+      "durationMinutes": 20,
+      "tags": ["journal"],
+      "checklist": [{ "text": "Write three lines" }],
+      "frequency": "daily",
+      "intervalCount": 1,
+      "startsOn": "2026-09-01",
+      "endsOn": null,
+      "enabled": true,
+      "lastGeneratedOn": "2026-09-27",
+      "createdAt": "timestamp",
+      "updatedAt": "timestamp"
+    }
+  ]
+}
+```
+
+**Errors:** `404` project not found.
+
+### `PATCH /api/projects/recurring-entries/:definitionId`
+
+Update any subset of a definition's fields, including `enabled` to pause or resume it. At least one field must be provided.
+
+**Response 200:** the updated definition (same shape as the create response).
+
+**Errors:** `400` invalid body or `endsOn` earlier than `startsOn`, `404` recurring entry not found, `409` archived project.
+
+### `DELETE /api/projects/recurring-entries/:definitionId`
+
+Delete a definition. Occurrence entries that were already generated remain; their link is cleared (`ON DELETE SET NULL`).
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": { "id": "uuid" }
+}
+```
+
+**Errors:** `404` recurring entry not found, `409` archived project.
+
+### `POST /api/projects/:projectId/recurring-entries/generate-due`
+
+Generate missing occurrences up to today for the project's enabled definitions. A single request generates at most 100 occurrences in total across all definitions, oldest due date first (ties broken by definition id); any remaining backlog is left for the next request, where generation continues from the persisted watermarks. Safe to call repeatedly; repeated or concurrent calls never create duplicate entries.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "generatedCount": 2,
+    "generatedEntries": [
+      { "id": "uuid", "definitionId": "uuid", "recurrenceDate": "2026-09-26" },
+      { "id": "uuid", "definitionId": "uuid", "recurrenceDate": "2026-09-27" }
+    ]
+  }
+}
+```
+
+`generatedCount` is `0` with an empty `generatedEntries` array when nothing is due, or when the project is archived (archived projects are a no-op instead of an error).
+
+**Errors:** `404` project not found.
+
+---
+
 ## Validation Reference
 
 All request validation uses **Zod** (with one imperative exception for avatar uploads).
@@ -963,6 +1109,7 @@ All request validation uses **Zod** (with one imperative exception for avatar up
 | Validation File | Schemas |
 |---|---|
 | `server/validation/entry.validation.js` | `createEntrySchema`, `updateEntrySchema`, `updateChecklistSchema`, `updateProjectReferencesSchema`, `updateEntryReferencesSchema`, `updateEntryProjectReferencesSchema` |
+| `server/validation/recurringEntry.validation.js` | `createRecurringEntrySchema`, `updateRecurringEntrySchema` |
 | `server/validation/savedFilter.validation.js` | `createSavedFilterSchema` |
 | `server/validation/profileAvatar.js` | `validateAvatarUrl` (imperative -- checks MIME, base64, magic bytes, max 512 KiB decoded) |
 | `server/services/projectFieldsService.js` | `fieldsSchema` (project field sync during project edit) |
@@ -971,7 +1118,7 @@ All request validation uses **Zod** (with one imperative exception for avatar up
 
 ## Database Tables
 
-The API operates on 11 PostgreSQL tables (defined in `server/db/schema.sql`):
+The API operates on 12 PostgreSQL tables (11 defined in `server/db/schema.sql`, plus `recurring_entry_definitions` from `server/sql/20260928_recurring_entries.sql`):
 
 | Table | Purpose |
 |---|---|
@@ -986,3 +1133,4 @@ The API operates on 11 PostgreSQL tables (defined in `server/db/schema.sql`):
 | `entry_links` | Bidirectional entry links |
 | `project_project_references` | Project-to-project references |
 | `saved_filters` | User-defined saved filters (JSONB criteria) |
+| `recurring_entry_definitions` | Recurrence rules for automatically generated log entries |
