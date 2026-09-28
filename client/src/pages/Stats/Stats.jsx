@@ -14,6 +14,8 @@ import {
   fetchProjectDetails,
 } from "../../api/projectDetailsApi";
 
+import CustomStatistics from "./CustomStatistics";
+
 const API_URL = (
   import.meta.env.VITE_API_URL ||
   "http://localhost:5000"
@@ -778,6 +780,27 @@ export default function Stats() {
                   )}
               </section>
 
+              <section className="stats-panel">
+                <div className="stats-panel-heading">
+                  <div>
+                    <h2>
+                      Custom statistics
+                    </h2>
+
+                    <span>
+                      Define your own metric from
+                      project fields, for example
+                      sum(Hours) / count(Days)
+                    </span>
+                  </div>
+                </div>
+
+                <CustomStatistics
+                  projectId={selectedProjectId}
+                  fields={selectedFields}
+                />
+              </section>
+
               <div className="stats-detail-grid">
                 <section className="stats-detail-card">
                   <div className="stats-detail-card-top">
@@ -1193,7 +1216,8 @@ export default function Stats() {
           font-weight: 600;
         }
 
-        .stats-control select {
+        .stats-control select,
+        .stats-control input {
           width: 100%;
           min-height: 38px;
           padding: 0 10px;
@@ -1202,6 +1226,7 @@ export default function Stats() {
           background: #fff;
           color: #334155;
           font-size: 13px;
+          box-sizing: border-box;
         }
 
         .stats-load-btn {
@@ -1428,6 +1453,181 @@ export default function Stats() {
         .stats-panel svg {
           width: 24px;
           height: 24px;
+        }
+
+        .custom-stat-loading {
+          padding: 20px 22px 24px;
+          color: #94a3b8;
+          font-size: 12px;
+        }
+
+        .custom-stat-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 0 22px 6px;
+        }
+
+        .custom-stat-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 12px 14px;
+          border: 1px solid #eef2f7;
+          border-radius: 8px;
+          background: #f8fafc;
+        }
+
+        .custom-stat-row-main {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .custom-stat-row-main strong {
+          color: #334155;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .custom-stat-row-main code {
+          color: #64748b;
+          font-size: 11px;
+          overflow-wrap: anywhere;
+        }
+
+        .custom-stat-value {
+          margin-left: auto;
+          text-align: right;
+          white-space: nowrap;
+        }
+
+        .custom-stat-value strong {
+          color: #4f63d2;
+          font-size: 15px;
+        }
+
+        .custom-stat-value-empty {
+          color: #94a3b8;
+          font-size: 12px;
+        }
+
+        .custom-stat-value-error {
+          color: #dc2626;
+          font-size: 11px;
+          white-space: normal;
+        }
+
+        .custom-stat-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .custom-stat-edit,
+        .custom-stat-cancel,
+        .custom-stat-delete {
+          min-height: 30px;
+          padding: 0 10px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .custom-stat-edit,
+        .custom-stat-cancel {
+          border: 1px solid #cbd5e1;
+          background: #fff;
+          color: #475569;
+        }
+
+        .custom-stat-delete {
+          border: 1px solid #fecaca;
+          background: #fef2f2;
+          color: #dc2626;
+        }
+
+        .custom-stat-delete:disabled,
+        .custom-stat-edit:disabled {
+          opacity: .5;
+          cursor: not-allowed;
+        }
+
+        .custom-stat-form {
+          margin: 16px 22px 22px;
+          padding: 16px;
+          border: 1px solid #eef2f7;
+          border-radius: 10px;
+          background: #f8fafc;
+        }
+
+        .custom-stat-fields {
+          display: grid;
+          grid-template-columns: 1fr 1.6fr 0.7fr;
+          gap: 12px;
+          align-items: end;
+        }
+
+        .custom-stat-chip-row {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          margin-top: 14px;
+        }
+
+        .custom-stat-chip-label {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .custom-stat-chip {
+          min-height: 28px;
+          padding: 0 10px;
+          border: 1px solid #dbe3f0;
+          border-radius: 999px;
+          background: #eef2ff;
+          color: #4f63d2;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .custom-stat-chip-empty {
+          color: #94a3b8;
+          font-size: 12px;
+        }
+
+        .custom-stat-form-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        @media (max-width: 1100px) {
+          .custom-stat-fields {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .custom-stat-fields {
+            grid-template-columns: 1fr;
+          }
+
+          .custom-stat-row {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .custom-stat-value {
+            margin-left: 0;
+            text-align: left;
+          }
         }
 
         @media (max-width: 1100px) {

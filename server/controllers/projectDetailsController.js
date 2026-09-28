@@ -9,12 +9,14 @@ const {
   updateEntryReferencesService,
   updateEntryService,
   deleteEntryService,
+  getEntryRevisionsService,
+  getEntryRevisionService,
+  restoreEntryRevisionService,
   getOutstandingEntriesService,
   completeEntryService,
   getIncompleteEntriesService,
   markEntryCompleteService,
 } = require("../services/projectDetailsService");
-
 const {
   createEntrySchema,
   updateChecklistSchema,
@@ -430,6 +432,49 @@ async function completeProjectEntry(req, res, next) {
     return next(error);
   }
 }
+async function getEntryRevisions(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+    const data = await getEntryRevisionsService({
+      projectId: req.params.projectId,
+      entryId: req.params.entryId,
+      userId,
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getEntryRevision(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+    const data = await getEntryRevisionService({
+      projectId: req.params.projectId,
+      entryId: req.params.entryId,
+      revisionId: req.params.revisionId,
+      userId,
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function restoreEntryRevision(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+    const data = await restoreEntryRevisionService({
+      projectId: req.params.projectId,
+      entryId: req.params.entryId,
+      revisionId: req.params.revisionId,
+      userId,
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
 module.exports = {
   getProjectDetails,
   searchProjectEntries,
@@ -445,4 +490,7 @@ module.exports = {
   updateProjectReferences,
   updateEntryProjectReferences,
   updateEntryReferences,
+  getEntryRevisions,
+  getEntryRevision,
+  restoreEntryRevision,
 };
