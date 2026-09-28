@@ -721,6 +721,89 @@ Custom-field statistics for a project.
 
 **Errors:** `400` (missing fieldId, invalid operation, non-numeric compare), `404` (project/field not found).
 
+### `GET /api/stats/projects/:projectId/custom`
+
+List the authenticated user's saved custom statistics for a project, each with its current recalculated value.
+
+**Path Params:** `projectId` (UUID)
+
+**Response 200:**
+```json
+{
+  "statistics": [
+    {
+      "id": "uuid",
+      "projectId": "uuid",
+      "name": "string",
+      "expression": "sum(Score) / count(Score)",
+      "value": 0,
+      "error": "string|null",
+      "createdAt": "timestamp",
+      "updatedAt": "timestamp"
+    }
+  ]
+}
+```
+
+`value` is `null` and `error` is set when a saved statistic can no longer be calculated (for example its field was archived).
+
+**Errors:** `404` (project not found).
+
+### `POST /api/stats/projects/:projectId/custom`
+
+Create a user-defined custom statistic from project fields.
+
+**Request Body:**
+```json
+{
+  "name": "Average score (string, required, max 100 chars)",
+  "expression": "avg(Score) * 2 (string, required, max 500 chars)"
+}
+```
+
+Expressions support numbers, `+ - * / % ^`, brackets, and the aggregates `sum()`, `avg()`, `min()`, `max()` and `count()`. Fields are referenced by name — `sum(Score)` or `sum("Call Duration")` when the name contains spaces. Non-numeric fields can only be used with `count()`.
+
+**Response 201:**
+```json
+{
+  "id": "uuid",
+  "projectId": "uuid",
+  "name": "Average score",
+  "expression": "avg(Score) * 2",
+  "value": 0,
+  "error": null,
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+```
+
+**Errors:** `400` (missing name/expression, invalid syntax, unknown or ambiguous field, non-numeric field without `count()`), `404` (project not found).
+
+### `PUT /api/stats/projects/:projectId/custom/:statId`
+
+Update a saved custom statistic's name and/or expression and return its recalculated value.
+
+**Path Params:** `projectId` (UUID), `statId` (UUID)
+
+**Request Body:** same shape as `POST`.
+
+**Response 200:** the updated statistic object with a freshly recalculated `value`.
+
+**Errors:** `400` (validation), `404` (project or statistic not found).
+
+### `DELETE /api/stats/projects/:projectId/custom/:statId`
+
+Delete a saved custom statistic.
+
+**Path Params:** `projectId` (UUID), `statId` (UUID)
+
+**Response 200:**
+```json
+{ "id": "uuid" }
+```
+
+**Errors:** `404` (statistic not found).
+
 ---
 
 ## 9. Logbook Export/Import

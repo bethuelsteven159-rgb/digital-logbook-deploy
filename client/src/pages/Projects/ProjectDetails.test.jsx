@@ -55,7 +55,33 @@ vi.mock('../../components/EditProjectModal', () => ({
 }));
 
 vi.mock('./NewEntryModal', () => ({
-  default: () => null,
+  default: ({ onClose, onCreate }) => (
+    <div
+      role="dialog"
+      aria-label="New Entry test modal"
+    >
+      <button
+        type="button"
+        onClick={() =>
+          onCreate({
+            name: 'Offline entry',
+            durationMinutes: 45,
+            occurredAt: '2026-09-12T08:00:00Z',
+            values: [],
+          }).catch(() => {})
+        }
+      >
+        Create mocked entry
+      </button>
+
+      <button
+        type="button"
+        onClick={onClose}
+      >
+        Close new entry
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('./EntryDetailsModal', () => ({
@@ -405,5 +431,278 @@ describe('ProjectDetails entry flow', () => {
         name: /^Edit entry$/i,
       }),
     ).toBeDisabled();
+  });
+});
+
+describe('ProjectDetails offline capture and sync', () => {
+  const offlinePayload = {
+    name: 'Offline entry',
+    durationMinutes: 45,
+    occurredAt: '2026-09-12T08:00:00Z',
+    values: [],
+  };
+
+  function readQueue() {
+    return JSON.parse(
+      localStorage.getItem('offlineEntryQueue') || '[]',
+    );
+  }
+
+  function setOnline(value) {
+    Object.defineProperty(window.navigator, 'onLine', {
+      value,
+      configurable: true,
+    });
+  }
+
+  function goOnline() {
+    setOnline(true);
+    window.dispatchEvent(new Event('online'));
+  }
+
+  function goOffline() {
+    setOnline(false);
+    window.dispatchEvent(new Event('offline'));
+  }
+
+  async function queueEntryWhileOffline(user) {
+    await user.click(
+      screen.getByRole('button', {
+        name: /Add New Entry/i,
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Create mocked entry',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(readQueue()).toHaveLength(1),
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    setOnline(true);
+
+    apiMocks.fetchSavedFilters.mockResolvedValue(
+      [],
+    );
+
+    apiMocks.fetchProjectDetails.mockResolvedValue(
+      detailsResponse(),
+    );
+
+    apiMocks.fetchProjects.mockResolvedValue([
+      project,
+    ]);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    setOnline(true);
+  });
+
+  it('queues new entries locally while offline', async () => {
+    const user = userEvent.setup();
+
+    setOnline(false);
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    expect(
+      screen.getByText(
+        /new entries will be saved locally/i,
+      ),
+    ).toBeInTheDocument();
+
+    await queueEntryWhileOffline(user);
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).not.toHaveBeenCalled();
+
+    const [queued] = readQueue();
+
+    expect(queued.projectId).toBe('project-1');
+    expect(queued.payload).toEqual(offlinePayload);
+    expect(queued.status).toBe('pending');
+    expect(queued.lastError).toBeNull();
+    expect(queued.localId).toBeTruthy();
+  });
+
+  it('syncs a queued entry once when the connection returns', async () => {
+    const user = userEvent.setup();
+
+    apiMocks.createProjectEntry.mockResolvedValue({
+      id: 'entry-2',
+    });
+
+    setOnline(false);
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await queueEntryWhileOffline(user);
+
+    goOnline();
+
+    await waitFor(() =>
+      expect(
+        apiMocks.createProjectEntry,
+      ).toHaveBeenCalledTimes(1),
+    );
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenCalledWith('project-1', offlinePayload);
+
+    await waitFor(() =>
+      expect(readQueue()).toEqual([]),
+    );
+
+    expect(
+      apiMocks.fetchProjectDetails.mock.calls.length,
+    ).toBeGreaterThanOrEqual(2);
+
+    await goOffline();
+
+    await screen.findByText(
+      /new entries will be saved locally/i,
+    );
+
+    goOnline();
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          /new entries will be saved locally/i,
+        ),
+      ).not.toBeInTheDocument(),
+    );
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a failed sync queued so the entry is not lost', async () => {
+    const user = userEvent.setup();
+
+    apiMocks.createProjectEntry.mockRejectedValue(
+      new Error('Server unreachable'),
+    );
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await queueEntryWhileOffline(user);
+
+    goOffline();
+
+    await screen.findByText(
+      /new entries will be saved locally/i,
+    );
+
+    goOnline();
+
+    await waitFor(() => {
+      const [item] = readQueue();
+
+      expect(item.status).toBe('failed');
+      expect(item.lastError).toBe(
+        'Server unreachable',
+      );
+    });
+
+    expect(readQueue()[0].payload).toEqual(
+      offlinePayload,
+    );
+
+    expect(
+      screen.getByText(
+        /1 entry waiting to sync/i,
+      ),
+    ).toBeInTheDocument();
+
+    apiMocks.createProjectEntry.mockResolvedValue({
+      id: 'entry-2',
+    });
+
+    goOffline();
+
+    await screen.findByText(
+      /new entries will be saved locally/i,
+    );
+
+    goOnline();
+
+    await waitFor(() =>
+      expect(readQueue()).toEqual([]),
+    );
+
+    // Direct attempt + failed sync + successful retry.
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenCalledTimes(3);
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenLastCalledWith(
+      'project-1',
+      offlinePayload,
+    );
+  });
+
+  it('does not queue entries the server rejected', async () => {
+    const user = userEvent.setup();
+    const consoleError = console.error;
+
+    console.error = vi.fn();
+
+    const rejection = new Error(
+      'Entry name is required',
+    );
+
+    rejection.status = 400;
+
+    apiMocks.createProjectEntry.mockRejectedValue(
+      rejection,
+    );
+
+    try {
+      renderPage();
+
+      await screen.findByText('First entry');
+
+      await user.click(
+        screen.getByRole('button', {
+          name: /Add New Entry/i,
+        }),
+      );
+
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Create mocked entry',
+        }),
+      );
+
+      await waitFor(() =>
+        expect(
+          apiMocks.createProjectEntry,
+        ).toHaveBeenCalledTimes(1),
+      );
+
+      expect(readQueue()).toEqual([]);
+    } finally {
+      console.error = consoleError;
+    }
   });
 });

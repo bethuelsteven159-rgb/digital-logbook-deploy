@@ -10,7 +10,8 @@
     "test:node": "node --test tests/*.test.js",
     "test:coverage": "vitest run --coverage && npm run test:node:coverage",
     "test:node:coverage": "c8 --reporter=text --reporter=lcov --report-dir=coverage-node --exclude=tests/** --exclude=**/*_mine* node --test tests/*.test.js",
-    "migrate:entry-links": "node scripts/applyEntryLinksMigration.js"
+    "migrate:entry-links": "node scripts/applyEntryLinksMigration.js",
+    "benchmark:custom-statistics": "node scripts/benchmarkCustomStatistics.js"
   },
   "keywords": [],
   "author": "",
