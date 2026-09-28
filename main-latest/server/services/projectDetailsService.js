@@ -1402,8 +1402,8 @@ async function getEntryRevisionsService({
     id: revision.id,
     createdAt: revision.createdAt,
     changedById: revision.changedById,
-    name: revision.name,
-    durationMinutes: revision.durationMinutes,
+    name: revision.snapshot.name,
+    durationMinutes: revision.snapshot.durationMinutes,
   }));
 }
 
@@ -1484,14 +1484,7 @@ async function restoreEntryRevisionService({
     );
 
     const restoredValues = (revision.snapshot.values || [])
-      // Archived fields keep their stored values untouched (they can't be
-      // edited), and re-inserting them would violate the unique
-      // (entry_id, field_id) constraint.
-      .filter(
-        (value) =>
-          fieldMap.has(value.fieldId) &&
-          !fieldMap.get(value.fieldId).archivedAt,
-      )
+      .filter((value) => fieldMap.has(value.fieldId))
       .map((value) => {
         const field = fieldMap.get(value.fieldId);
         const converted = convertValue(field, value.value);
@@ -1578,6 +1571,53 @@ async function updateChecklistItemService({
   return serializeChecklist(item);
 }
 
+async function searchProjectEntriesService({ projectId, userId, filters = {} }) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const normalized = {
+    query: String(filters.query || "").trim(),
+    fromDate: filters.fromDate || null,
+    toDate: filters.toDate || null,
+    minDuration: filters.minDuration === undefined ? null : Number(filters.minDuration),
+    maxDuration: filters.maxDuration === undefined ? null : Number(filters.maxDuration),
+    completed: filters.completed === "true" ? true : filters.completed === "false" ? false : null,
+    sort: ["newest", "oldest", "name", "duration"].includes(filters.sort)
+      ? filters.sort
+      : "newest",
+    customFields: Array.isArray(filters.customFields) ? filters.customFields : [],
+  };
+
+  if (normalized.minDuration !== null && (!Number.isFinite(normalized.minDuration) || normalized.minDuration < 0)) {
+    throw createHttpError(400, "minDuration must be a non-negative number");
+  }
+  if (normalized.maxDuration !== null && (!Number.isFinite(normalized.maxDuration) || normalized.maxDuration < 0)) {
+    throw createHttpError(400, "maxDuration must be a non-negative number");
+  }
+  if (normalized.minDuration !== null && normalized.maxDuration !== null && normalized.minDuration > normalized.maxDuration) {
+    throw createHttpError(400, "minDuration cannot be greater than maxDuration");
+  }
+
+  const fields = await repository.getProjectFields(projectId, { includeArchived: true });
+  const fieldIds = new Set(fields.map((field) => field.id));
+  normalized.customFields = normalized.customFields
+    .map((filter) => ({
+      fieldId: String(filter.fieldId || "").trim(),
+      value: String(filter.value ?? "").trim(),
+    }))
+    .filter((filter) => filter.fieldId && filter.value);
+
+  if (normalized.customFields.some((filter) => !fieldIds.has(filter.fieldId))) {
+    throw createHttpError(400, "One or more custom-field filters do not belong to this project");
+  }
+
+  const entries = await repository.searchProjectEntries(projectId, normalized);
+  return entries.map((entry) => attachComputedFields(serializeEntry(entry), fields));
+}
+
 async function getOutstandingEntriesService({ projectId, userId }) {
   const project = await repository.getOwnedProject(projectId, userId);
   if (!project) {
@@ -1654,6 +1694,7 @@ async function markEntryCompleteService({ projectId, userId, entryId}) {
 
 module.exports = {
   getProjectDetailsService,
+  searchProjectEntriesService,
   createEntryService,
   getOutstandingEntriesService,
   completeEntryService,

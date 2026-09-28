@@ -1,0 +1,37 @@
+codecov:
+  require_ci_to_pass: false
+
+comment:
+  layout: "reach, diff, flags, files, footer"
+  behavior: default
+  require_changes: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        informational: true
+
+fixes:
+  - "src/::client/src/"
+  - "controllers/::server/controllers/"
+  - "data/::server/data/"
+  - "middleware/::server/middleware/"
+  - "repositories/::server/repositories/"
+  - "routes/::server/routes/"
+  - "services/::server/services/"
+  - "validation/::server/validation/"
+  - "db.js::server/db.js"
+  - "server.js::server/server.js"
+
+ignore:
+  - "client/src/App_mine.jsx"
+  - "server/server_mine.js"
+  - "**/*.test.js"
+  - "**/*.test.jsx"
+  - "client/test/"
+  - "server/tests/"
