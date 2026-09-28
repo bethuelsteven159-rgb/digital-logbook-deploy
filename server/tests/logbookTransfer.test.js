@@ -1091,6 +1091,119 @@ test("repository skips fields and entries for unknown projects", async () => {
   }
 });
 
+test("repository defaults omitted optional numbers on a first import", async () => {
+  const data = makeImportData();
+
+  data.fields[0].position = null;
+  data.values[0].valueNumber = null;
+  data.checklist[0].position = null;
+
+  const queryable = createFakeQueryable();
+  const originalQuery = db.query;
+
+  db.query = queryable.query;
+
+  try {
+    const summary = await repository.insertImportedLogbook(
+      "user-1",
+      data,
+    );
+
+    assert.equal(summary.fieldsImported, 1);
+    assert.equal(summary.valuesImported, 1);
+    assert.equal(summary.checklistImported, 1);
+    assert.equal(summary.referencesImported, 1);
+
+    const fieldInsert = findStatements(
+      queryable.statements,
+      "INSERT INTO project_fields",
+    )[0];
+
+    assert.ok(fieldInsert);
+    assert.equal(fieldInsert.parameters[4], 0);
+
+    const valueInsert = findStatements(
+      queryable.statements,
+      "INSERT INTO entry_field_values",
+    )[0];
+
+    assert.ok(valueInsert);
+    assert.equal(valueInsert.parameters[3], null);
+
+    const checklistInsert = findStatements(
+      queryable.statements,
+      "INSERT INTO entry_checklist_items",
+    )[0];
+
+    assert.ok(checklistInsert);
+    assert.equal(checklistInsert.parameters[4], 0);
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
+test("repository defaults omitted optional numbers when updating existing rows", async () => {
+  const data = makeImportData();
+
+  data.fields[0].position = null;
+  data.values[0].valueNumber = null;
+  data.checklist[0].position = null;
+
+  const queryable = createFakeQueryable({
+    existingTables: [
+      "projects",
+      "project_fields",
+      "entries",
+      "entry_field_values",
+      "entry_checklist_items",
+      "entry_project_references",
+    ],
+  });
+  const originalQuery = db.query;
+
+  db.query = queryable.query;
+
+  try {
+    const summary = await repository.insertImportedLogbook(
+      "user-1",
+      data,
+    );
+
+    assert.equal(summary.fieldsImported, 0);
+    assert.equal(summary.fieldsUpdated, 1);
+    assert.equal(summary.valuesImported, 0);
+    assert.equal(summary.valuesUpdated, 1);
+    assert.equal(summary.checklistImported, 0);
+    assert.equal(summary.checklistUpdated, 1);
+
+    const fieldUpdate = findStatements(
+      queryable.statements,
+      "UPDATE project_fields",
+    )[0];
+
+    assert.ok(fieldUpdate);
+    assert.equal(fieldUpdate.parameters[2], 0);
+
+    const valueUpdate = findStatements(
+      queryable.statements,
+      "UPDATE entry_field_values",
+    )[0];
+
+    assert.ok(valueUpdate);
+    assert.equal(valueUpdate.parameters[1], null);
+
+    const checklistUpdate = findStatements(
+      queryable.statements,
+      "UPDATE entry_checklist_items",
+    )[0];
+
+    assert.ok(checklistUpdate);
+    assert.equal(checklistUpdate.parameters[2], 0);
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
 /*
  * Transaction wrapper
  */
