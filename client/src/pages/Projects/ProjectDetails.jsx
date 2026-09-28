@@ -31,6 +31,7 @@ import {
   markEntryComplete,
   fetchOutstandingEntries,
   fetchIncompleteEntries,
+  searchProjectEntries,
 } from "../../api/projectDetailsApi";
 
 import {
@@ -118,6 +119,19 @@ export default function ProjectDetails() {
   const [activeFilterId, setActiveFilterId] = useState(null);
   const [filteredEntries, setFilteredEntries] = useState(null);
   const [entryStatusView, setEntryStatusView] = useState(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFromDate, setSearchFromDate] = useState("");
+  const [searchToDate, setSearchToDate] = useState("");
+  const [searchMinDuration, setSearchMinDuration] = useState("");
+  const [searchMaxDuration, setSearchMaxDuration] = useState("");
+  const [searchCompleted, setSearchCompleted] = useState("all");
+  const [searchSort, setSearchSort] = useState("newest");
+  const [searchCustomFields, setSearchCustomFields] = useState([]);
+  const [searchActive, setSearchActive] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [showSearchFilters, setShowSearchFilters] = useState(false);
 
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
   const [editingFilterId, setEditingFilterId] = useState(null);
@@ -467,6 +481,8 @@ async function handleApplyFilter(filterId) {
   }
 
   try {
+    setSearchActive(false);
+    setSearchError("");
     const results = await applySavedFilter(id, filterId);
 
     setActiveFilterId(filterId);
@@ -542,6 +558,8 @@ async function handleShowOverdue() {
   }
 
   try {
+    setSearchActive(false);
+    setSearchError("");
     const results = await fetchOutstandingEntries(id);
 
     setEntryStatusView("overdue");
@@ -564,6 +582,8 @@ async function handleShowIncomplete() {
   }
 
   try {
+    setSearchActive(false);
+    setSearchError("");
     const results = await fetchIncompleteEntries(id);
 
     setEntryStatusView("incomplete");
@@ -640,6 +660,85 @@ async function handleShowIncomplete() {
       month: "short",
       year: "numeric",
     }).format(date);
+  }
+
+
+  function addSearchCustomField() {
+    const firstAvailableField = searchableFields[0]?.id || "";
+    setSearchCustomFields((current) => [
+      ...current,
+      { fieldId: firstAvailableField, value: "" },
+    ]);
+  }
+
+  function updateSearchCustomField(index, updates) {
+    setSearchCustomFields((current) =>
+      current.map((filter, filterIndex) =>
+        filterIndex === index ? { ...filter, ...updates } : filter,
+      ),
+    );
+  }
+
+  function removeSearchCustomField(index) {
+    setSearchCustomFields((current) =>
+      current.filter((_, filterIndex) => filterIndex !== index),
+    );
+  }
+
+  async function handleStructuredSearch(event) {
+    event?.preventDefault();
+
+    try {
+      setSearching(true);
+      setSearchError("");
+      setError("");
+
+      const completed =
+        searchCompleted === "completed"
+          ? true
+          : searchCompleted === "incomplete"
+            ? false
+            : undefined;
+
+      const results = await searchProjectEntries(id, {
+        query: searchQuery,
+        fromDate: searchFromDate,
+        toDate: searchToDate,
+        minDuration: searchMinDuration,
+        maxDuration: searchMaxDuration,
+        completed,
+        sort: searchSort,
+        customFields: searchCustomFields,
+      });
+
+      setActiveFilterId(null);
+      setEntryStatusView(null);
+      setFilteredEntries(Array.isArray(results) ? results : []);
+      setSearchActive(true);
+    } catch (requestError) {
+      console.error("Failed to search entries:", requestError);
+      setSearchError(
+        requestError.message || "Unable to search entries.",
+      );
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function handleClearStructuredSearch() {
+    setSearchQuery("");
+    setSearchFromDate("");
+    setSearchToDate("");
+    setSearchMinDuration("");
+    setSearchMaxDuration("");
+    setSearchCompleted("all");
+    setSearchSort("newest");
+    setSearchCustomFields([]);
+    setSearchError("");
+    setSearchActive(false);
+    setFilteredEntries(null);
+    setActiveFilterId(null);
+    setEntryStatusView(null);
   }
 
   function formatLoggedTime(minutes = 0) {
@@ -747,12 +846,33 @@ async function handleShowIncomplete() {
     ? details.fields
     : [];
 
- const entries =
-  filteredEntries !== null
-    ? filteredEntries
-    : Array.isArray(details.entries)
-      ? details.entries
-      : [];
+  const searchableFields = (() => {
+    const byId = new Map();
+    fields.forEach((field) => {
+      if (field?.id) byId.set(field.id, field);
+    });
+    const projectEntries = Array.isArray(details.entries) ? details.entries : [];
+    projectEntries.forEach((entry) => {
+      const values = Array.isArray(entry?.values) ? entry.values : [];
+      values.forEach((value) => {
+        const fieldId = value?.fieldId || value?.id;
+        if (!fieldId || byId.has(fieldId)) return;
+        byId.set(fieldId, {
+          id: fieldId,
+          name: value?.name || "Custom field",
+          fieldType: value?.type || "text",
+        });
+      });
+    });
+    return Array.from(byId.values());
+  })();
+
+  const entries =
+    filteredEntries !== null
+      ? filteredEntries
+      : Array.isArray(details.entries)
+        ? details.entries
+        : [];
 
   const displayEntries = [
     ...pendingEntries.map((item) => ({
@@ -1093,189 +1213,125 @@ async function handleShowIncomplete() {
     : "Show incomplete only"}
 </button>
 
-{showFilterBuilder && (
-  <div className="filter-builder">
-  <div className="form-field">
-    <label className="form-label">
-      Filter name
-    </label>
-
-    <input
-      className="form-input"
-      type="text"
-      value={filterName}
-      onChange={(event) =>
-        setFilterName(event.target.value)
-      }
-      placeholder="e.g. Long entries"
-    />
-  </div>
-
-  {filterConditions.map((condition, index) => (
-    <div className="filter-condition-row" key={index}>
-      <div className="form-field">
-        <label className="form-label">
-          Field
-        </label>
-
-        <select
-          className="form-select"
-          value={condition.targetField}
-          onChange={(event) =>
-            updateFilterCondition(index, {
-              targetField: event.target.value,
-            })
-          }
-        >
-          <option value="name">Entry name</option>
-          <option value="durationMinutes">
-            Time spent (minutes)
-          </option>
-
-          {fields.map((field) => (
-            <option
-              key={field.id}
-              value={field.id}
+            <form
+              className="structured-search"
+              onSubmit={handleStructuredSearch}
             >
-              {field.name}
-            </option>
-          ))}
-        </select>
-      </div>
+              <div className="structured-search-header">
+                <div>
+                  <h3 className="structured-search-title">Search entries</h3>
+                  <p className="structured-search-description">
+                    Find entries by name, tags, or custom field values. Add filters when you need to narrow the results.
+                  </p>
+                </div>
+                {searchActive && (
+                  <span className="search-result-count">
+                    {entries.length} result{entries.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
 
-      <div className="form-field">
-        <label className="form-label">
-          Condition
-        </label>
+              <div className="structured-search-main-row">
+                <input
+                  id="entry-search-query"
+                  className="form-input structured-search-main-input"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search entries..."
+                />
+                <button type="submit" className="btn-save" disabled={searching}>
+                  {searching ? "Searching..." : "Search"}
+                </button>
+              </div>
 
-        <select
-          className="form-select"
-          value={condition.operator}
-          onChange={(event) =>
-            updateFilterCondition(index, {
-              operator: event.target.value,
-            })
-          }
-        >
-          <option value="equals">Equals</option>
-          <option value="not_equals">Not equals</option>
-          <option value="contains">Contains</option>
-          <option value="greater_than">
-            Greater than
-          </option>
-          <option value="less_than">
-            Less than
-          </option>
-        </select>
-      </div>
+              <button
+                type="button"
+                className="search-more-filters-toggle"
+                onClick={() => setShowSearchFilters((current) => !current)}
+                aria-expanded={showSearchFilters}
+              >
+                {showSearchFilters ? "− Fewer filters" : "+ More filters"}
+              </button>
 
-      <div className="form-field">
-        <label className="form-label">
-          Value
-        </label>
+              {showSearchFilters && (
+                <div className="search-more-filters-panel">
+                  <div className="structured-search-grid">
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="entry-search-from">From date</label>
+                      <input id="entry-search-from" className="form-input" type="date" value={searchFromDate} onChange={(event) => setSearchFromDate(event.target.value)} />
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="entry-search-to">To date</label>
+                      <input id="entry-search-to" className="form-input" type="date" value={searchToDate} onChange={(event) => setSearchToDate(event.target.value)} />
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="entry-search-min-duration">Min minutes</label>
+                      <input id="entry-search-min-duration" className="form-input" type="number" min="0" value={searchMinDuration} onChange={(event) => setSearchMinDuration(event.target.value)} placeholder="Any" />
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="entry-search-max-duration">Max minutes</label>
+                      <input id="entry-search-max-duration" className="form-input" type="number" min="0" value={searchMaxDuration} onChange={(event) => setSearchMaxDuration(event.target.value)} placeholder="Any" />
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="entry-search-completed">Status</label>
+                      <select id="entry-search-completed" className="form-select" value={searchCompleted} onChange={(event) => setSearchCompleted(event.target.value)}>
+                        <option value="all">All statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="incomplete">Incomplete</option>
+                      </select>
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="entry-search-sort">Sort by</label>
+                      <select id="entry-search-sort" className="form-select" value={searchSort} onChange={(event) => setSearchSort(event.target.value)}>
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="name">Name A-Z</option>
+                        <option value="duration">Longest duration</option>
+                      </select>
+                    </div>
+                  </div>
 
-        <input
-          className="form-input"
-          type="text"
-          value={condition.value}
-          onChange={(event) =>
-            updateFilterCondition(index, {
-              value: event.target.value,
-            })
-          }
-          placeholder="e.g. 10"
-        />
-      </div>
+                  {searchableFields.length > 0 && (
+                    <div className="specific-field-filters">
+                      <div className="specific-field-filter-heading">
+                        <span className="form-label">Custom fields</span>
+                        <p className="specific-field-filter-help">Search for a value within a particular field.</p>
+                      </div>
 
-      {filterConditions.length > 1 && (
-        <button
-          type="button"
-          className="field-row-remove"
-          onClick={() => removeFilterCondition(index)}
-          aria-label="Remove condition"
-        >
-          <X size={14} />
-        </button>
-      )}
-    </div>
-  ))}
+                      {searchCustomFields.map((filter, index) => (
+                        <div className="custom-search-filter-row" key={`${index}-${filter.fieldId}`}>
+                          <select className="form-select" value={filter.fieldId} onChange={(event) => updateSearchCustomField(index, { fieldId: event.target.value })}>
+                            <option value="">Choose field</option>
+                            {searchableFields.map((field) => (
+                              <option key={field.id} value={field.id}>{field.name}</option>
+                            ))}
+                          </select>
+                          <input className="form-input" type="text" value={filter.value} onChange={(event) => updateSearchCustomField(index, { value: event.target.value })} placeholder="Value to match" />
+                          <button type="button" className="field-row-remove" onClick={() => removeSearchCustomField(index)} aria-label="Remove field filter">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
 
-  <button
-    type="button"
-    className="btn-add-field"
-    onClick={addFilterCondition}
-  >
-    <Plus size={14} />
-    Add condition
-  </button>
+                      <button type="button" className="btn-add-field custom-field-add-button" onClick={addSearchCustomField}>
+                        <Plus size={14} />
+                        {searchCustomFields.length > 0 ? "Add another field" : "Add field filter"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
- <div className="filter-builder-actions">
-   <button
-  type="button"
-  className="btn-cancel"
-  onClick={() => {
-    setShowFilterBuilder(false);
-    setEditingFilterId(null);
-    setFilterName("");
-    setFilterConditions([
-      { targetField: "durationMinutes", operator: "greater_than", value: "" },
-    ]);
-  }}
->
-  Cancel
-</button>
+              {searchError && <div className="structured-search-error">{searchError}</div>}
 
-    <button
-  type="button"
-  className="btn-save"
-  onClick={() => {
-    if (!filterName.trim()) {
-      return;
-    }
+              {(searchActive || searchQuery || searchFromDate || searchToDate || searchMinDuration || searchMaxDuration || searchCompleted !== "all" || searchSort !== "newest" || searchCustomFields.length > 0) && (
+                <div className="structured-search-clear-row">
+                  <button type="button" className="btn-cancel" onClick={handleClearStructuredSearch} disabled={searching}>Clear search</button>
+                </div>
+              )}
+            </form>
 
-    const criteria = filterConditions.map((condition) => {
-      const isBuiltIn =
-        condition.targetField === "name" ||
-        condition.targetField === "durationMinutes";
-
-      return isBuiltIn
-        ? {
-            fieldName: condition.targetField,
-            operator: condition.operator,
-            value: condition.value,
-          }
-        : {
-            fieldId: condition.targetField,
-            operator: condition.operator,
-            value: condition.value,
-          };
-    });
-
-    if (editingFilterId) {
-      handleUpdateSavedFilter(editingFilterId, {
-        name: filterName.trim(),
-        criteria,
-      });
-    } else {
-      handleCreateSavedFilter({
-        name: filterName.trim(),
-        criteria,
-      });
-    }
-
-    setShowFilterBuilder(false);
-    setEditingFilterId(null);
-    setFilterName("");
-    setFilterConditions([
-      { targetField: "durationMinutes", operator: "greater_than", value: "" },
-    ]);
-  }}
->
-  {editingFilterId ? "Update filter" : "Save filter"}
-</button>
-  </div>
-</div>
-)}
             {(pendingEntries.length > 0 || !isOnline) && (
               <div className="offline-banner">
                 {!isOnline && (
@@ -1301,14 +1357,40 @@ async function handleShowIncomplete() {
 
             {displayEntries.length === 0 ? (
               <div className="entries-empty">
-                <div className="empty-icon-wrap"><IconEntryLarge /></div>
-                <p className="empty-heading">No entries yet.</p>
-                <p className="empty-body">
-                  Add your first entry to start building a record for this project. Each entry captures a piece of your work.
+                <div className="empty-icon-wrap">
+                  <IconEntryLarge />
+                </div>
+
+                <p className="empty-heading">
+                  {searchActive ? "No entries match your search." : "No entries yet."}
                 </p>
-                {!project.archivedAt && (
-                  <button type="button" className="btn btn-primary" onClick={() => setShowEntryModal(true)}>
-                    <IconPlus /> Add New Entry
+
+                <p className="empty-body">
+                  {searchActive
+                    ? "Try changing or clearing one or more search filters."
+                    : "Add your first entry to start building a record for this project. Each entry captures a piece of your work."}
+                </p>
+
+                {searchActive && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleClearStructuredSearch}
+                  >
+                    Clear search
+                  </button>
+                )}
+
+                {!searchActive && !project.archivedAt && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() =>
+                      setShowEntryModal(true)
+                    }
+                  >
+                    <IconPlus />
+                    Add New Entry
                   </button>
                 )}
               </div>
@@ -2640,6 +2722,110 @@ function ProjectDetailsStyles() {
         font-size: 11px;
       }
 
+      .structured-search {
+        padding: 18px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #ffffff;
+      }
+
+      .structured-search-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .structured-search-title {
+        margin: 0;
+        color: #1a2340;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .structured-search-description {
+        margin: 4px 0 0;
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .search-result-count {
+        flex-shrink: 0;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3949ab;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .structured-search-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .search-field-wide {
+        grid-column: span 2;
+      }
+
+      .custom-search-filters {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .custom-search-filter-row {
+        display: grid;
+        grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .structured-search-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .structured-search-actions .btn-add-field {
+        width: auto;
+      }
+
+      .structured-search-actions-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .structured-search-error {
+        margin-top: 12px;
+        padding: 9px 11px;
+        border-radius: 8px;
+        background: #fff1f2;
+        color: #be123c;
+        font-size: 12px;
+      }
+
+      .saved-filters-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #fbfcfe;
+      }
+
+      .saved-filters-bar .form-select {
+        width: auto;
+        min-width: 190px;
+      }
+
       .calendar-toolbar,
       .board-toolbar {
         display: flex;
@@ -2693,6 +2879,10 @@ function ProjectDetailsStyles() {
       .view-empty { padding: 28px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 10px; }
 
       @media (max-width: 900px) {
+        .structured-search-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .breadcrumb-bar,
         .page-header,
         .project-content {
@@ -2753,6 +2943,109 @@ function ProjectDetailsStyles() {
 
         .entry-row-header {
           flex-direction: column;
+        }
+
+        .entry-row-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .structured-search {
+        padding: 18px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #ffffff;
+      }
+
+      .structured-search-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .structured-search-title {
+        margin: 0;
+        color: #1a2340;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .structured-search-description {
+        margin: 4px 0 0;
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .search-result-count {
+        flex-shrink: 0;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3949ab;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .structured-search-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .search-field-wide {
+        grid-column: span 2;
+      }
+
+      .custom-search-filters {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .custom-search-filter-row {
+        display: grid;
+        grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .structured-search-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .structured-search-actions .btn-add-field {
+        width: auto;
+      }
+
+      .structured-search-actions-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .structured-search-error {
+        margin-top: 12px;
+        padding: 9px 11px;
+        border-radius: 8px;
+        background: #fff1f2;
+        color: #be123c;
+        font-size: 12px;
+      }
+
+      .saved-filters-bar {
+          flex-wrap: wrap;
+        }
+
+        .saved-filters-bar .form-select {
+          width: 100%;
         }
       }
       .entry-feature-block {
@@ -3275,6 +3568,22 @@ function ProjectDetailsStyles() {
         }
       }
 
+
+      .structured-search-main-row { display: flex; gap: 12px; align-items: center; }
+      .structured-search-main-input { flex: 1; min-width: 0; }
+      .search-more-filters-toggle { margin-top: 12px; border: 0; background: transparent; padding: 4px 0; color: #334155; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+      .search-more-filters-toggle:hover { color: #1d4ed8; }
+      .search-more-filters-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+      .search-more-filters-panel .form-label, .specific-field-filters .form-label { color: #1e293b !important; font-weight: 700 !important; opacity: 1 !important; }
+      .specific-field-filters { margin-top: 18px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+      .specific-field-filter-heading { display: block; margin-bottom: 12px; }
+      .specific-field-filter-help { margin: 4px 0 0; color: #475569 !important; font-size: 12px; line-height: 1.45; opacity: 1 !important; }
+      .specific-field-filter-empty { margin: 8px 0 0; color: #64748b; font-size: 12px; }
+      .specific-field-filters .btn-add-field:not(:disabled) { color: #334155; border-color: #94a3b8; background: #fff; }
+      .custom-field-add-button { margin-top: 10px; }
+      .specific-field-filters .btn-add-field:disabled { color: #94a3b8; border-color: #cbd5e1; background: #f8fafc; cursor: not-allowed; opacity: 1; }
+      .structured-search-clear-row { display: flex; justify-content: flex-end; margin-top: 12px; }
+      @media (max-width: 720px) { .structured-search-main-row { flex-direction: column; align-items: stretch; } }
     `}</style>
   );
 }
@@ -3663,6 +3972,7 @@ function IconGrip() {
         r="1"
         fill="currentColor"
       />
+
 
       <circle
         cx="15"

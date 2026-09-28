@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   getProjectDetails,
+  searchProjectEntries,
   createProjectEntry,
   getOutstandingEntries,
   completeProjectEntry,
@@ -24,6 +25,11 @@ const router = express.Router();
 router.get(
   "/:projectId",
   getProjectDetails,
+);
+
+router.get(
+  "/:projectId/entries/search",
+  searchProjectEntries,
 );
 
 router.post(
