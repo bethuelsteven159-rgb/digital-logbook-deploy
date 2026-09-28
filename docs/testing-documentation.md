@@ -94,3 +94,9 @@ All feedback items have been addressed, with implemented improvements tracked ag
 ![Improvement suggestions](screenshots/user-feedback/part10feedback.jpeg)
 
 ![Overall rating](screenshots/user-feedback/part11feedback.jpeg)
+
+
+
+### Coverage - Entry Revision History
+
+The server/services/projectDetailsService.js service currently has **58.86% statement coverage, 52.71% branch coverage, 75.00% function coverage, and 58.75% line coverage**. The Vitest suite passes **125/125 tests**, including the revision-history and archived-field restore tests.
