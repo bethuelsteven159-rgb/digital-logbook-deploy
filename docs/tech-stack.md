@@ -95,9 +95,9 @@ Testing coverage is still being developed, with additional tests and final verif
 
 ## CI/CD
 
-**Gitea Actions** is used to automate parts of the development workflow.
+**Gitea Actions** was evaluated for automating parts of the development workflow, but no automated CI pipeline is currently configured in this repository — there is no `.gitea/workflows/` directory set up to run tests on pull requests.
 
-The current configuration runs automated tests when pull requests are created. This helps identify issues before changes are merged into the main development branches.
+In practice, tests are run manually by each developer (`npm test` in `server/` and `client/`) before opening a pull request, and reviewers are expected to confirm the test suite passes before approving a merge. Setting up an automated Gitea Actions workflow to run tests on every pull request remains a possible improvement for future sprints.
 
 ## Repository Structure
 

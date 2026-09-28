@@ -79,6 +79,30 @@ function mapEntryReference(row) {
   };
 }
 
+function mapEntryRevision(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    entryId: row.entry_id,
+    projectId: row.project_id,
+    changedById: row.changed_by_id,
+    snapshot: row.snapshot,
+    createdAt: row.created_at,
+  };
+}
+
+function mapEntryRevisionSummary(row) {
+  return {
+    id: row.id,
+    entryId: row.entry_id,
+    projectId: row.project_id,
+    changedById: row.changed_by_id,
+    name: row.name,
+    durationMinutes: row.duration_minutes,
+    createdAt: row.created_at,
+  };
+}
 function mapEntryRow(row) {
   return {
     id: row.entry_id,
@@ -353,6 +377,110 @@ function createRepository(queryable) {
         queryable,
         entries,
       );
+    },
+
+    async searchProjectEntries(projectId, filters = {}) {
+      const {
+        query,
+        fromDate,
+        toDate,
+        minDuration,
+        maxDuration,
+        completed,
+        customFields = [],
+        sort = "newest",
+      } = filters;
+
+      const conditions = ["e.project_id = $1"];
+      const params = [projectId];
+
+      const addParam = (value) => {
+        params.push(value);
+        return `$${params.length}`;
+      };
+
+      if (query) {
+        const search = addParam(`%${query}%`);
+        conditions.push(`(
+          e.name ILIKE ${search}
+          OR COALESCE(array_to_string(e.tags, ' '), '') ILIKE ${search}
+          OR EXISTS (
+            SELECT 1
+            FROM entry_field_values sv
+            WHERE sv.entry_id = e.id
+              AND (
+                COALESCE(sv.value_text, '') ILIKE ${search}
+                OR COALESCE(sv.value_number::text, '') ILIKE ${search}
+                OR COALESCE(sv.value_date::text, '') ILIKE ${search}
+              )
+          )
+        )`);
+      }
+
+      if (fromDate) {
+        const value = addParam(fromDate);
+        conditions.push(`e.occurred_at >= ${value}::date`);
+      }
+
+      if (toDate) {
+        const value = addParam(toDate);
+        conditions.push(`e.occurred_at < (${value}::date + INTERVAL '1 day')`);
+      }
+
+      if (minDuration !== null && minDuration !== undefined) {
+        const value = addParam(minDuration);
+        conditions.push(`e.duration_minutes >= ${value}`);
+      }
+
+      if (maxDuration !== null && maxDuration !== undefined) {
+        const value = addParam(maxDuration);
+        conditions.push(`e.duration_minutes <= ${value}`);
+      }
+
+      if (completed === true) conditions.push("e.completed_at IS NOT NULL");
+      if (completed === false) conditions.push("e.completed_at IS NULL");
+
+      for (const filter of customFields) {
+        const fieldId = addParam(filter.fieldId);
+        const value = addParam(`%${filter.value}%`);
+        conditions.push(`EXISTS (
+          SELECT 1
+          FROM entry_field_values fv
+          WHERE fv.entry_id = e.id
+            AND fv.field_id = ${fieldId}::uuid
+            AND (
+              COALESCE(fv.value_text, '') ILIKE ${value}
+              OR COALESCE(fv.value_number::text, '') ILIKE ${value}
+              OR COALESCE(fv.value_date::text, '') ILIKE ${value}
+            )
+        )`);
+      }
+
+      const orderBy = {
+        newest: "e.occurred_at DESC, e.created_at DESC",
+        oldest: "e.occurred_at ASC, e.created_at ASC",
+        name: "e.name ASC, e.occurred_at DESC",
+        duration: "e.duration_minutes DESC, e.occurred_at DESC",
+      }[sort] || "e.occurred_at DESC, e.created_at DESC";
+
+      const result = await queryable.query(
+        `SELECT e.id AS entry_id, e.project_id, e.created_by_id,
+                e.name AS entry_name, e.duration_minutes, e.occurred_at,
+                e.tags, e.due_at, e.completed_at,
+                e.created_at AS entry_created_at, e.updated_at AS entry_updated_at,
+                v.id AS value_id, v.field_id, v.value_text, v.value_number,
+                v.value_date, v.created_at AS value_created_at,
+                f.name AS field_name, f.archived_at AS field_archived_at,
+                f.field_type
+         FROM entries e
+         LEFT JOIN entry_field_values v ON v.entry_id = e.id
+         LEFT JOIN project_fields f ON f.id = v.field_id
+         WHERE ${conditions.join("\n           AND ")}
+         ORDER BY ${orderBy}, v.created_at ASC`,
+        params,
+      );
+
+      return attachEntryFeatures(queryable, groupEntries(result.rows));
     },
 
     async getOutstandingEntries(projectId) {
@@ -947,16 +1075,18 @@ function createRepository(queryable) {
          SET name = $2,
              duration_minutes = $3,
              due_at = $4,
+             tags = $5,
              updated_at = NOW()
          WHERE id = $1
          RETURNING id, project_id, created_by_id, name,
-                   duration_minutes, occurred_at, due_at, completed_at,
+                   duration_minutes, occurred_at, due_at, completed_at, tags,
                    created_at, updated_at`,
         [
           entryId,
           data.name,
           data.durationMinutes,
           data.dueAt ?? null,
+          data.tags || [],
         ],
       );
 
@@ -1145,6 +1275,56 @@ function createRepository(queryable) {
       );
 
       return result.rows[0] ? result.rows[0].tags : null;
+    },
+
+    async createEntryRevision({
+      entryId,
+      projectId,
+      changedById,
+      snapshot,
+    }) {
+      const result = await queryable.query(
+        `INSERT INTO entry_revisions
+           (entry_id, project_id, changed_by_id, snapshot)
+         VALUES ($1, $2, $3, $4::jsonb)
+         RETURNING id, entry_id, project_id, changed_by_id,
+                   snapshot, created_at`,
+        [
+          entryId,
+          projectId,
+          changedById,
+          JSON.stringify(snapshot),
+        ],
+      );
+
+      return mapEntryRevision(result.rows[0]);
+    },
+
+      async getEntryRevisions(entryId, limit = 100) {
+      const result = await queryable.query(
+        `SELECT id, entry_id, project_id, changed_by_id, created_at,
+                snapshot->>'name' AS name,
+                (snapshot->>'durationMinutes')::int AS duration_minutes
+         FROM entry_revisions
+         WHERE entry_id = $1
+         ORDER BY created_at DESC
+         LIMIT $2`,
+        [entryId, limit],
+      );
+
+      return result.rows.map(mapEntryRevisionSummary);
+    },
+    async getEntryRevisionById(revisionId) {
+      const result = await queryable.query(
+        `SELECT id, entry_id, project_id, changed_by_id,
+                snapshot, created_at
+         FROM entry_revisions
+         WHERE id = $1
+         LIMIT 1`,
+        [revisionId],
+      );
+
+      return mapEntryRevision(result.rows[0]);
     },
   };
 }

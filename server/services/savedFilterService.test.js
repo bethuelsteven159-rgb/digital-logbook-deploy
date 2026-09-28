@@ -200,3 +200,85 @@ describe("saved-filter service contract", () => {
     expect(remove).toHaveBeenCalledWith({ filterId, ownerId });
   });
 });
+
+describe("saved-filter custom-field filtering", () => {
+  const ownerId = "owner-qa";
+  const projectId = "project-qa";
+  const filterId = "filter-qa";
+
+  it("applies multiple criteria including a custom field", async () => {
+    const customFieldId = "11111111-1111-4111-8111-111111111111";
+
+    const criteria = [
+      {
+        fieldName: "name",
+        operator: "contains",
+        value: "report",
+      },
+      {
+        fieldId: customFieldId,
+        operator: "equals",
+        value: "High",
+      },
+    ];
+
+    vi.spyOn(repository, "getSavedFilterById").mockResolvedValue({
+      id: filterId,
+      ownerId,
+      projectId,
+      name: "High reports",
+      criteria,
+    });
+
+    vi.spyOn(projectRepository, "getOwnedProject").mockResolvedValue({
+      id: projectId,
+    });
+
+    vi.spyOn(projectRepository, "getProjectEntries").mockResolvedValue([
+      {
+        id: "entry-1",
+        name: "Final report",
+        values: [
+          {
+            fieldId: customFieldId,
+            valueText: "High",
+            valueNumber: null,
+            valueDate: null,
+            field: {
+              id: customFieldId,
+              name: "Priority",
+              fieldType: "short_text",
+              archivedAt: null,
+            },
+          },
+        ],
+      },
+      {
+        id: "entry-2",
+        name: "Final report",
+        values: [
+          {
+            fieldId: customFieldId,
+            valueText: "Low",
+            valueNumber: null,
+            valueDate: null,
+            field: {
+              id: customFieldId,
+              name: "Priority",
+              fieldType: "short_text",
+              archivedAt: null,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = await service.applySavedFilterService({
+      ownerId,
+      projectId,
+      filterId,
+    });
+
+    expect(result.map((entry) => entry.id)).toEqual(["entry-1"]);
+  });
+});

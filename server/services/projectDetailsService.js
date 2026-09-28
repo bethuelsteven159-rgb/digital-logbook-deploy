@@ -1225,8 +1225,18 @@ async function updateEntryService({
       const updatedRow =
         await tx.updateEntry(
           entryId,
-          data,
+          {
+            ...data,
+            tags: data.tags ?? entry.tags ?? [],
+          },
         );
+
+      await tx.createEntryRevision({
+        entryId,
+        projectId,
+        changedById: userId,
+        snapshot: serializeEntry(entry),
+      });
 
       await tx.replaceEntryFieldValues(
         entryId,
@@ -1379,9 +1389,151 @@ async function updateEntryService({
           updatedRow.occurred_at,
         updatedAt:
           updatedRow.updated_at,
+        dueAt:
+          updatedRow.due_at,
+        tags:
+          updatedRow.tags || [],
       };
     },
   );
+}
+
+async function getEntryRevisionsService({
+  projectId,
+  entryId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const entry = await repository.getEntryById(entryId);
+
+  if (!entry || entry.projectId !== projectId) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const revisions = await repository.getEntryRevisions(entryId);
+
+  return revisions.map((revision) => ({
+    id: revision.id,
+    createdAt: revision.createdAt,
+    changedById: revision.changedById,
+    name: revision.name,
+    durationMinutes: revision.durationMinutes,
+  }));
+}
+
+async function getEntryRevisionService({
+  projectId,
+  entryId,
+  revisionId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const entry = await repository.getEntryById(entryId);
+
+  if (!entry || entry.projectId !== projectId) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const revision = await repository.getEntryRevisionById(revisionId);
+
+  if (!revision || revision.entryId !== entryId) {
+    throw createHttpError(404, "Revision not found");
+  }
+
+  return revision.snapshot;
+}
+
+async function restoreEntryRevisionService({
+  projectId,
+  entryId,
+  revisionId,
+  userId,
+}) {
+  return repository.withTransaction(async (tx) => {
+    const project = await tx.getOwnedProject(projectId, userId);
+
+    if (!project) {
+      throw createHttpError(404, "Project not found");
+    }
+
+    if (project.archivedAt) {
+      throw createHttpError(
+        409,
+        "Archived projects cannot be edited",
+      );
+    }
+
+    const entry = await tx.getEntryById(entryId);
+
+    if (!entry || entry.projectId !== projectId) {
+      throw createHttpError(404, "Entry not found");
+    }
+
+    const revision = await tx.getEntryRevisionById(revisionId);
+
+    if (!revision || revision.entryId !== entryId) {
+      throw createHttpError(404, "Revision not found");
+    }
+
+    // Snapshot the current (pre-restore) state first, so restoring
+    // never destroys the version we're restoring from.
+    await tx.createEntryRevision({
+      entryId,
+      projectId,
+      changedById: userId,
+      snapshot: serializeEntry(entry),
+    });
+
+    const fields = await tx.getProjectFields(projectId, {
+      includeArchived: true,
+    });
+
+    const fieldMap = new Map(
+      fields.map((field) => [field.id, field]),
+    );
+
+    const restoredValues = (revision.snapshot.values || [])
+      // Archived fields keep their stored values untouched (they can't be
+      // edited), and re-inserting them would violate the unique
+      // (entry_id, field_id) constraint.
+      .filter(
+        (value) =>
+          fieldMap.has(value.fieldId) &&
+          !fieldMap.get(value.fieldId).archivedAt,
+      )
+      .map((value) => {
+        const field = fieldMap.get(value.fieldId);
+        const converted = convertValue(field, value.value);
+
+        return converted
+          ? { entryId, fieldId: value.fieldId, ...converted }
+          : null;
+      })
+      .filter(Boolean);
+
+    await tx.updateEntry(entryId, {
+      name: revision.snapshot.name,
+      durationMinutes: revision.snapshot.durationMinutes,
+      dueAt: revision.snapshot.dueAt,
+    });
+
+    await tx.replaceEntryFieldValues(entryId, restoredValues);
+
+    return attachComputedFields(
+      serializeEntry(await tx.getEntryById(entryId)),
+      fields,
+    );
+  });
 }
 
 async function deleteEntryService({ projectId, entryId, userId }) {
@@ -1443,6 +1595,53 @@ async function updateChecklistItemService({
   }
 
   return serializeChecklist(item);
+}
+
+async function searchProjectEntriesService({ projectId, userId, filters = {} }) {
+  const project = await repository.getOwnedProject(projectId, userId);
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const normalized = {
+    query: String(filters.query || "").trim(),
+    fromDate: filters.fromDate || null,
+    toDate: filters.toDate || null,
+    minDuration: filters.minDuration === undefined ? null : Number(filters.minDuration),
+    maxDuration: filters.maxDuration === undefined ? null : Number(filters.maxDuration),
+    completed: filters.completed === "true" ? true : filters.completed === "false" ? false : null,
+    sort: ["newest", "oldest", "name", "duration"].includes(filters.sort)
+      ? filters.sort
+      : "newest",
+    customFields: Array.isArray(filters.customFields) ? filters.customFields : [],
+  };
+
+  if (normalized.minDuration !== null && (!Number.isFinite(normalized.minDuration) || normalized.minDuration < 0)) {
+    throw createHttpError(400, "minDuration must be a non-negative number");
+  }
+  if (normalized.maxDuration !== null && (!Number.isFinite(normalized.maxDuration) || normalized.maxDuration < 0)) {
+    throw createHttpError(400, "maxDuration must be a non-negative number");
+  }
+  if (normalized.minDuration !== null && normalized.maxDuration !== null && normalized.minDuration > normalized.maxDuration) {
+    throw createHttpError(400, "minDuration cannot be greater than maxDuration");
+  }
+
+  const fields = await repository.getProjectFields(projectId, { includeArchived: true });
+  const fieldIds = new Set(fields.map((field) => field.id));
+  normalized.customFields = normalized.customFields
+    .map((filter) => ({
+      fieldId: String(filter.fieldId || "").trim(),
+      value: String(filter.value ?? "").trim(),
+    }))
+    .filter((filter) => filter.fieldId && filter.value);
+
+  if (normalized.customFields.some((filter) => !fieldIds.has(filter.fieldId))) {
+    throw createHttpError(400, "One or more custom-field filters do not belong to this project");
+  }
+
+  const entries = await repository.searchProjectEntries(projectId, normalized);
+  return entries.map((entry) => attachComputedFields(serializeEntry(entry), fields));
 }
 
 async function getOutstandingEntriesService({ projectId, userId }) {
@@ -1521,6 +1720,7 @@ async function markEntryCompleteService({ projectId, userId, entryId}) {
 
 module.exports = {
   getProjectDetailsService,
+  searchProjectEntriesService,
   createEntryService,
   getOutstandingEntriesService,
   completeEntryService,
@@ -1533,6 +1733,9 @@ module.exports = {
   updateEntryReferencesService,
   updateEntryService,
   deleteEntryService,
+  getEntryRevisionsService,
+  getEntryRevisionService,
+  restoreEntryRevisionService,
   serializeEntry,
   buildLinkedEntriesMap,
 };

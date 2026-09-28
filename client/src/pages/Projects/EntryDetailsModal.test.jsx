@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EntryDetailsModal from './EntryDetailsModal';
-
+process.env.TZ = 'Africa/Johannesburg';
 const entry = {
   id: 'entry-1',
   name: 'Practice session',
@@ -220,5 +220,93 @@ describe('EntryDetailsModal', () => {
     expect(
       screen.getAllByText('None').length,
     ).toBe(2);
+  });
+
+  it('reports the new checklist state when an item is toggled', async () => {
+    const user = userEvent.setup();
+    const onChecklistToggle = vi.fn();
+
+    render(
+      <EntryDetailsModal
+        entry={entry}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onChecklistToggle={onChecklistToggle}
+      />,
+    );
+
+    const prep = screen.getByRole('checkbox', {
+      name: 'Uncheck Prep',
+    });
+
+    expect(prep).toBeChecked();
+
+    await user.click(prep);
+
+    expect(
+      onChecklistToggle,
+    ).toHaveBeenCalledWith('entry-1', 'check-1', false);
+
+    const review = screen.getByRole('checkbox', {
+      name: 'Check Review',
+    });
+
+    expect(review).not.toBeChecked();
+
+    await user.click(review);
+
+    expect(
+      onChecklistToggle,
+    ).toHaveBeenLastCalledWith('entry-1', 'check-2', true);
+  });
+
+  it('disables a checklist item while it is being saved', () => {
+    render(
+      <EntryDetailsModal
+        entry={entry}
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onChecklistToggle={vi.fn()}
+        checklistSaving={{
+          'entry-1:check-2': true,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'Check Review',
+      }),
+    ).toBeDisabled();
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'Uncheck Prep',
+      }),
+    ).toBeEnabled();
+  });
+
+  it('disables checklist toggling for archived entries', () => {
+    render(
+      <EntryDetailsModal
+        entry={entry}
+        archived
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onChecklistToggle={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'Uncheck Prep',
+      }),
+    ).toBeDisabled();
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'Check Review',
+      }),
+    ).toBeDisabled();
   });
 });
