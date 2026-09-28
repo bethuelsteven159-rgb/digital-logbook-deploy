@@ -10,11 +10,12 @@ import {
 } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Zap } from "lucide-react";
 import EditProjectModal from "../../components/EditProjectModal";
 import NewEntryModal from "./NewEntryModal";
 import EditEntryModal from "./EditEntryModal";
 import EntryDetailsModal from "./EntryDetailsModal";
+import AutomationRulesModal from "./AutomationRulesModal";
 import CalendarView from "./CalendarView";
 import BoardView from "./BoardView";
 
@@ -125,6 +126,9 @@ export default function ProjectDetails() {
     showEditProjectModal,
     setShowEditProjectModal,
   ] = useState(false);
+
+  const [showAutomationRulesModal, setShowAutomationRulesModal] =
+    useState(false);
 
   const isOnline = useOnlineStatus();
 
@@ -890,6 +894,18 @@ export default function ProjectDetails() {
               Edit Project
             </button>
 
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                setShowAutomationRulesModal(true)
+              }
+              disabled={projectActionSaving}
+            >
+              <Zap size={14} />
+              Automation
+            </button>
+
             {!project.archivedAt && (
               <button
                 type="button"
@@ -1590,6 +1606,16 @@ export default function ProjectDetails() {
             setShowEditProjectModal(false)
           }
           onSave={handleUpdateProject}
+        />
+      )}
+
+      {showAutomationRulesModal && (
+        <AutomationRulesModal
+          projectId={id}
+          fields={fields}
+          onClose={() =>
+            setShowAutomationRulesModal(false)
+          }
         />
       )}
 

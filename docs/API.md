@@ -67,13 +67,17 @@ All API responses follow a consistent pattern:
 | 24 | PATCH | `/api/projects/filters/:filterId` | Yes |
 | 25 | GET | `/api/projects/:projectId/filters/:filterId/apply` | Yes |
 | 26 | DELETE | `/api/projects/filters/:filterId` | Yes |
-| 27 | GET | `/api/users/me/profile` | Yes |
-| 28 | PATCH | `/api/users/me/profile` | Yes |
-| 29 | GET | `/api/stats/dashboard` | Yes |
-| 30 | GET | `/api/stats/projects/:projectId` | Yes |
-| 31 | GET | `/api/logbook/export` | Yes |
-| 32 | POST | `/api/logbook/import` | Yes |
-| 33 | GET | `/api/dashboard` | Yes |
+| 27 | POST | `/api/projects/:projectId/automation-rules` | Yes |
+| 28 | GET | `/api/projects/:projectId/automation-rules` | Yes |
+| 29 | PATCH | `/api/projects/automation-rules/:ruleId` | Yes |
+| 30 | DELETE | `/api/projects/automation-rules/:ruleId` | Yes |
+| 31 | GET | `/api/users/me/profile` | Yes |
+| 32 | PATCH | `/api/users/me/profile` | Yes |
+| 33 | GET | `/api/stats/dashboard` | Yes |
+| 34 | GET | `/api/stats/projects/:projectId` | Yes |
+| 35 | GET | `/api/logbook/export` | Yes |
+| 36 | POST | `/api/logbook/import` | Yes |
+| 37 | GET | `/api/dashboard` | Yes |
 
 ---
 
@@ -586,7 +590,66 @@ Delete a saved filter.
 
 ---
 
-## 7. User Profile
+## 7. Automation Rules
+
+**Route file:** `server/routes/automationRules.js`
+**Controller:** `server/controllers/automationRuleController.js`
+**Auth:** Required (all endpoints)
+
+Automation rules run when a **new entry is created** (never on edit). A rule evaluates one condition against the created entry's field values; when it matches, its `add_tag` action adds a tag to the entry inside the same transaction. Condition fields must be active (non-archived, non-computed) project fields.
+
+### `POST /api/projects/:projectId/automation-rules`
+
+Create an automation rule for a project.
+
+**Path Params:** `projectId` (UUID)
+
+**Request Body (Zod-validated):**
+```json
+{
+  "name": "string (1-100 chars)",
+  "conditionFieldId": "uuid (active project field)",
+  "conditionOperator": "equals|not_equals|contains|greater_than|less_than",
+  "conditionValue": "string|number|boolean (optional)",
+  "actionType": "add_tag",
+  "actionValue": "string (1-30 chars, lowercased)",
+  "enabled": "boolean (default true)"
+}
+```
+
+Condition matching uses saved-filter semantics: missing entry values or condition values never match; `equals`/`not_equals` compare as strings; `contains` is case-insensitive; `greater_than`/`less_than` compare as numbers.
+
+**Response 201:** `{ "success": true, "data": { <automation rule object> } }`
+
+### `GET /api/projects/:projectId/automation-rules`
+
+List all automation rules for a project.
+
+**Path Params:** `projectId` (UUID)
+
+**Response 200:** `{ "success": true, "data": [<automation rule objects>] }`
+
+### `PATCH /api/projects/automation-rules/:ruleId`
+
+Update a rule's definition and/or `enabled` flag (at least one field required). Replaces the whole definition when definition fields are supplied.
+
+**Path Params:** `ruleId` (UUID)
+
+**Request Body (Zod-validated):** Any subset of the create schema.
+
+**Response 200:** `{ "success": true, "data": { <automation rule object> } }`
+
+### `DELETE /api/projects/automation-rules/:ruleId`
+
+Delete an automation rule.
+
+**Path Params:** `ruleId` (UUID)
+
+**Response 200:** `{ "success": true, "data": { "id": "uuid" } }`
+
+---
+
+## 8. User Profile
 
 **Route file:** `server/routes/users.js`
 **Controller:** `server/controllers/profileController.js`
@@ -638,7 +701,7 @@ The `avatarUrl` is validated by `validateAvatarUrl()` in `server/validation/prof
 
 ---
 
-## 8. Statistics
+## 9. Statistics
 
 **Route file:** `server/routes/stats.js`
 **Auth:** Required (all endpoints)
@@ -723,7 +786,7 @@ Custom-field statistics for a project.
 
 ---
 
-## 9. Logbook Export/Import
+## 10. Logbook Export/Import
 
 **Route file:** `server/routes/logbookTransfer.js`
 **Controller:** `server/controllers/logbookTransferController.js`
@@ -829,7 +892,7 @@ Import a previously exported logbook. Creates or updates projects, fields, entri
 
 ---
 
-## 10. Dashboard
+## 11. Dashboard
 
 **Route file:** `server/routes/dashboard.js`
 **Auth:** Required
@@ -881,6 +944,7 @@ All request validation uses **Zod** (with one imperative exception for avatar up
 |---|---|
 | `server/validation/entry.validation.js` | `createEntrySchema`, `updateEntrySchema`, `updateChecklistSchema`, `updateProjectReferencesSchema`, `updateEntryReferencesSchema`, `updateEntryProjectReferencesSchema` |
 | `server/validation/savedFilter.validation.js` | `createSavedFilterSchema` |
+| `server/validation/automationRule.validation.js` | `createAutomationRuleSchema`, `updateAutomationRuleSchema` |
 | `server/validation/profileAvatar.js` | `validateAvatarUrl` (imperative -- checks MIME, base64, magic bytes, max 512 KiB decoded) |
 | `server/services/projectFieldsService.js` | `fieldsSchema` (project field sync during project edit) |
 
@@ -888,7 +952,7 @@ All request validation uses **Zod** (with one imperative exception for avatar up
 
 ## Database Tables
 
-The API operates on 11 PostgreSQL tables (defined in `server/db/schema.sql`):
+The API operates on 12 PostgreSQL tables (11 defined in `server/db/schema.sql`, plus `automation_rules` added by `server/sql/20260927_automation_rules.sql`):
 
 | Table | Purpose |
 |---|---|
@@ -903,3 +967,4 @@ The API operates on 11 PostgreSQL tables (defined in `server/db/schema.sql`):
 | `entry_links` | Bidirectional entry links |
 | `project_project_references` | Project-to-project references |
 | `saved_filters` | User-defined saved filters (JSONB criteria) |
+| `automation_rules` | Entry-creation automation rules (condition + add_tag action) |

@@ -1,5 +1,6 @@
 const repository = require("../repositories/projectDetailsRepository");
 const { evaluateFormula } = require("./computedFieldService");
+const { applyAutomationRulesForEntry } = require("./automationRuleService");
 
 function createHttpError(statusCode, message) {
   const error = new Error(message);
@@ -565,6 +566,17 @@ async function createEntryService({ projectId, userId, data }) {
         linkedEntryIds,
       );
     }
+
+    await applyAutomationRulesForEntry({
+      tx,
+      projectId,
+      entryId: entry.id,
+      values: valuesToCreate.map((value) => ({
+        fieldId: value.fieldId,
+        value: serializeFieldValue(value),
+      })),
+      existingTags: entry.tags || [],
+    });
 
     const completeEntry =
       await tx.getEntryById(
