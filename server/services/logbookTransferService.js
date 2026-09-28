@@ -40,6 +40,7 @@ function exportLogbookService({ userId }) {
           name: entry.name,
           durationMinutes: entry.duration_minutes,
           occurredAt: toIso(entry.occurred_at),
+          archivedAt: toIso(entry.archived_at),
           createdAt: toIso(entry.created_at),
           updatedAt: toIso(entry.updated_at),
           values: data.values
@@ -143,3 +144,4 @@ async function importLogbookService({ userId, payload }) {
 }
 
 module.exports = { exportLogbookService, importLogbookService, validateImportPayload };
+
