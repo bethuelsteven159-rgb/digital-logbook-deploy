@@ -136,6 +136,28 @@ async function main() {
         getEntryRevisionsService({ projectId, entryId, userId }),
       );
 
+            await timeIt("baseline round trip (SELECT 1)", () =>
+        db.query("SELECT 1"),
+      );
+
+      await timeIt("raw list query, all columns", () =>
+        db.query(
+          `SELECT id, entry_id, project_id, changed_by_id, snapshot, created_at
+           FROM entry_revisions WHERE entry_id = $1 ORDER BY created_at DESC`,
+          [entryId],
+        ),
+      );
+
+      await timeIt("raw list query, summary columns only", () =>
+        db.query(
+          `SELECT id, changed_by_id, created_at,
+                  snapshot->>'name' AS name,
+                  (snapshot->>'durationMinutes')::int AS duration_minutes
+           FROM entry_revisions WHERE entry_id = $1 ORDER BY created_at DESC`,
+          [entryId],
+        ),
+      );
+
       const revisions = await getEntryRevisionsService({
         projectId,
         entryId,

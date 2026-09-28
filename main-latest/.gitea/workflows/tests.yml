@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install client dependencies
+        run: npm --prefix client ci
+
+      - name: Install server dependencies
+        run: npm --prefix server ci
+
+      - name: Run server tests with coverage
+        run: npm --prefix server run test:coverage
+
+      - name: Run client tests with coverage
+        run: npm --prefix client run test:coverage
+
+      - name: Upload coverage to Codecov
+        continue-on-error: true
+        uses: codecov/codecov-action@v5
+        with:
+          files: client/coverage/lcov.info,client/coverage-node/lcov.info,server/coverage/lcov.info,server/coverage-node/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: bethuelsteven159-rgb/digital-logbook-deploy
+          fail_ci_if_error: false

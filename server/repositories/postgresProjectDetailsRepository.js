@@ -91,6 +91,17 @@ function mapEntryRevision(row) {
   };
 }
 
+function mapEntryRevisionSummary(row) {
+  return {
+    id: row.id,
+    entryId: row.entry_id,
+    projectId: row.project_id,
+    changedById: row.changed_by_id,
+    name: row.name,
+    durationMinutes: row.duration_minutes,
+    createdAt: row.created_at,
+  };
+}
 function mapEntryRow(row) {
   return {
     id: row.entry_id,
@@ -1260,19 +1271,20 @@ function createRepository(queryable) {
       return mapEntryRevision(result.rows[0]);
     },
 
-    async getEntryRevisions(entryId) {
+      async getEntryRevisions(entryId, limit = 100) {
       const result = await queryable.query(
-        `SELECT id, entry_id, project_id, changed_by_id,
-                snapshot, created_at
+        `SELECT id, entry_id, project_id, changed_by_id, created_at,
+                snapshot->>'name' AS name,
+                (snapshot->>'durationMinutes')::int AS duration_minutes
          FROM entry_revisions
          WHERE entry_id = $1
-         ORDER BY created_at DESC`,
-        [entryId],
+         ORDER BY created_at DESC
+         LIMIT $2`,
+        [entryId, limit],
       );
 
-      return result.rows.map(mapEntryRevision);
+      return result.rows.map(mapEntryRevisionSummary);
     },
-
     async getEntryRevisionById(revisionId) {
       const result = await queryable.query(
         `SELECT id, entry_id, project_id, changed_by_id,

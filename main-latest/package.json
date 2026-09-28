@@ -1,0 +1,26 @@
+{
+  "name": "digital-notebook",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently -n client,server -c blue,green \"npm.cmd run dev --prefix client\" \"npm.cmd run dev --prefix server\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.0.2",
+    "concurrently": "^10.0.5",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
+    "vitest": "^5.0.1"
+  }
+}

@@ -119,6 +119,13 @@ function harness(failure) {
       return rows([]);
     }
     if (sql.startsWith("INSERT INTO entry_field_values")) {
+      // Mirror the real uq_entry_field_value (entry_id, field_id) constraint.
+      if (state.values.some((v) => v.field_id === args[1])) {
+        throw Object.assign(
+          new Error("duplicate key value violates unique constraint"),
+          { code: "23505" },
+        );
+      }
       state.values.push({
         id: id(10),
         field_id: args[1],
@@ -175,7 +182,13 @@ function harness(failure) {
       return rows(
         state.revisions
           .filter((r) => r.entry_id === args[0])
-          .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
+          .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+          .slice(0, args[1])
+          .map((r) => ({
+            ...r,
+            name: r.snapshot.name,
+            duration_minutes: r.snapshot.durationMinutes,
+          })),
       );
     }
     if (
@@ -343,5 +356,97 @@ describe("entry revision history", () => {
         userId: ownerId,
       }),
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("restoring a snapshot that includes an archived field's value does not duplicate or lose it", async () => {
+    const h = harness();
+    h.state().values.push({
+      id: id(9),
+      field_id: archivedId,
+      value_text: "Jane",
+      value_number: null,
+      value_date: null,
+      created_at: "2026-01-01",
+    });
+    await repository.archiveProjectFields([archivedId]);
+
+    await save(payload({ name: "Edited" }));
+    const [revision] = await getEntryRevisionsService({
+      projectId,
+      entryId,
+      userId: ownerId,
+    });
+
+    await restoreEntryRevisionService({
+      projectId,
+      entryId,
+      revisionId: revision.id,
+      userId: ownerId,
+    });
+
+    const archivedRows = h
+      .state()
+      .values.filter((v) => v.field_id === archivedId);
+    expect(archivedRows).toHaveLength(1);
+    expect(archivedRows[0].value_text).toBe("Jane");
+    expect(
+      Number(h.state().values.find((v) => v.field_id === activeId).value_number),
+    ).toBe(5);
+  });
+
+  it("repeated restores never delete history; each restore adds exactly one revision", async () => {
+    harness();
+    await save(payload({ name: "First edit" }));
+    await save(payload({ name: "Second edit" }));
+
+    const list = () =>
+      getEntryRevisionsService({ projectId, entryId, userId: ownerId });
+    const restore = (revisionId) =>
+      restoreEntryRevisionService({
+        projectId,
+        entryId,
+        revisionId,
+        userId: ownerId,
+      });
+
+    let revisions = await list();
+    expect(revisions.map((r) => r.name)).toEqual(["First edit", "Original"]);
+    const firstEdit = revisions[0];
+    const original = revisions[1];
+
+    expect((await restore(original.id)).name).toBe("Original");
+    expect((await list()).length).toBe(3);
+
+    expect((await restore(firstEdit.id)).name).toBe("First edit");
+    expect((await list()).length).toBe(4);
+
+    expect((await restore(original.id)).name).toBe("Original");
+    revisions = await list();
+    expect(revisions.length).toBe(5);
+    expect(revisions.map((r) => r.name)).toEqual(
+      expect.arrayContaining(["Original", "First edit", "Second edit"]),
+    );
+  });
+
+  it("restore leaves references untouched (it restores name, duration, due date and field values only)", async () => {
+    const h = harness();
+    await save(payload({ name: "Edited" }));
+    h.state().projects = [id(6)];
+    h.state().references = [id(7)];
+    const [revision] = await getEntryRevisionsService({
+      projectId,
+      entryId,
+      userId: ownerId,
+    });
+
+    await restoreEntryRevisionService({
+      projectId,
+      entryId,
+      revisionId: revision.id,
+      userId: ownerId,
+    });
+
+    expect(h.state().projects).toEqual([id(6)]);
+    expect(h.state().references).toEqual([id(7)]);
   });
 });
