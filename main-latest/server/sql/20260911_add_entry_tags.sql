@@ -1,5 +1,0 @@
-ALTER TABLE entries
-  ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
-
-CREATE INDEX IF NOT EXISTS idx_entries_tags
-  ON entries USING GIN (tags);
