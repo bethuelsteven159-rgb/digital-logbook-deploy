@@ -1063,16 +1063,18 @@ function createRepository(queryable) {
          SET name = $2,
              duration_minutes = $3,
              due_at = $4,
+             tags = $5,
              updated_at = NOW()
          WHERE id = $1
          RETURNING id, project_id, created_by_id, name,
-                   duration_minutes, occurred_at, due_at, completed_at,
+                   duration_minutes, occurred_at, due_at, completed_at, tags,
                    created_at, updated_at`,
         [
           entryId,
           data.name,
           data.durationMinutes,
           data.dueAt ?? null,
+          data.tags || [],
         ],
       );
 

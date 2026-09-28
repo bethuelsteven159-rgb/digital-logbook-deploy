@@ -1213,7 +1213,10 @@ async function updateEntryService({
       const updatedRow =
         await tx.updateEntry(
           entryId,
-          data,
+          {
+            ...data,
+            tags: data.tags ?? entry.tags ?? [],
+          },
         );
 
       await tx.createEntryRevision({
@@ -1374,6 +1377,10 @@ async function updateEntryService({
           updatedRow.occurred_at,
         updatedAt:
           updatedRow.updated_at,
+        dueAt:
+          updatedRow.due_at,
+        tags:
+          updatedRow.tags || [],
       };
     },
   );
