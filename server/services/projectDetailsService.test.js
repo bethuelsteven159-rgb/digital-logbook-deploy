@@ -31,6 +31,7 @@ function makeTransactionRepo(overrides = {}) {
       createdAt: "2026-09-12T00:00:00.000Z",
     }),
     createEntryFieldValues: vi.fn().mockResolvedValue(0),
+    getEnabledAutomationRules: vi.fn().mockResolvedValue([]),
     getOwnedProjectIds: vi.fn().mockResolvedValue([]),
     getOwnedEntryIds: vi.fn().mockResolvedValue([]),
     getEntriesByIdsForProject: vi.fn().mockResolvedValue([]),

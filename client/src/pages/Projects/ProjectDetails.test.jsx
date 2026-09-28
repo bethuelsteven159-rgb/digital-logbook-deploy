@@ -129,6 +129,19 @@ vi.mock('./EntryDetailsModal', () => ({
   ),
 }));
 
+vi.mock('./AutomationRulesModal', () => ({
+  default: ({ onClose }) => (
+    <div
+      role="dialog"
+      aria-label="Automation rules test modal"
+    >
+      <button type="button" onClick={onClose}>
+        Close automation
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('./EditEntryModal', () => ({
   default: ({
     onClose,
@@ -470,6 +483,34 @@ describe('ProjectDetails entry flow', () => {
         name: /^Edit entry$/i,
       }),
     ).toBeDisabled();
+  });
+
+  it('opens the automation rules modal from the header button', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('First entry'),
+      ).toBeInTheDocument(),
+    );
+
+    expect(
+      screen.queryByRole('dialog', {
+        name: 'Automation rules test modal',
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Automation' }),
+    );
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Automation rules test modal',
+      }),
+    ).toBeInTheDocument();
   });
 });
 

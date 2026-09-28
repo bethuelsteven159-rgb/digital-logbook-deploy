@@ -195,6 +195,46 @@ export async function updateSavedFilter(filterId, payload) {
   });
 }
 
+export async function fetchAutomationRules(projectId) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/automation-rules`);
+}
+
+export async function createAutomationRule(projectId, payload) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/automation-rules`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAutomationRule(ruleId, payload) {
+  if (!ruleId) {
+    throw new Error("Rule ID is required.");
+  }
+
+  return request(`/api/projects/automation-rules/${ruleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAutomationRule(ruleId) {
+  if (!ruleId) {
+    throw new Error("Rule ID is required.");
+  }
+
+  return request(`/api/projects/automation-rules/${ruleId}`, {
+    method: "DELETE",
+  });
+}
+
 
 export async function deleteProjectEntry(projectId, entryId) {
   if (!projectId || !entryId) {

@@ -639,6 +639,7 @@ function stubEntryTransaction(t, client) {
       throw new Error('Unexpected field creation');
     }),
     getEntriesByIdsForProject: t.mock.fn(async () => []),
+    getEnabledAutomationRules: t.mock.fn(async () => []),
     createEntry: t.mock.fn(async (data) => {
       writes.push({ kind: 'entry', data });
       return { id: newEntryId };

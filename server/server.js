@@ -7,6 +7,7 @@ const projectRoutes = require("./routes/projects");
 const projectDetailsRoutes = require("./routes/projectDetails");
 const recurringEntryRoutes = require("./routes/recurringEntries");
 const savedFiltersRoutes = require("./routes/savedFilters");
+const automationRulesRoutes = require("./routes/automationRules");
 const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
@@ -79,6 +80,12 @@ app.use(
   "/api/projects",
   requireAuth,
   savedFiltersRoutes,
+);
+
+app.use(
+  "/api/projects",
+  requireAuth,
+  automationRulesRoutes,
 );
 
 app.use(

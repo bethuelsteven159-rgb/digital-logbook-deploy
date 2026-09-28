@@ -1,4 +1,5 @@
 const db = require("../db");
+const { mapAutomationRule } = require("./postgresAutomationRuleRepository");
 
 function mapProject(row) {
   if (!row) return null;
@@ -1246,6 +1247,34 @@ function createRepository(queryable) {
       );
 
       return result.rows[0] || null;
+    },
+
+    async getEnabledAutomationRules(projectId) {
+      const result = await queryable.query(
+        `SELECT id, owner_id, project_id, name,
+                condition_field_id, condition_operator,
+                condition_value, action_type, action_value,
+                enabled, created_at, updated_at
+         FROM automation_rules
+         WHERE project_id = $1
+           AND enabled = TRUE`,
+        [projectId],
+      );
+
+      return result.rows.map(mapAutomationRule);
+    },
+
+    async setEntryTags(entryId, tags) {
+      const result = await queryable.query(
+        `UPDATE entries
+         SET tags = $2,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, tags`,
+        [entryId, tags],
+      );
+
+      return result.rows[0] ? result.rows[0].tags : null;
     },
 
     async createEntryRevision({
