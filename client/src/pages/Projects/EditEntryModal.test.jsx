@@ -639,3 +639,23 @@ describe('due date timezone safety', () => {
     expect(props.onSave.mock.calls[0][0].dueAt).toBeNull();
   });
 });
+
+describe('EditEntryModal - Morare Sprint 3 tag QA', () => {
+  it('loads existing tags, allows removal/addition, and saves the edited tag set', async () => {
+    const user = userEvent.setup();
+    const props = renderModal({
+      entry: { ...baseEntry, tags: ['research', 'old-tag'] },
+    });
+
+    expect(screen.getByText('research')).toBeInTheDocument();
+    expect(screen.getByText('old-tag')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Remove old-tag' }));
+    await user.type(screen.getByLabelText('Tags'), 'C++{Enter}');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(props.onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: ['research', 'c++'] }),
+    );
+  });
+});

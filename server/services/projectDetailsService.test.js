@@ -7,6 +7,7 @@ const repository = require("../repositories/projectDetailsRepository");
 const {
   createEntryService,
   getProjectDetailsService,
+  searchProjectEntriesService,
   deleteEntryService,
   updateEntryReferencesService,
 } = require("../services/projectDetailsService");
@@ -56,8 +57,12 @@ function makeTransactionRepo(overrides = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.spyOn(db, "query").mockImplementation(() => { throw new Error("Unexpected real database query"); });
-  vi.spyOn(db, "connect").mockImplementation(() => { throw new Error("Unexpected real database connection"); });
+  vi.spyOn(db, "query").mockImplementation(() => {
+    throw new Error("Unexpected real database query");
+  });
+  vi.spyOn(db, "connect").mockImplementation(() => {
+    throw new Error("Unexpected real database connection");
+  });
 });
 
 afterEach(() => {
@@ -236,6 +241,7 @@ describe("computed fields (US-105)", () => {
     position: 0,
     archivedAt: null,
   };
+
   const rate = {
     id: "field-rate",
     projectId: "project-1",
@@ -245,6 +251,7 @@ describe("computed fields (US-105)", () => {
     position: 1,
     archivedAt: null,
   };
+
   const total = {
     id: "field-total",
     projectId: "project-1",
@@ -291,6 +298,7 @@ describe("computed fields (US-105)", () => {
       archivedAt: null,
       createdAt: "2026-01-01T00:00:00.000Z",
     });
+
     repository.getProjectFields = vi.fn().mockResolvedValue(fields);
     repository.getProjectStats = vi.fn().mockResolvedValue({
       totalEntries: entries.length,
@@ -303,132 +311,235 @@ describe("computed fields (US-105)", () => {
   }
 
   function computedValueOf(result) {
-    return result.entries[0].values.find((value) => value.type === "computed");
+    return result.entries[0].values.find(
+      (value) => value.type === "computed",
+    );
   }
 
-  test("attaches computed values to entries returned by getProjectDetailsService", async () => {
-    mockProjectDetails({
-      fields: [hours, rate, total],
-      entries: [entryRow({ values: [entryValue(hours, "3"), entryValue(rate, "20")] })],
-    });
-
-    const result = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
-
-    expect(result.entries[0].values.map((value) => value.name)).toEqual([
-      "Hours",
-      "Rate",
-      "Total",
-    ]);
-    expect(computedValueOf(result)).toMatchObject({
-      fieldId: "field-total",
-      name: "Total",
-      archived: false,
-      value: 60,
-    });
-  });
-
-  test("recalculates computed values from current source values on every read", async () => {
-    mockProjectDetails({
-      fields: [hours, rate, total],
-      entries: [entryRow({ values: [entryValue(hours, "3"), entryValue(rate, "20")] })],
-    });
-
-    const first = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
-
-    repository.getProjectEntries.mockResolvedValue([
-      entryRow({ values: [entryValue(hours, "4"), entryValue(rate, "25")] }),
-    ]);
-    const second = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
-
-    expect(computedValueOf(first).value).toBe(60);
-    expect(computedValueOf(second).value).toBe(100);
-  });
-
-  test("returns a null computed value when a source value is missing", async () => {
-    mockProjectDetails({
-      fields: [hours, rate, total],
-      entries: [entryRow({ values: [entryValue(hours, "3")] })],
-    });
-
-    const result = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
-
-    expect(computedValueOf(result).value).toBeNull();
-  });
-
-  test("keeps archived computed fields for historical entries and hides them from newer entries", async () => {
-    const archivedTotal = { ...total, archivedAt: "2026-08-15T00:00:00.000Z" };
-    mockProjectDetails({
-      fields: [hours, rate, archivedTotal],
-      entries: [
-        entryRow({
-          id: "entry-old",
-          createdAt: "2026-08-01T00:00:00.000Z",
-          values: [entryValue(hours, "3"), entryValue(rate, "20")],
-        }),
-        entryRow({
-          id: "entry-new",
-          createdAt: "2026-09-01T00:00:00.000Z",
-          values: [entryValue(hours, "3"), entryValue(rate, "20")],
-        }),
-      ],
-    });
-
-    const result = await getProjectDetailsService({ projectId: "project-1", userId: "user-1" });
-    const oldEntry = result.entries.find((entry) => entry.id === "entry-old");
-    const newEntry = result.entries.find((entry) => entry.id === "entry-new");
-
-    expect(oldEntry.values.find((value) => value.fieldId === "field-total")).toMatchObject({
-      type: "computed",
-      archived: true,
-      value: 60,
-    });
-    expect(newEntry.values.some((value) => value.fieldId === "field-total")).toBe(false);
-    expect(result.fields.some((field) => field.id === "field-total")).toBe(false);
-  });
-
-  test("createEntryService persists a new computed field formula and returns its computed value", async () => {
-    const txRepo = makeTransactionRepo({
-      getProjectFields: vi.fn()
-        .mockResolvedValueOnce([hours, rate])
-        .mockResolvedValueOnce([hours, rate, total]),
-      createProjectField: vi.fn().mockResolvedValue(total),
-      getEntryById: vi.fn().mockResolvedValue(
-        entryRow({ values: [entryValue(hours, "3"), entryValue(rate, "20")] }),
-      ),
-    });
-
-    repository.withTransaction = vi.fn((work) => work(txRepo));
-
-    const result = await createEntryService({
-      projectId: "project-1",
-      userId: "user-1",
-      data: {
-        name: "Lab Session",
-        durationMinutes: 30,
-        tags: [],
-        values: [
-          { fieldId: "field-hours", value: 3 },
-          { fieldId: "field-rate", value: 20 },
+  test(
+    "attaches computed values to entries returned by getProjectDetailsService",
+    async () => {
+      mockProjectDetails({
+        fields: [hours, rate, total],
+        entries: [
+          entryRow({
+            values: [
+              entryValue(hours, "3"),
+              entryValue(rate, "20"),
+            ],
+          }),
         ],
-        newFields: [{ name: "Total", type: "computed", formula: "Hours * Rate" }],
-      },
-    });
+      });
 
-    expect(txRepo.createProjectField).toHaveBeenCalledWith(
-      expect.objectContaining({
+      const result = await getProjectDetailsService({
         projectId: "project-1",
-        name: "Total",
-        fieldType: "computed",
-        formula: "Hours * Rate",
-      }),
-    );
-    expect(result.values.find((value) => value.fieldId === "field-total")).toMatchObject({
-      type: "computed",
-      value: 60,
-    });
-  });
-});
+        userId: "user-1",
+      });
 
+      expect(result.entries[0].values.map((value) => value.name)).toEqual([
+        "Hours",
+        "Rate",
+        "Total",
+      ]);
+
+      expect(computedValueOf(result)).toMatchObject({
+        fieldId: "field-total",
+        name: "Total",
+        archived: false,
+        value: 60,
+      });
+    },
+  );
+
+  test(
+    "recalculates computed values from current source values on every read",
+    async () => {
+      mockProjectDetails({
+        fields: [hours, rate, total],
+        entries: [
+          entryRow({
+            values: [
+              entryValue(hours, "3"),
+              entryValue(rate, "20"),
+            ],
+          }),
+        ],
+      });
+
+      const first = await getProjectDetailsService({
+        projectId: "project-1",
+        userId: "user-1",
+      });
+
+      repository.getProjectEntries.mockResolvedValue([
+        entryRow({
+          values: [
+            entryValue(hours, "4"),
+            entryValue(rate, "25"),
+          ],
+        }),
+      ]);
+
+      const second = await getProjectDetailsService({
+        projectId: "project-1",
+        userId: "user-1",
+      });
+
+      expect(computedValueOf(first).value).toBe(60);
+      expect(computedValueOf(second).value).toBe(100);
+    },
+  );
+
+  test(
+    "returns a null computed value when a source value is missing",
+    async () => {
+      mockProjectDetails({
+        fields: [hours, rate, total],
+        entries: [
+          entryRow({
+            values: [entryValue(hours, "3")],
+          }),
+        ],
+      });
+
+      const result = await getProjectDetailsService({
+        projectId: "project-1",
+        userId: "user-1",
+      });
+
+      expect(computedValueOf(result).value).toBeNull();
+    },
+  );
+
+  test(
+    "keeps archived computed fields for historical entries and hides them from newer entries",
+    async () => {
+      const archivedTotal = {
+        ...total,
+        archivedAt: "2026-08-15T00:00:00.000Z",
+      };
+
+      mockProjectDetails({
+        fields: [hours, rate, archivedTotal],
+        entries: [
+          entryRow({
+            id: "entry-old",
+            createdAt: "2026-08-01T00:00:00.000Z",
+            values: [
+              entryValue(hours, "3"),
+              entryValue(rate, "20"),
+            ],
+          }),
+          entryRow({
+            id: "entry-new",
+            createdAt: "2026-09-01T00:00:00.000Z",
+            values: [
+              entryValue(hours, "3"),
+              entryValue(rate, "20"),
+            ],
+          }),
+        ],
+      });
+
+      const result = await getProjectDetailsService({
+        projectId: "project-1",
+        userId: "user-1",
+      });
+
+      const oldEntry = result.entries.find(
+        (entry) => entry.id === "entry-old",
+      );
+
+      const newEntry = result.entries.find(
+        (entry) => entry.id === "entry-new",
+      );
+
+      expect(
+        oldEntry.values.find(
+          (value) => value.fieldId === "field-total",
+        ),
+      ).toMatchObject({
+        type: "computed",
+        archived: true,
+        value: 60,
+      });
+
+      expect(
+        newEntry.values.some(
+          (value) => value.fieldId === "field-total",
+        ),
+      ).toBe(false);
+
+      expect(
+        result.fields.some((field) => field.id === "field-total"),
+      ).toBe(false);
+    },
+  );
+
+  test(
+    "createEntryService persists a new computed field formula and returns its computed value",
+    async () => {
+      const txRepo = makeTransactionRepo({
+        getProjectFields: vi
+          .fn()
+          .mockResolvedValueOnce([hours, rate])
+          .mockResolvedValueOnce([hours, rate, total]),
+
+        createProjectField: vi.fn().mockResolvedValue(total),
+
+        getEntryById: vi.fn().mockResolvedValue(
+          entryRow({
+            values: [
+              entryValue(hours, "3"),
+              entryValue(rate, "20"),
+            ],
+          }),
+        ),
+      });
+
+      repository.withTransaction = vi.fn((work) => work(txRepo));
+
+      const result = await createEntryService({
+        projectId: "project-1",
+        userId: "user-1",
+        data: {
+          name: "Lab Session",
+          durationMinutes: 30,
+          tags: [],
+          values: [
+            { fieldId: "field-hours", value: 3 },
+            { fieldId: "field-rate", value: 20 },
+          ],
+          newFields: [
+            {
+              name: "Total",
+              type: "computed",
+              formula: "Hours * Rate",
+            },
+          ],
+        },
+      });
+
+      expect(txRepo.createProjectField).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: "project-1",
+          name: "Total",
+          fieldType: "computed",
+          formula: "Hours * Rate",
+        }),
+      );
+
+      expect(
+        result.values.find(
+          (value) => value.fieldId === "field-total",
+        ),
+      ).toMatchObject({
+        type: "computed",
+        value: 60,
+      });
+    },
+  );
+});
 
 describe("deleteEntryService", () => {
   test("deletes an entry owned by the signed-in user", async () => {
@@ -436,9 +547,11 @@ describe("deleteEntryService", () => {
       id: "project-1",
       ownerId: "user-1",
     });
+
     repository.getOwnedEntry = vi.fn().mockResolvedValue({
       id: "entry-1",
     });
+
     repository.deleteEntry = vi.fn().mockResolvedValue(true);
 
     const result = await deleteEntryService({
@@ -451,7 +564,11 @@ describe("deleteEntryService", () => {
       "entry-1",
       "project-1",
     );
-    expect(result).toEqual({ id: "entry-1", deleted: true });
+
+    expect(result).toEqual({
+      id: "entry-1",
+      deleted: true,
+    });
   });
 
   test("rejects deletion when the project is not owned by the user", async () => {
@@ -463,10 +580,11 @@ describe("deleteEntryService", () => {
         entryId: "entry-1",
         userId: "user-1",
       }),
-    ).rejects.toMatchObject({ statusCode: 404 });
+    ).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 });
-
 
 describe("entry-reference contract", () => {
   function internalReference(target) {
@@ -481,95 +599,579 @@ describe("entry-reference contract", () => {
 
   function referenceTransaction(existing = []) {
     let targets = [...existing];
+
     const tx = makeTransactionRepo({
-      getOwnedEntry: vi.fn().mockResolvedValue({ id: "entry-1" }),
+      getOwnedEntry: vi.fn().mockResolvedValue({
+        id: "entry-1",
+      }),
+
       getOwnedEntryIds: vi.fn(async (ids) => ids),
-      getEntryReferences: vi.fn(async () => targets.map(internalReference)),
+
+      getEntryReferences: vi.fn(async () =>
+        targets.map(internalReference),
+      ),
+
       getEntryById: vi.fn(async () => ({
         id: "entry-1",
         entryReferences: targets.map(internalReference),
       })),
-      createEntryReferences: vi.fn(async (_id, ids) => { targets.push(...ids); }),
+
+      createEntryReferences: vi.fn(async (_id, ids) => {
+        targets.push(...ids);
+      }),
+
       removeEntryReferences: vi.fn(async (_id, ids) => {
         targets = targets.filter((id) => !ids.includes(id));
       }),
     });
+
     repository.withTransaction = vi.fn((work) => work(tx));
+
     return tx;
   }
 
   function create(referenceEntryIds) {
     return createEntryService({
-      projectId: "project-1", userId: "user-1",
-      data: { name: "Work", durationMinutes: 30, values: [], newFields: [], referenceEntryIds },
+      projectId: "project-1",
+      userId: "user-1",
+      data: {
+        name: "Work",
+        durationMinutes: 30,
+        values: [],
+        newFields: [],
+        referenceEntryIds,
+      },
     });
   }
 
   function update(entryIds) {
-    return updateEntryReferencesService({ entryId: "entry-1", userId: "user-1", entryIds });
+    return updateEntryReferencesService({
+      entryId: "entry-1",
+      userId: "user-1",
+      entryIds,
+    });
   }
 
-  test("transaction reference methods match the real repository interface", () => {
-    const tx = makeTransactionRepo();
-    for (const name of ["createEntryReferences", "removeEntryReferences"]) {
-      expect(typeof repository[name]).toBe("function");
-      expect(typeof tx[name]).toBe("function");
-    }
-    expect(tx.createEntryEntryReferences).toBeUndefined();
-    expect(tx.removeEntryEntryReferences).toBeUndefined();
-  });
+  test(
+    "transaction reference methods match the real repository interface",
+    () => {
+      const tx = makeTransactionRepo();
 
-  test("creates references and serializes target IDs using the public entryId property", async () => {
-    const tx = referenceTransaction();
-    const result = await create(["entry-2"]);
-    expect(tx.getOwnedEntryIds).toHaveBeenCalledWith(["entry-2"], "user-1");
-    expect(tx.createEntryReferences).toHaveBeenCalledWith("entry-1", ["entry-2"]);
-    expect(result.entryReferences).toEqual([{
-      id: "relationship-entry-2", entryId: "entry-2", entryName: "Name entry-2",
-      projectId: "project-2", projectName: "Other project",
-    }]);
-  });
+      for (const name of [
+        "createEntryReferences",
+        "removeEntryReferences",
+      ]) {
+        expect(typeof repository[name]).toBe("function");
+        expect(typeof tx[name]).toBe("function");
+      }
+
+      expect(tx.createEntryEntryReferences).toBeUndefined();
+      expect(tx.removeEntryEntryReferences).toBeUndefined();
+    },
+  );
+
+  test(
+    "creates references and serializes target IDs using the public entryId property",
+    async () => {
+      const tx = referenceTransaction();
+
+      const result = await create(["entry-2"]);
+
+      expect(tx.getOwnedEntryIds).toHaveBeenCalledWith(
+        ["entry-2"],
+        "user-1",
+      );
+
+      expect(tx.createEntryReferences).toHaveBeenCalledWith(
+        "entry-1",
+        ["entry-2"],
+      );
+
+      expect(result.entryReferences).toEqual([
+        {
+          id: "relationship-entry-2",
+          entryId: "entry-2",
+          entryName: "Name entry-2",
+          projectId: "project-2",
+          projectName: "Other project",
+        },
+      ]);
+    },
+  );
 
   test.each([
-    ["adds", ["entry-2"], ["entry-2", "entry-3"], ["entry-3"], []],
-    ["removes", ["entry-2", "entry-3"], ["entry-2"], [], ["entry-3"]],
-    ["replaces", ["entry-2"], ["entry-3"], ["entry-3"], ["entry-2"]],
-    ["clears", ["entry-2", "entry-3"], [], [], ["entry-2", "entry-3"]],
-    ["preserves unchanged", ["entry-2"], ["entry-2"], [], []],
-  ])("%s references", async (_label, existing, desired, added, removed) => {
-    const tx = referenceTransaction(existing);
-    const result = await update(desired);
-    if (added.length) expect(tx.createEntryReferences).toHaveBeenCalledWith("entry-1", added);
-    else expect(tx.createEntryReferences).not.toHaveBeenCalled();
-    if (removed.length) expect(tx.removeEntryReferences).toHaveBeenCalledWith("entry-1", removed);
-    else expect(tx.removeEntryReferences).not.toHaveBeenCalled();
-    expect(result.entryReferences.map((ref) => ref.entryId)).toEqual(desired);
-    for (const ref of result.entryReferences) expect(ref).not.toHaveProperty("referencedEntryId");
-  });
+    [
+      "adds",
+      ["entry-2"],
+      ["entry-2", "entry-3"],
+      ["entry-3"],
+      [],
+    ],
+    [
+      "removes",
+      ["entry-2", "entry-3"],
+      ["entry-2"],
+      [],
+      ["entry-3"],
+    ],
+    [
+      "replaces",
+      ["entry-2"],
+      ["entry-3"],
+      ["entry-3"],
+      ["entry-2"],
+    ],
+    [
+      "clears",
+      ["entry-2", "entry-3"],
+      [],
+      [],
+      ["entry-2", "entry-3"],
+    ],
+    [
+      "preserves unchanged",
+      ["entry-2"],
+      ["entry-2"],
+      [],
+      [],
+    ],
+  ])(
+    "%s references",
+    async (_label, existing, desired, added, removed) => {
+      const tx = referenceTransaction(existing);
 
-  test.each(["create", "update"])("%s rejects self references", async (operation) => {
-    const tx = referenceTransaction();
-    await expect((operation === "create" ? create : update)(["entry-1"]))
-      .rejects.toMatchObject({ statusCode: 400, message: "An entry cannot reference itself" });
-    expect(tx.createEntryReferences).not.toHaveBeenCalled();
-    expect(tx.removeEntryReferences).not.toHaveBeenCalled();
-  });
+      const result = await update(desired);
 
-  test.each(["create", "update"])("%s rejects targets not owned by the user", async (operation) => {
-    const tx = referenceTransaction();
-    tx.getOwnedEntryIds.mockResolvedValue([]);
-    await expect((operation === "create" ? create : update)(["entry-2"]))
-      .rejects.toMatchObject({ statusCode: 400, message: "One of the referenced entries does not belong to you" });
-    expect(tx.createEntryReferences).not.toHaveBeenCalled();
-    expect(tx.removeEntryReferences).not.toHaveBeenCalled();
-  });
+      if (added.length) {
+        expect(tx.createEntryReferences).toHaveBeenCalledWith(
+          "entry-1",
+          added,
+        );
+      } else {
+        expect(tx.createEntryReferences).not.toHaveBeenCalled();
+      }
+
+      if (removed.length) {
+        expect(tx.removeEntryReferences).toHaveBeenCalledWith(
+          "entry-1",
+          removed,
+        );
+      } else {
+        expect(tx.removeEntryReferences).not.toHaveBeenCalled();
+      }
+
+      expect(
+        result.entryReferences.map((ref) => ref.entryId),
+      ).toEqual(desired);
+
+      for (const ref of result.entryReferences) {
+        expect(ref).not.toHaveProperty("referencedEntryId");
+      }
+    },
+  );
+
+  test.each(["create", "update"])(
+    "%s rejects self references",
+    async (operation) => {
+      const tx = referenceTransaction();
+
+      await expect(
+        (operation === "create" ? create : update)(["entry-1"]),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "An entry cannot reference itself",
+      });
+
+      expect(tx.createEntryReferences).not.toHaveBeenCalled();
+      expect(tx.removeEntryReferences).not.toHaveBeenCalled();
+    },
+  );
+
+  test.each(["create", "update"])(
+    "%s rejects targets not owned by the user",
+    async (operation) => {
+      const tx = referenceTransaction();
+
+      tx.getOwnedEntryIds.mockResolvedValue([]);
+
+      await expect(
+        (operation === "create" ? create : update)(["entry-2"]),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message:
+          "One of the referenced entries does not belong to you",
+      });
+
+      expect(tx.createEntryReferences).not.toHaveBeenCalled();
+      expect(tx.removeEntryReferences).not.toHaveBeenCalled();
+    },
+  );
 
   test("update rejects a source entry not owned by the user", async () => {
     const tx = referenceTransaction();
+
     tx.getOwnedEntry.mockResolvedValue(null);
-    await expect(update(["entry-2"])).rejects.toMatchObject({ statusCode: 404 });
+
+    await expect(
+      update(["entry-2"]),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+    });
+
     expect(tx.getOwnedEntryIds).not.toHaveBeenCalled();
     expect(tx.createEntryReferences).not.toHaveBeenCalled();
     expect(tx.removeEntryReferences).not.toHaveBeenCalled();
   });
+});
+
+describe("searchProjectEntriesService - structured search (US-A04)", () => {
+  const project = {
+    id: "project-1",
+    ownerId: "user-1",
+    name: "Search Project",
+  };
+
+  const fields = [
+    {
+      id: "field-location",
+      projectId: "project-1",
+      name: "Location",
+      fieldType: "short_text",
+      position: 0,
+      archivedAt: null,
+    },
+    {
+      id: "field-score",
+      projectId: "project-1",
+      name: "Score",
+      fieldType: "number",
+      position: 1,
+      archivedAt: null,
+    },
+  ];
+
+  function entry(overrides = {}) {
+    return {
+      id: "entry-1",
+      projectId: "project-1",
+      name: "Research session",
+      durationMinutes: 60,
+      occurredAt: "2026-09-20T10:00:00.000Z",
+      tags: ["research", "university"],
+      completedAt: null,
+      createdAt: "2026-09-20T10:00:00.000Z",
+      values: [],
+      checklist: [],
+      references: [],
+      entryReferences: [],
+      ...overrides,
+    };
+  }
+
+  function mockSearch(entries = [entry()]) {
+    repository.getOwnedProject = vi.fn().mockResolvedValue(project);
+    repository.getProjectFields = vi.fn().mockResolvedValue(fields);
+    repository.searchProjectEntries = vi
+      .fn()
+      .mockResolvedValue(entries);
+  }
+
+  test("passes multiple structured filters to the repository", async () => {
+    mockSearch();
+
+    const result = await searchProjectEntriesService({
+      projectId: "project-1",
+      userId: "user-1",
+      filters: {
+        query: "  research  ",
+        fromDate: "2026-09-01",
+        toDate: "2026-09-30",
+        minDuration: "30",
+        maxDuration: "120",
+        completed: "false",
+        sort: "oldest",
+        customFields: [
+          {
+            fieldId: "field-location",
+            value: "  Library  ",
+          },
+        ],
+      },
+    });
+
+    expect(result).toHaveLength(1);
+
+    expect(repository.searchProjectEntries).toHaveBeenCalledWith(
+      "project-1",
+      {
+        query: "research",
+        fromDate: "2026-09-01",
+        toDate: "2026-09-30",
+        minDuration: 30,
+        maxDuration: 120,
+        completed: false,
+        sort: "oldest",
+        customFields: [
+          {
+            fieldId: "field-location",
+            value: "Library",
+          },
+        ],
+      },
+    );
+  });
+
+  test(
+    "uses sensible defaults when optional filters are omitted",
+    async () => {
+      mockSearch();
+
+      await searchProjectEntriesService({
+        projectId: "project-1",
+        userId: "user-1",
+        filters: {},
+      });
+
+      expect(repository.searchProjectEntries).toHaveBeenCalledWith(
+        "project-1",
+        {
+          query: "",
+          fromDate: null,
+          toDate: null,
+          minDuration: null,
+          maxDuration: null,
+          completed: null,
+          sort: "newest",
+          customFields: [],
+        },
+      );
+    },
+  );
+
+  test("returns an empty array when no entries match", async () => {
+    mockSearch([]);
+
+    const result = await searchProjectEntriesService({
+      projectId: "project-1",
+      userId: "user-1",
+      filters: {
+        query: "nothing-matches-this",
+      },
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  test(
+    "rejects search when the project is not owned by the user",
+    async () => {
+      repository.getOwnedProject = vi
+        .fn()
+        .mockResolvedValue(null);
+
+      repository.getProjectFields = vi.fn();
+      repository.searchProjectEntries = vi.fn();
+
+      await expect(
+        searchProjectEntriesService({
+          projectId: "project-1",
+          userId: "user-1",
+          filters: {},
+        }),
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Project not found",
+      });
+
+      expect(
+        repository.getProjectFields,
+      ).not.toHaveBeenCalled();
+
+      expect(
+        repository.searchProjectEntries,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
+  test("rejects a negative minimum duration", async () => {
+    mockSearch();
+
+    await expect(
+      searchProjectEntriesService({
+        projectId: "project-1",
+        userId: "user-1",
+        filters: {
+          minDuration: "-1",
+        },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "minDuration must be a non-negative number",
+    });
+
+    expect(
+      repository.searchProjectEntries,
+    ).not.toHaveBeenCalled();
+  });
+
+  test("rejects a negative maximum duration", async () => {
+    mockSearch();
+
+    await expect(
+      searchProjectEntriesService({
+        projectId: "project-1",
+        userId: "user-1",
+        filters: {
+          maxDuration: "-5",
+        },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "maxDuration must be a non-negative number",
+    });
+
+    expect(
+      repository.searchProjectEntries,
+    ).not.toHaveBeenCalled();
+  });
+
+  test(
+    "rejects minimum duration greater than maximum duration",
+    async () => {
+      mockSearch();
+
+      await expect(
+        searchProjectEntriesService({
+          projectId: "project-1",
+          userId: "user-1",
+          filters: {
+            minDuration: "120",
+            maxDuration: "30",
+          },
+        }),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message:
+          "minDuration cannot be greater than maxDuration",
+      });
+
+      expect(
+        repository.searchProjectEntries,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
+  test(
+    "rejects a custom field that does not belong to the project",
+    async () => {
+      mockSearch();
+
+      await expect(
+        searchProjectEntriesService({
+          projectId: "project-1",
+          userId: "user-1",
+          filters: {
+            customFields: [
+              {
+                fieldId: "field-from-another-project",
+                value: "Library",
+              },
+            ],
+          },
+        }),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message:
+          "One or more custom-field filters do not belong to this project",
+      });
+
+      expect(
+        repository.searchProjectEntries,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
+  test("removes incomplete custom-field filters", async () => {
+    mockSearch();
+
+    await searchProjectEntriesService({
+      projectId: "project-1",
+      userId: "user-1",
+      filters: {
+        customFields: [
+          {
+            fieldId: "field-location",
+            value: "   ",
+          },
+          {
+            fieldId: "",
+            value: "Library",
+          },
+          {
+            fieldId: "field-location",
+            value: "Campus",
+          },
+        ],
+      },
+    });
+
+    expect(repository.searchProjectEntries).toHaveBeenCalledWith(
+      "project-1",
+      expect.objectContaining({
+        customFields: [
+          {
+            fieldId: "field-location",
+            value: "Campus",
+          },
+        ],
+      }),
+    );
+  });
+
+  test(
+    "falls back to newest when an unsupported sort is supplied",
+    async () => {
+      mockSearch();
+
+      await searchProjectEntriesService({
+        projectId: "project-1",
+        userId: "user-1",
+        filters: {
+          sort: "random",
+        },
+      });
+
+      expect(repository.searchProjectEntries).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({
+          sort: "newest",
+        }),
+      );
+    },
+  );
+
+  test.each([
+    ["true", true],
+    ["false", false],
+  ])(
+    "normalizes completed=%s to %s",
+    async (input, expected) => {
+      mockSearch();
+
+      await searchProjectEntriesService({
+        projectId: "project-1",
+        userId: "user-1",
+        filters: {
+          completed: input,
+        },
+      });
+
+      expect(repository.searchProjectEntries).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({
+          completed: expected,
+        }),
+      );
+    },
+  );
 });

@@ -1,5 +1,6 @@
 const {
   getProjectDetailsService,
+  searchProjectEntriesService,
   createEntryService,
   updateChecklistItemService,
   deleteChecklistItemService,
@@ -65,6 +66,44 @@ async function getProjectDetails(
         success: true,
         data,
       });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function searchProjectEntries(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+    let customFields = [];
+
+    if (req.query.customFields) {
+      try {
+        const parsed = JSON.parse(req.query.customFields);
+        if (!Array.isArray(parsed)) {
+          return res.status(400).json({ success: false, message: "customFields must be an array" });
+        }
+        customFields = parsed;
+      } catch {
+        return res.status(400).json({ success: false, message: "customFields must be valid JSON" });
+      }
+    }
+
+    const data = await searchProjectEntriesService({
+      projectId: req.params.projectId,
+      userId,
+      filters: {
+        query: req.query.q,
+        fromDate: req.query.fromDate,
+        toDate: req.query.toDate,
+        minDuration: req.query.minDuration,
+        maxDuration: req.query.maxDuration,
+        completed: req.query.completed,
+        sort: req.query.sort,
+        customFields,
+      },
+    });
+
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     return next(error);
   }
@@ -438,6 +477,7 @@ async function restoreEntryRevision(req, res, next) {
 }
 module.exports = {
   getProjectDetails,
+  searchProjectEntries,
   createProjectEntry,
   getOutstandingEntries,
   completeProjectEntry,
