@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+﻿import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ProjectDetails from './ProjectDetails';
@@ -57,6 +57,13 @@ vi.mock('../../api/entryFeaturesApi', () => ({
   updateEntry: apiMocks.updateEntry,
 }));
 
+vi.mock('../../api/recurringEntriesApi', () => ({
+  fetchRecurringEntries: vi.fn().mockResolvedValue([]),
+  createRecurringEntry: vi.fn(),
+  updateRecurringEntry: vi.fn(),
+  deleteRecurringEntry: vi.fn(),
+  generateDueRecurringEntries: vi.fn().mockResolvedValue({ created: 0 }),
+}));
 vi.mock('../../components/Sidebar', () => ({ default: () => null }));
 vi.mock('../../components/EditProjectModal', () => ({ default: () => null }));
 vi.mock('./NewEntryModal', () => ({ default: () => null }));
@@ -131,8 +138,8 @@ describe('ProjectDetails reminders (US-A07 happy path)', () => {
 
     renderPage();
 
-    expect(await screen.findByText(/^Overdue - was due/)).toBeInTheDocument();
-    expect(screen.getAllByText(/^Overdue - was due/)).toHaveLength(1);
+    expect(await screen.findByText(/^Overdue . was due/)).toBeInTheDocument();
+    expect(screen.getAllByText(/^Overdue . was due/)).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Mark as complete' })).toHaveLength(2);
 
     await user.click(screen.getAllByRole('button', { name: 'Mark as complete' })[0]);
@@ -142,7 +149,7 @@ describe('ProjectDetails reminders (US-A07 happy path)', () => {
     });
 
     expect(await screen.findByText('Completed')).toBeInTheDocument();
-    expect(screen.queryByText(/^Overdue - was due/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Overdue . was due/)).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Mark as complete' })).toHaveLength(1);
   });
 
@@ -170,3 +177,4 @@ describe('ProjectDetails reminders (US-A07 happy path)', () => {
     expect((await screen.findAllByText('Future report')).length).toBeGreaterThan(0);
   });
 });
+
