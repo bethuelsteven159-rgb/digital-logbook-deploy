@@ -107,6 +107,7 @@ function mapEntryRow(row) {
   return {
     id: row.entry_id,
     projectId: row.project_id,
+    projectName: row.project_name ?? null,
     createdById: row.created_by_id,
     name: row.entry_name,
     durationMinutes: row.duration_minutes,
@@ -292,6 +293,29 @@ function createRepository(queryable) {
       );
 
       return result.rows.map((row) => row.id);
+    },
+
+    async getOwnedProjectFields(userId, { includeArchived = true } = {}) {
+      const result = await queryable.query(
+        `SELECT pf.id, pf.project_id, pf.name, pf.field_type,
+                pf.formula, pf.position, pf.required, pf.archived_at,
+                pf.created_at, pf.updated_at,
+                EXISTS (
+                  SELECT 1
+                  FROM entry_field_values ev
+                  JOIN entries e ON e.id = ev.entry_id
+                  WHERE ev.field_id = pf.id
+                    AND e.project_id = pf.project_id
+                ) AS used_by_entries
+         FROM project_fields pf
+         JOIN projects p ON p.id = pf.project_id
+         WHERE p.owner_id = $1
+           AND ($2::boolean OR pf.archived_at IS NULL)
+         ORDER BY pf.project_id, pf.position ASC`,
+        [userId, includeArchived],
+      );
+
+      return result.rows.map(mapField);
     },
 
     async getProjectFields(projectId, { includeArchived = false } = {}) {
@@ -480,6 +504,125 @@ function createRepository(queryable) {
                 f.name AS field_name, f.archived_at AS field_archived_at,
                 f.field_type
          FROM entries e
+         LEFT JOIN entry_field_values v ON v.entry_id = e.id
+         LEFT JOIN project_fields f ON f.id = v.field_id
+         WHERE ${conditions.join("\n           AND ")}
+         ORDER BY ${orderBy}, v.created_at ASC`,
+        params,
+      );
+
+      return attachEntryFeatures(queryable, groupEntries(result.rows));
+    },
+
+    async searchOwnedEntries(userId, filters = {}) {
+      const {
+        projectId,
+        query,
+        fromDate,
+        toDate,
+        minDuration,
+        maxDuration,
+        completed,
+        customFields = [],
+        sort = "newest",
+      } = filters;
+
+      const conditions = ["p.owner_id = $1"];
+      const params = [userId];
+
+      const addParam = (value) => {
+        params.push(value);
+        return `$${params.length}`;
+      };
+
+      if (projectId) {
+        const value = addParam(projectId);
+        conditions.push(`e.project_id = ${value}::uuid`);
+      }
+
+      let relevanceOrder = null;
+      if (query) {
+        const search = addParam(`%${query}%`);
+        const exact = addParam(query.toLowerCase());
+        const prefix = addParam(`${query.toLowerCase()}%`);
+        conditions.push(`(
+          e.name ILIKE ${search}
+          OR COALESCE(array_to_string(e.tags, ' '), '') ILIKE ${search}
+          OR EXISTS (
+            SELECT 1
+            FROM entry_field_values sv
+            WHERE sv.entry_id = e.id
+              AND (
+                COALESCE(sv.value_text, '') ILIKE ${search}
+                OR COALESCE(sv.value_number::text, '') ILIKE ${search}
+                OR COALESCE(sv.value_date::text, '') ILIKE ${search}
+              )
+          )
+        )`);
+        relevanceOrder = `CASE
+          WHEN LOWER(e.name) = ${exact} THEN 0
+          WHEN LOWER(e.name) LIKE ${prefix} THEN 1
+          WHEN e.name ILIKE ${search} THEN 2
+          WHEN COALESCE(array_to_string(e.tags, ' '), '') ILIKE ${search} THEN 3
+          ELSE 4
+        END, e.occurred_at DESC, e.created_at DESC`;
+      }
+
+      if (fromDate) {
+        const value = addParam(fromDate);
+        conditions.push(`e.occurred_at >= ${value}::date`);
+      }
+      if (toDate) {
+        const value = addParam(toDate);
+        conditions.push(`e.occurred_at < (${value}::date + INTERVAL '1 day')`);
+      }
+      if (minDuration !== null && minDuration !== undefined) {
+        const value = addParam(minDuration);
+        conditions.push(`e.duration_minutes >= ${value}`);
+      }
+      if (maxDuration !== null && maxDuration !== undefined) {
+        const value = addParam(maxDuration);
+        conditions.push(`e.duration_minutes <= ${value}`);
+      }
+      if (completed === true) conditions.push("e.completed_at IS NOT NULL");
+      if (completed === false) conditions.push("e.completed_at IS NULL");
+
+      for (const filter of customFields) {
+        const fieldId = addParam(filter.fieldId);
+        const value = addParam(`%${filter.value}%`);
+        conditions.push(`EXISTS (
+          SELECT 1
+          FROM entry_field_values fv
+          WHERE fv.entry_id = e.id
+            AND fv.field_id = ${fieldId}::uuid
+            AND (
+              COALESCE(fv.value_text, '') ILIKE ${value}
+              OR COALESCE(fv.value_number::text, '') ILIKE ${value}
+              OR COALESCE(fv.value_date::text, '') ILIKE ${value}
+            )
+        )`);
+      }
+
+      const orderBy = sort === "relevance" && relevanceOrder
+        ? relevanceOrder
+        : ({
+            newest: "e.occurred_at DESC, e.created_at DESC",
+            oldest: "e.occurred_at ASC, e.created_at ASC",
+            name: "e.name ASC, e.occurred_at DESC",
+            duration: "e.duration_minutes DESC, e.occurred_at DESC",
+          }[sort] || "e.occurred_at DESC, e.created_at DESC");
+
+      const result = await queryable.query(
+        `SELECT e.id AS entry_id, e.project_id, p.name AS project_name,
+                e.created_by_id, e.name AS entry_name, e.duration_minutes,
+                e.occurred_at, e.tags, e.due_at, e.completed_at,
+                e.created_at AS entry_created_at, e.updated_at AS entry_updated_at,
+                v.id AS value_id, v.field_id, v.value_text, v.value_number,
+                v.value_date, v.created_at AS value_created_at,
+                f.name AS field_name, f.archived_at AS field_archived_at,
+                f.field_type
+         FROM entries e
+         JOIN projects p ON p.id = e.project_id
          LEFT JOIN entry_field_values v ON v.entry_id = e.id
          LEFT JOIN project_fields f ON f.id = v.field_id
          WHERE ${conditions.join("\n           AND ")}

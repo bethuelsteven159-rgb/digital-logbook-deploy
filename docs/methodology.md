@@ -317,7 +317,86 @@ The client's feedback was that the implemented features looked good overall, but
 
 ### 8.3 Sprint 3
 
-*To be added.*
+By Sprint 3 the core Intermediate features were in place, so this sprint shifted from building new basic functionality to three things: delivering the **Advanced tier** features, making the existing product more stable through **automated testing and code coverage**, and adding an **external API integration** plus **performance benchmarking**. Compared with Sprint 2, work was also organised around a shared quality bar (a team-wide coverage target and a stricter Definition of Done), rather than only around feature delivery.
+
+#### Sprint 3 Planning
+
+The team held sprint planning over a Teams call, reviewing the Digital Logbook brief, the Intermediate user-story breakdown, the Sprint 3 rubric and the supplied coverage report. The outcome was a written **Sprint 3 Work Division** document that assigned every member (Morare, Bethuel, Tumi, Sino, Simphiwe and Inga) four kinds of work: testing of existing Intermediate features, one Advanced feature, coverage improvement for specific legacy files, and a performance/quality focus. Morare additionally owns the external API integration.
+
+The **Sprint Goal** was to move the application toward a near-complete, reviewed product while improving feature implementation, API implementation, automated testing, performance, documentation and methodology.
+
+**Sprint 3 work division:**
+
+| Member | Intermediate QA | Advanced feature | Coverage area | Extra / performance focus |
+| --- | --- | --- | --- | --- |
+| Morare | US-101 Tags, US-108 Saved Filters, US-111 Due Dates | US-A02 Custom dashboard | `server.js`, `authController.js` | External API; dashboard load time and API timeout/failure behaviour |
+| Bethuel | US-102 Checklists, US-109 Calendar View, US-112 Offline/Sync | US-A01 Custom statistics / expressions | `logbookTransferController.js`, `logbookTransferService.js` | Custom-calculation performance |
+| Tumi | US-103 Entry Links, US-106a Add Field, US-107a Total/Group Stats | US-A04 Advanced structured search | `postgresProjectDetailsRepository.js` | Search/query performance |
+| Sino | US-104 Project References, US-106b Rename/Remove Field, US-107b Plot Over Time | US-A03 Revision history / restore | `projectDetailsService.js` | Data integrity; revision-history retrieval |
+| Simphiwe | US-105 Computed Fields, US-106c Carry Entries Forward, US-110 Board View | US-A05 Automation rules and US-A06 recurring entries | `logbookTransferRepository.js`, `projects.js` | Automation/recurrence with many rules |
+| Inga | US-106d Old Formats Readable, US-107c Compare Projects, US-113 Export/Import | US-A07 Reminders and US-A08 Archiving | `stats.js`, `entry.validation.js` | Archive vs non-archive query performance |
+
+To make the Intermediate testing split even, the bundled requirements were expanded into 18 testable areas (US-106 split into four format-migration behaviours, US-107 into three statistics behaviours), giving exactly three areas per person.
+
+**Advanced backlog:** US-A01 (user-defined statistics, Bethuel), US-A02 (custom dashboard, Morare), US-A03 (revision history and restore, Sino), US-A04 (structured search, Tumi), US-A05 (automation rules, Simphiwe), US-A06 (recurring entries, Simphiwe), US-A07 (reminders, Inga) and US-A08 (archiving, Inga).
+
+**Sprint 3 quality rules agreed at planning:**
+
+* **Team coverage target:** at least 60% overall backend statement/line coverage by the end of the sprint (the starting point was roughly 43% statements, 78.5% branches and 46.7% functions). Tests must be meaningful rather than written only to execute lines.
+* **New-code rule:** every Advanced feature must reach at least 60% coverage in the code introduced for that feature.
+* **Sprint 3 Definition of Done:** implementation complete; automated tests written; new code at 60% coverage or higher; existing tests still passing; assigned Intermediate stories acceptance-tested (manually or automatically); discovered bugs logged and either fixed or tracked.
+* **UI and API testing:** backend unit tests are not the whole testing requirement. Each new feature should also have backend/API tests and at least one UI/end-to-end happy-path test (for example for version history: create entry → edit entry → open history → restore → verify the old value appears).
+* **Shared performance benchmark:** all performance checks use one shared dataset (for example 10,000 entries) so results are comparable across members.
+* **Priority:** Advanced features should not consume the whole sprint while coverage remains near 43%. The desired outcome is an Advanced feature set together with a demonstrably more stable, tested and performant Intermediate product.
+
+![Sprint 3 Planning Screenshot 1](./screenshots/sprint3-planning-1.png)
+
+
+#### Daily Standup 1
+
+Held in the team's WhatsApp group as part of Sprint 3 startup.
+
+* **Simphiwe** fixed a set of bugs carried over from Sprint 2: the saved-filter update bug, archived-field data loss, due-date timezone shifting, and partial entry saves. Regression tests were added for each fix.
+* **Sino** had only just started on her Sprint 3 work, so there was little to report yet.
+* **Tumi** had also only just started on her part, so had no update yet.
+* **Morare** had not started. He reported that the network at home was unreliable and that he had personal commitments taking up most of his time, so he did not expect to start soon. This was raised as a blocker (see Section 5). When asked whether he could finish before sprint marking, given that he also owns the external API (the most important part of his work), he said he hoped so but was not sure, and the team offered help whenever he needed it.
+* **Inga** raised that the team had not yet decided which database to use, and that this needed to be decided soon so the features could be connected to it.
+
+![Daily Standup 1 Screenshot 1 — Progress updates](./screenshots/sprint3-standup-1a.jpeg)
+
+![Daily Standup 1 Screenshot 2 — Progress check and database question](./screenshots/sprint3-standup-1b.jpeg)
+
+#### Daily Standup 2
+
+Held as a team meeting, with updates shared in the team's WhatsApp group and over Teams, on a separate day from Standup 1.
+
+* **Sino** added tests for the revision-history feature (US-A03) and raised statement coverage on `projectDetailsService.js` from about 21.7% to about 44.4%. The function-level breakdown showed the remaining gap was no longer in revision history. The functions still at zero coverage were `deleteChecklistItemService`, `updateProjectReferencesService`, `updateChecklistItemService`, `getOutstandingEntriesService`, `getIncompleteEntriesService`, `completeEntryService`, `markEntryCompleteService` and `serializeChecklist`. Because these belong to other features in the same shared file, Sino asked the owners of checklists, references and completion to add tests for their own pieces, since otherwise the file would not reach the 60% team target. She also offered to help write some of the tests if that was faster than reassigning them. This is an example of a blocker/dependency being raised early, as described in Section 5. In the meeting she reported that she was almost done with her work.
+* **Simphiwe** completed quality assurance for US-105 Computed Fields, added the missing regression tests, verified the feature works correctly, and raised its test coverage above the Sprint 3 target. She then started preparing the next QA task, US-106c.
+* **Bethuel** finished the code coverage setup, which now runs through GitHub Actions, and moved on to starting his user story.
+* **Inga** reported a database change: the team is using **Neon** instead of a self-managed Postgres setup, which resolves the open database question raised in Standup 1.
+* **Morare** had just started on his user story, the external API integration, and shared his update via Teams.
+
+![Daily Standup 2 Screenshot 1 — Sino's coverage update](./screenshots/sprint3-standup-2a.jpeg)
+
+![Daily Standup 2 Screenshot 2 — Simphiwe's QA update](./screenshots/sprint3-standup-2b.jpeg)
+
+![Daily Standup 2](./screenshots/sprint3-planning-2.png)
+
+#### Sprint Review
+
+At the end of the sprint the team held a sprint review with the client over Teams, demonstrating what had been implemented and gathering the client's feedback.
+
+The client's feedback was positive overall: the implemented features were fine and worked as expected. The main point for improvement was the design, which the client said should be more intuitive to use.
+
+![Sprint 3 Review Screenshot](./screenshots/sprint3-sprint-retrospective.png)
+
+#### Sprint Retrospective
+
+The Sprint 3 retrospective was held over Teams, where the team reflected on the work completed during the sprint and on what it wants to improve going forward. During the session, Bethuel walked the team through the performance benchmarking documentation (`performance.md`), which showed how custom-calculation evaluation time scales with dataset size and identified rebuilding the field-value index as the main cost rather than the aggregation arithmetic itself. This is part of the performance work assigned at planning.
+
+Overall the team felt the sprint went well. The main area raised for improvement was **communication**, which had also been raised in the Sprint 1 retrospective, along with the **way the team works together**. These points are carried forward into the next sprint's working agreements.
+
+![Sprint 3 Retrospective Screenshot](./screenshots/sprint3-sprint-review.png)
 
 ## 9. Stakeholder Reviews
 
@@ -351,7 +430,7 @@ Below are examples of stakeholder feedback gathered this way, how the team evalu
 
 **Stakeholder feedback:** The client confirmed code coverage reporting was wanted for the sprint and specifically requested it be set up as part of the Gitea workflow rather than tracked separately.
 
-**Evaluation & integration:** The team agreed this was a reasonable and achievable request given the existing plan (Section 2 of Client Meeting 2) to define the CI/CD approach, and added configuring code coverage on Gitea to the backlog as a concrete follow-up task rather than leaving it as an open comment. **Status: outstanding** — this has been logged as a backlog item but is not yet implemented; it is carried forward as a task for an upcoming sprint.
+**Evaluation & integration:** The team agreed this was a reasonable and achievable request given the existing plan (Section 2 of Client Meeting 2) to define the CI/CD approach, and added configuring code coverage on Gitea to the backlog as a concrete follow-up task rather than leaving it as an open comment. **Status: resolved in Sprint 3** — this was logged as a backlog item and carried forward. In Sprint 3, Bethuel completed the code coverage setup, which now runs automatically through GitHub Actions (reported in Sprint 3 Daily Standup 2, Section 8.3), and the Sprint 3 planning set a team-wide 60% backend coverage target to make use of it.
 
 ![Stakeholder feedback on code coverage and Gitea](./screenshots/stakeholder-review-code-coverage-gitea.jpeg)
 

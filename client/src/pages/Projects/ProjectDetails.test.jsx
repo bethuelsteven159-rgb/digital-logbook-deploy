@@ -539,6 +539,266 @@ describe('ProjectDetails entry flow', () => {
   });
 });
 
+
+describe('ProjectDetails structured entry search', () => {
+  const secondEntry = {
+    id: 'entry-2',
+    projectId: 'project-1',
+    name: 'Backend implementation',
+    durationMinutes: 75,
+    occurredAt: '2026-09-11T10:00:00Z',
+    dueAt: null,
+    tags: ['backend', 'api'],
+    values: [
+      {
+        fieldId: 'field-1',
+        name: 'Notes',
+        fieldType: 'short_text',
+        value: 'Implemented authentication',
+      },
+      {
+        fieldId: 'field-2',
+        name: 'Work type',
+        fieldType: 'short_text',
+        value: 'Development',
+      },
+    ],
+    checklist: [],
+    references: [],
+    entryReferences: [],
+  };
+
+  const searchableFirstEntry = {
+    ...entry,
+    tags: ['report', 'documentation'],
+    values: [
+      {
+        fieldId: 'field-1',
+        name: 'Notes',
+        fieldType: 'short_text',
+        value: 'Research summary',
+      },
+      {
+        fieldId: 'field-2',
+        name: 'Work type',
+        fieldType: 'short_text',
+        value: 'Research',
+      },
+    ],
+  };
+
+  function searchDetailsResponse() {
+    return {
+      project,
+      fields: [
+        {
+          id: 'field-1',
+          name: 'Notes',
+          fieldType: 'short_text',
+        },
+        {
+          id: 'field-2',
+          name: 'Work type',
+          fieldType: 'short_text',
+        },
+      ],
+      entries: [searchableFirstEntry, secondEntry],
+      references: [],
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    apiMocks.fetchSavedFilters.mockResolvedValue([]);
+    apiMocks.fetchProjectDetails.mockResolvedValue(
+      searchDetailsResponse(),
+    );
+    apiMocks.fetchProjects.mockResolvedValue([project]);
+  });
+
+  it('searches entry names', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Search field' }),
+      'name',
+    );
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search entries' }),
+      'backend',
+    );
+
+    expect(
+      screen.getByText('Backend implementation'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('First entry'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('1 of 2 entries')).toBeInTheDocument();
+  });
+
+  it('searches tags', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Search field' }),
+      'tags',
+    );
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search entries' }),
+      'documentation',
+    );
+
+    expect(screen.getByText('First entry')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Backend implementation'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('searches across all fields including custom field values', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search entries' }),
+      'authentication',
+    );
+
+    expect(
+      screen.getByText('Backend implementation'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('First entry'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('searches a selected custom field', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Search field' }),
+      'custom:field-2',
+    );
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search entries' }),
+      'development',
+    );
+
+    expect(
+      screen.getByText('Backend implementation'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('First entry'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not match a value from the wrong custom field', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Search field' }),
+      'custom:field-1',
+    );
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search entries' }),
+      'development',
+    );
+
+    expect(
+      screen.queryByText('Backend implementation'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('0 of 2 entries')).toBeInTheDocument();
+  });
+
+  it('searches case-insensitively', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Search field' }),
+      'name',
+    );
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search entries' }),
+      'BACKEND',
+    );
+
+    expect(
+      screen.getByText('Backend implementation'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a no-match state when a search returns no entries', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search entries' }),
+      'xyz123-no-match',
+    );
+
+    expect(
+      screen.getByText('No matching entries'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/No entries match "xyz123-no-match"/i).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('0 of 2 entries')).toBeInTheDocument();
+    expect(
+      screen.queryByText('No entries yet.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('clears a search and restores all entries', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    const searchBox = screen.getByRole('searchbox', {
+      name: 'Search entries',
+    });
+
+    await user.type(searchBox, 'backend');
+
+    expect(
+      screen.queryByText('First entry'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Backend implementation'),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Clear' }),
+    );
+
+    expect(screen.getByText('First entry')).toBeInTheDocument();
+    expect(
+      screen.getByText('Backend implementation'),
+    ).toBeInTheDocument();
+    expect(searchBox).toHaveValue('');
+  });
+});
+
 describe('ProjectDetails offline capture and sync', () => {
   const offlinePayload = {
     name: 'Offline entry',

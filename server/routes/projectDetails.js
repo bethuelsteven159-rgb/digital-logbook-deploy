@@ -2,7 +2,11 @@ const express = require("express");
 
 const {
   getProjectDetails,
+  getAiProjectProgress,
+  getLearningVideos,
+  getAiProjectSpeech,
   searchProjectEntries,
+  searchOwnedEntries,
   createProjectEntry,
   getOutstandingEntries,
   completeProjectEntry,
@@ -20,15 +24,36 @@ const {
   getEntryRevisions,
   getEntryRevision,
   restoreEntryRevision,
-} = require("../controllers/projectDetailsController");
+} = require(
+  "../controllers/projectDetailsController",
+);
 
 const router = express.Router();
+
+router.get(
+  "/entries/search",
+  searchOwnedEntries,
+);
 
 router.get(
   "/:projectId",
   getProjectDetails,
 );
 
+router.post(
+  "/:projectId/ai-progress",
+  getAiProjectProgress,
+);
+
+router.post(
+  "/:projectId/ai-progress/speech",
+  getAiProjectSpeech,
+);
+
+router.get(
+  "/:projectId/learning-videos",
+  getLearningVideos,
+);
 router.get(
   "/:projectId/entries/search",
   searchProjectEntries,
@@ -84,6 +109,7 @@ router.delete(
  * Used by the Entry Details modal when the user
  * checks or unchecks a checklist item.
  */
+
 router.patch(
   "/:projectId/entries/:entryId/checklist/:itemId",
   updateChecklistItem,
