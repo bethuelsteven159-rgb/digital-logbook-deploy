@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
+﻿import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 
 // The service uses CommonJS require; stub its actual repository object below.
 const db = require("../db");
@@ -910,6 +910,7 @@ describe("searchProjectEntriesService - structured search (US-A04)", () => {
         toDate: "2026-09-30",
         minDuration: 30,
         maxDuration: 120,
+        archived: false,
         completed: false,
         sort: "oldest",
         customFields: [
@@ -941,6 +942,7 @@ describe("searchProjectEntriesService - structured search (US-A04)", () => {
           toDate: null,
           minDuration: null,
           maxDuration: null,
+          archived: false,
           completed: null,
           sort: "newest",
           customFields: [],
@@ -1176,3 +1178,4 @@ describe("searchProjectEntriesService - structured search (US-A04)", () => {
     },
   );
 });
+
