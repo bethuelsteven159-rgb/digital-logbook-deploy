@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETECASCADE,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(120) NOT NULL,
     description TEXT,
     archived_at TIMESTAMPTZ,
@@ -122,7 +122,7 @@ CREATE INDEX IF NOT EXISTS idx_entry_revisions_entry
 
 CREATE TABLE IF NOT EXISTS saved_filters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETECASCADE,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     criteria JSONB NOT NULL,
