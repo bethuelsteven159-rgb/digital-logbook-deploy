@@ -311,3 +311,31 @@ describe("importLogbookService archivedAt handling", () => {
     );
   });
 });
+describe("old export files remain readable (US-106d)", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  function buildOldFormatPayload() {
+    const payload = buildValidImportPayload();
+    delete payload.projects[0].archivedAt;
+    for (const field of payload.projects[0].fields) delete field.archivedAt;
+    for (const entry of payload.projects[0].entries) delete entry.archivedAt;
+    return payload;
+  }
+
+  it("accepts an export that has no archivedAt on projects, fields or entries", () => {
+    expect(() => validateImportPayload(buildOldFormatPayload())).not.toThrow();
+  });
+
+  it("imports old-format entries as not archived", async () => {
+    const tx = { insertImportedLogbook: vi.fn().mockResolvedValue({ imported: true }) };
+    repository.withTransaction.mockImplementation((callback) => callback(tx));
+
+    await importLogbookService({ userId: "user-1", payload: buildOldFormatPayload() });
+
+    const [, normalized] = tx.insertImportedLogbook.mock.calls[0];
+    expect(normalized.entries[0].archivedAt ?? null).toBeNull();
+    expect(normalized.projects[0].archivedAt ?? null).toBeNull();
+  });
+});
