@@ -12,6 +12,7 @@ const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
 const logbookTransferRoutes = require("./routes/logbookTransfer");
+const remindersRoutes = require("./routes/reminders");
 
 // Dashboard route
 const dashboardRoutes = require("./routes/dashboard");
@@ -118,6 +119,7 @@ app.use(
 // ==========================
 // 404 Handler
 // ==========================
+app.use("/api/reminders", requireAuth, remindersRoutes);
 
 app.use((_req, res) => {
   return res.status(404).json({

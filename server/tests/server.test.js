@@ -29,6 +29,11 @@ before(async () => {
     res.status(200).json({ success: true, userId: req.user.id || req.user.sub });
   });
   mockedRoutes.set('projects', projectRouter);
+  const remindersRouter = express.Router();
+  remindersRouter.get('/', (req, res) => {
+    res.status(200).json({ mounted: true, userId: req.user.id || req.user.sub });
+  });
+  mockedRoutes.set('reminders', remindersRouter);
 
   const routeNames = [
     'authRoutes',
@@ -42,6 +47,7 @@ before(async () => {
     'external',
     'logbookTransfer',
     'dashboard',
+    'reminders',
   ];
 
   const cachedRoutes = routeNames.map((name) => {
@@ -128,4 +134,17 @@ test('global error handler preserves an explicit status code and message', async
   } finally {
     console.error = original;
   }
+});
+
+test('GET /api/reminders is mounted and requires authentication', async () => {
+  const res = await fetch(`${baseUrl}/api/reminders`);
+  assert.equal(res.status, 401);
+});
+
+test('GET /api/reminders is reachable with a valid token', async () => {
+  const res = await fetch(`${baseUrl}/api/reminders`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { mounted: true, userId: USER_ID });
 });
