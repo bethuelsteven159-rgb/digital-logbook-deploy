@@ -5,6 +5,7 @@ import ProfileAvatar from './ProfileAvatar.jsx';
 const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: IconDashboard },
     { to: "/projects", label: "Projects", icon: IconProjects },
+    { to: "/search", label: "Search", icon: IconSearch },
     { to: "/stats", label: "Stats", icon: IconStats },
     { to: "/settings", label: "Settings", icon: IconSettings },
 ];
@@ -232,6 +233,13 @@ function IconProjects() {
       <path d="M2 7a2 2 0 0 1 2-2h4l2 3h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z"/>
     </svg>);
 }
+function IconSearch() {
+  return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7"/>
+      <line x1="20" y1="20" x2="16.2" y2="16.2"/>
+    </svg>);
+}
+
 function IconStats() {
     return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10"/>
