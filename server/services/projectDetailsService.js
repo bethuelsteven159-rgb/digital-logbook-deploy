@@ -1536,6 +1536,83 @@ async function restoreEntryRevisionService({
   });
 }
 
+async function archiveEntryService({
+  projectId,
+  entryId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(
+    projectId,
+    userId,
+  );
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const ownedEntry = await repository.getOwnedEntry(
+    entryId,
+    userId,
+  );
+
+  if (!ownedEntry) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const archived = await repository.archiveEntry(
+    entryId,
+    projectId,
+  );
+
+  if (!archived) {
+    throw createHttpError(404, "Entry not found or already archived");
+  }
+
+  return {
+    id: archived.id,
+    projectId: archived.project_id,
+    archivedAt: archived.archived_at,
+  };
+}
+
+async function unarchiveEntryService({
+  projectId,
+  entryId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(
+    projectId,
+    userId,
+  );
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const ownedEntry = await repository.getOwnedEntry(
+    entryId,
+    userId,
+  );
+
+  if (!ownedEntry) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const unarchived = await repository.unarchiveEntry(
+    entryId,
+    projectId,
+  );
+
+  if (!unarchived) {
+    throw createHttpError(404, "Entry not found or not archived");
+  }
+
+  return {
+    id: unarchived.id,
+    projectId: unarchived.project_id,
+    archivedAt: unarchived.archived_at,
+  };
+}
 async function deleteEntryService({ projectId, entryId, userId }) {
   const project = await repository.getOwnedProject(projectId, userId);
 
@@ -1615,6 +1692,8 @@ async function searchProjectEntriesService({ projectId, userId, filters = {} }) 
       ? filters.sort
       : "newest",
     customFields: Array.isArray(filters.customFields) ? filters.customFields : [],
+    archived: filters.archived === true || filters.archived === "true",
+    archived: filters.archived === true || filters.archived === "true",
   };
 
   if (normalized.minDuration !== null && (!Number.isFinite(normalized.minDuration) || normalized.minDuration < 0)) {
@@ -1732,6 +1811,8 @@ module.exports = {
   updateEntryProjectReferencesService,
   updateEntryReferencesService,
   updateEntryService,
+  archiveEntryService,
+  unarchiveEntryService,
   deleteEntryService,
   getEntryRevisionsService,
   getEntryRevisionService,

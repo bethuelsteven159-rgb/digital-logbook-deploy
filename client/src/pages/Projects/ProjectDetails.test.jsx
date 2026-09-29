@@ -18,6 +18,9 @@ const apiMocks = vi.hoisted(() => ({
   updateEntryReferences: vi.fn(),
   updateEntry: vi.fn(),
   generateDueRecurringEntries: vi.fn(),
+  archiveProjectEntry: vi.fn(),
+  unarchiveProjectEntry: vi.fn(),
+  searchProjectEntries: vi.fn(),
 }));
 
 vi.mock('../../api/projectDetailsApi', () => ({
@@ -27,6 +30,9 @@ vi.mock('../../api/projectDetailsApi', () => ({
   createSavedFilter: apiMocks.createSavedFilter,
   applySavedFilter: apiMocks.applySavedFilter,
   deleteSavedFilter: apiMocks.deleteSavedFilter,
+  archiveProjectEntry: apiMocks.archiveProjectEntry,
+  unarchiveProjectEntry: apiMocks.unarchiveProjectEntry,
+  searchProjectEntries: apiMocks.searchProjectEntries,
 }));
 
 vi.mock('../../api/projectsApi', () => ({
@@ -96,6 +102,8 @@ vi.mock('./EntryDetailsModal', () => ({
     archived,
     onClose,
     onEdit,
+    onArchive,
+    onUnarchive,
   }) => (
     <div
       role="dialog"
@@ -118,6 +126,22 @@ vi.mock('./EntryDetailsModal', () => ({
       >
         Edit entry
       </button>
+
+      {entry.archivedAt ? (
+        <button
+          type="button"
+          onClick={() => onUnarchive(entry)}
+        >
+          Unarchive entry
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onArchive(entry)}
+        >
+          Archive entry
+        </button>
+      )}
 
       <button
         type="button"
@@ -227,6 +251,7 @@ const entry = {
   durationMinutes: 30,
   occurredAt: '2026-09-10T10:00:00Z',
   dueAt: '2026-09-12T12:00:00Z',
+  archivedAt: null,
   values: [
     {
       fieldId: 'field-1',
@@ -956,5 +981,173 @@ describe('ProjectDetails recurring entries', () => {
     expect(
       apiMocks.generateDueRecurringEntries,
     ).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ProjectDetails entry archive', () => {
+  const archivedEntry = {
+    ...entry,
+    id: 'entry-2',
+    name: 'Old entry',
+    archivedAt: '2026-09-01T00:00:00Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    apiMocks.fetchSavedFilters.mockResolvedValue([]);
+    apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse());
+    apiMocks.fetchProjects.mockResolvedValue([project]);
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
+    apiMocks.archiveProjectEntry.mockResolvedValue({});
+    apiMocks.unarchiveProjectEntry.mockResolvedValue({});
+    apiMocks.searchProjectEntries.mockResolvedValue([archivedEntry]);
+  });
+
+  async function openArchiveView(user) {
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'View archive' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Old entry')).toBeInTheDocument(),
+    );
+  }
+
+  it('archives an entry and removes it from the active list', async () => {
+    apiMocks.fetchProjectDetails
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce({ ...detailsResponse(), entries: [] });
+
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Click entry to view full contents/i,
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Archive entry' }));
+
+    await waitFor(() =>
+      expect(apiMocks.archiveProjectEntry).toHaveBeenCalledWith(
+        'project-1',
+        'entry-1',
+      ),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText('First entry')).not.toBeInTheDocument(),
+    );
+    expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows archived entries in the archive view and hides active ones', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await openArchiveView(user);
+
+    expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
+      'project-1',
+      expect.objectContaining({ archived: true }),
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Archived entries' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('First entry')).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Back to active entries' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Old entry')).not.toBeInTheDocument();
+  });
+
+  it('searches within the archive', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await openArchiveView(user);
+
+    apiMocks.searchProjectEntries.mockClear();
+
+    await user.type(
+      screen.getByPlaceholderText('Search entries...'),
+      'old',
+    );
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+
+    await waitFor(() =>
+      expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
+        'project-1',
+        expect.objectContaining({ archived: true, query: 'old' }),
+      ),
+    );
+  });
+
+  it('does not search the archive from the main list', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+
+    await user.type(
+      screen.getByPlaceholderText('Search entries...'),
+      'first',
+    );
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+
+    await waitFor(() =>
+      expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
+        'project-1',
+        expect.objectContaining({ archived: false, query: 'first' }),
+      ),
+    );
+  });
+
+  it('unarchives an entry and removes it from the archive view', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await openArchiveView(user);
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Click entry to view full contents/i,
+      }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Unarchive entry' }),
+    );
+
+    await waitFor(() =>
+      expect(apiMocks.unarchiveProjectEntry).toHaveBeenCalledWith(
+        'project-1',
+        'entry-2',
+      ),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText('Old entry')).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText('No archived entries.')).toBeInTheDocument();
+    expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2);
   });
 });

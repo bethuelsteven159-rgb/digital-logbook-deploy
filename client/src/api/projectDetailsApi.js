@@ -79,6 +79,8 @@ export async function searchProjectEntries(projectId, filters = {}) {
   if (filters.maxDuration !== undefined && filters.maxDuration !== null && filters.maxDuration !== "") params.set("maxDuration", filters.maxDuration);
   if (typeof filters.completed === "boolean") params.set("completed", String(filters.completed));
   if (filters.sort) params.set("sort", filters.sort);
+  if (filters.archived === true) params.set("archived", "true");
+  if (filters.archived === true) params.set("archived", "true");
 
   const customFields = Array.isArray(filters.customFields)
     ? filters.customFields.filter((filter) => filter?.fieldId && String(filter.value ?? "").trim())
@@ -245,6 +247,32 @@ export async function deleteProjectEntry(projectId, entryId) {
     `/api/projects/${projectId}/entries/${entryId}`,
     {
       method: "DELETE",
+    },
+  );
+}
+
+export async function archiveProjectEntry(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/archive`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
+export async function unarchiveProjectEntry(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/unarchive`,
+    {
+      method: "PATCH",
     },
   );
 }

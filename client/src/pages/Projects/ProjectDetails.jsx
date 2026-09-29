@@ -25,6 +25,8 @@ import RecurringEntriesModal from "./RecurringEntriesModal";
 import {
   createProjectEntry,
   deleteProjectEntry,
+  archiveProjectEntry,
+  unarchiveProjectEntry,
   fetchProjectDetails,
   fetchSavedFilters,
   createSavedFilter,
@@ -100,6 +102,8 @@ export default function ProjectDetails() {
 
   const [entryDeleteSaving, setEntryDeleteSaving] =
     useState(false);
+  const [archiveSaving, setArchiveSaving] = useState(false);
+  const [showArchivedEntries, setShowArchivedEntries] = useState(false);
 
   const [checklistSaving, setChecklistSaving] = useState({});
 
@@ -373,28 +377,81 @@ export default function ProjectDetails() {
   }
 
   async function handleDeleteEntry(entry) {
-    if (!entry?.id) {
-      return;
-    }
-
-    try {
-      setEntryDeleteSaving(true);
-      setError("");
-
-      await deleteProjectEntry(id, entry.id);
-
-      setSelectedEntryForDetails(null);
-      setSelectedEntryForEdit(null);
-      setShowEditEntryModal(false);
-
-      await loadProject();
-    } catch (requestError) {
-      console.error("Failed to delete entry:", requestError);
-      setError(requestError.message || "Failed to delete entry.");
-    } finally {
-      setEntryDeleteSaving(false);
-    }
+  if (!entry?.id) {
+    return;
   }
+
+  try {
+    setEntryDeleteSaving(true);
+    setError("");
+
+    await deleteProjectEntry(id, entry.id);
+
+    setSelectedEntryForDetails(null);
+    setSelectedEntryForEdit(null);
+    setShowEditEntryModal(false);
+
+    await loadProject();
+  } catch (requestError) {
+    console.error("Failed to delete entry:", requestError);
+    setError(requestError.message || "Failed to delete entry.");
+  } finally {
+    setEntryDeleteSaving(false);
+  }
+}
+
+async function handleArchiveEntry(entry) {
+  if (!entry?.id) {
+    return;
+  }
+
+  try {
+    setArchiveSaving(true);
+    setError("");
+
+    await archiveProjectEntry(id, entry.id);
+
+    setFilteredEntries((current) =>
+      current ? current.filter((item) => item.id !== entry.id) : current,
+    );
+
+    setSelectedEntryForDetails(null);
+    setSelectedEntryForEdit(null);
+    setShowEditEntryModal(false);
+
+    await loadProject();
+  } catch (requestError) {
+    console.error("Failed to archive entry:", requestError);
+    setError(requestError.message || "Failed to archive entry.");
+  } finally {
+    setArchiveSaving(false);
+  }
+}
+
+async function handleUnarchiveEntry(entry) {
+  if (!entry?.id) {
+    return;
+  }
+
+  try {
+    setArchiveSaving(true);
+    setError("");
+
+    await unarchiveProjectEntry(id, entry.id);
+
+    setSelectedEntryForDetails(null);
+    setFilteredEntries((current) =>
+      current ? current.filter((item) => item.id !== entry.id) : current,
+    );
+
+    await loadProject();
+  } catch (requestError) {
+    console.error("Failed to unarchive entry:", requestError);
+    setError(requestError.message || "Failed to unarchive entry.");
+  } finally {
+    setArchiveSaving(false);
+  }
+}
 
   async function handleCreateEntry(payload) {
     if (!isOnline) {
@@ -518,6 +575,7 @@ function handleOpenEditFilter(filter) {
 }
 
 async function handleApplyFilter(filterId) {
+  setShowArchivedEntries(false);
   if (!filterId) {
     setActiveFilterId(null);
     setFilteredEntries(null);
@@ -594,6 +652,7 @@ async function handleMarkComplete(entryId) {
 
 
 async function handleShowOverdue() {
+  setShowArchivedEntries(false);
   if (entryStatusView === "overdue") {
     setEntryStatusView(null);
     setFilteredEntries(null);
@@ -618,6 +677,7 @@ async function handleShowOverdue() {
 }
 
 async function handleShowIncomplete() {
+  setShowArchivedEntries(false);
   if (entryStatusView === "incomplete") {
     setEntryStatusView(null);
     setFilteredEntries(null);
@@ -645,6 +705,7 @@ async function handleShowIncomplete() {
       await updateProject(id, payload);
 
       setShowEditProjectModal(false);
+      setShowArchivedEntries(false);
       setActiveFilterId(null);
       setFilteredEntries(null);
       await loadProject();
@@ -767,6 +828,7 @@ async function handleShowIncomplete() {
         completed,
         sort: searchSort,
         customFields: searchCustomFields,
+        archived: showArchivedEntries,
       });
 
       setActiveFilterId(null);
@@ -794,9 +856,61 @@ async function handleShowIncomplete() {
     setSearchCustomFields([]);
     setSearchError("");
     setSearchActive(false);
-    setFilteredEntries(null);
     setActiveFilterId(null);
     setEntryStatusView(null);
+
+    if (showArchivedEntries) {
+      loadArchivedEntries();
+      return;
+    }
+
+    setFilteredEntries(null);
+  }
+
+  async function loadArchivedEntries(filters = {}) {
+    try {
+      setSearching(true);
+      setSearchError("");
+
+      const results = await searchProjectEntries(id, {
+        sort: "newest",
+        ...filters,
+        archived: true,
+      });
+
+      setFilteredEntries(Array.isArray(results) ? results : []);
+    } catch (requestError) {
+      console.error("Failed to load archived entries:", requestError);
+      setSearchError(
+        requestError.message || "Unable to load archived entries.",
+      );
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function handleToggleArchivedView() {
+    setSearchQuery("");
+    setSearchFromDate("");
+    setSearchToDate("");
+    setSearchMinDuration("");
+    setSearchMaxDuration("");
+    setSearchCompleted("all");
+    setSearchSort("newest");
+    setSearchCustomFields([]);
+    setSearchError("");
+    setSearchActive(false);
+    setActiveFilterId(null);
+    setEntryStatusView(null);
+
+    if (showArchivedEntries) {
+      setShowArchivedEntries(false);
+      setFilteredEntries(null);
+      return;
+    }
+
+    setShowArchivedEntries(true);
+    await loadArchivedEntries();
   }
 
   function formatLoggedTime(minutes = 0) {
@@ -933,7 +1047,7 @@ async function handleShowIncomplete() {
         : [];
 
   const displayEntries = [
-    ...pendingEntries.map((item) => ({
+    ...(showArchivedEntries ? [] : pendingEntries).map((item) => ({
       id: item.localId,
       name: item.payload.name,
       durationMinutes: item.payload.durationMinutes,
@@ -1187,10 +1301,19 @@ async function handleShowIncomplete() {
           <section className="entries-section">
             <div className="entries-header entries-header-with-views">
               <div>
-                <h2 className="entries-title">Entries</h2>
+                <h2 className="entries-title">{showArchivedEntries ? "Archived entries" : "Entries"}</h2>
                 <span className="entries-count">
                   {entries.length} {entries.length === 1 ? "entry" : "entries"}
                 </span>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  style={{ marginLeft: "12px" }}
+                  onClick={handleToggleArchivedView}
+                  disabled={searching}
+                >
+                  {showArchivedEntries ? "Back to active entries" : "View archive"}
+                </button>
               </div>
 
               {entries.length > 0 && (
@@ -1452,13 +1575,19 @@ async function handleShowIncomplete() {
                 </div>
 
                 <p className="empty-heading">
-                  {searchActive ? "No entries match your search." : "No entries yet."}
+                  {searchActive
+                    ? "No entries match your search."
+                    : showArchivedEntries
+                      ? "No archived entries."
+                      : "No entries yet."}
                 </p>
 
                 <p className="empty-body">
                   {searchActive
                     ? "Try changing or clearing one or more search filters."
-                    : "Add your first entry to start building a record for this project. Each entry captures a piece of your work."}
+                    : showArchivedEntries
+                      ? "Entries you archive appear here. Unarchive an entry to return it to the main list."
+                      : "Add your first entry to start building a record for this project. Each entry captures a piece of your work."}
                 </p>
 
                 {searchActive && (
@@ -1471,7 +1600,7 @@ async function handleShowIncomplete() {
                   </button>
                 )}
 
-                {!searchActive && !project.archivedAt && (
+                {!searchActive && !showArchivedEntries && !project.archivedAt && (
                   <button
                     type="button"
                     className="btn btn-primary"
@@ -1626,11 +1755,14 @@ async function handleShowIncomplete() {
           onClose={() => setSelectedEntryForDetails(null)}
           onEdit={() => openEditEntryModal(selectedEntryForDetails)}
           onDelete={handleDeleteEntry}
+          onArchive={handleArchiveEntry}
+          onUnarchive={handleUnarchiveEntry}
           onHistory={(entry) => {
             setSelectedEntryForDetails(null);
             setSelectedEntryForHistory(entry);
           }}
           deleteSaving={entryDeleteSaving}
+          archiveSaving={archiveSaving}
           onChecklistToggle={handleChecklistToggle}
           checklistSaving={checklistSaving}
           onProjectReferenceClick={(projectId) => {

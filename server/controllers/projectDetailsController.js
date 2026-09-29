@@ -8,6 +8,8 @@ const {
   updateEntryProjectReferencesService,
   updateEntryReferencesService,
   updateEntryService,
+  archiveEntryService,
+  unarchiveEntryService,
   deleteEntryService,
   getEntryRevisionsService,
   getEntryRevisionService,
@@ -99,6 +101,7 @@ async function searchProjectEntries(req, res, next) {
         maxDuration: req.query.maxDuration,
         completed: req.query.completed,
         sort: req.query.sort,
+        archived: req.query.archived === "true",
         customFields,
       },
     });
@@ -171,6 +174,38 @@ async function updateEntry(req, res, next) {
     });
 
     return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
+async function archiveEntry(req, res, next) {
+  try {
+    const data = await archiveEntryService({
+      projectId: req.params.projectId,
+      entryId: req.params.entryId,
+      userId: req.user.id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+async function unarchiveEntry(req, res, next) {
+  try {
+    const data = await unarchiveEntryService({
+      projectId: req.params.projectId,
+      entryId: req.params.entryId,
+      userId: req.user.id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
   } catch (error) {
     return next(error);
   }
@@ -486,6 +521,8 @@ module.exports = {
   updateEntry,
   deleteEntry,
   updateChecklistItem,
+  archiveEntry,
+  unarchiveEntry,
   deleteChecklistItem,
   updateProjectReferences,
   updateEntryProjectReferences,
