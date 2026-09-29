@@ -115,7 +115,26 @@ export async function fetchAiProjectProgress(
     },
   );
 }
+export async function fetchLearningVideos(
+  projectId,
+  query = "",
+) {
+  if (!projectId) {
+    throw new Error(
+      "Project ID is required.",
+    );
+  }
 
+  const term = String(query ?? "").trim();
+
+  const params = term
+    ? `?q=${encodeURIComponent(term)}`
+    : "";
+
+  return request(
+    `/api/projects/${projectId}/learning-videos${params}`,
+  );
+}
 export async function fetchAiProjectSpeech(
   projectId,
   insight,

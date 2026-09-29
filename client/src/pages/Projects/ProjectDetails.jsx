@@ -22,6 +22,7 @@ import CalendarView from "./CalendarView";
 import BoardView from "./BoardView";
 import RecurringEntriesModal from "./RecurringEntriesModal";
 import AiProjectInsight from "./AiProjectInsight";
+import LearningVideos from "./LearningVideos";
 
 import {
   createProjectEntry,
@@ -1197,6 +1198,12 @@ async function handleShowIncomplete() {
 
           <AiProjectInsight
             projectId={id}
+          />
+
+
+          <LearningVideos
+            projectId={id}
+            projectName={project.name}
           />
 
           {/* Project references */}
