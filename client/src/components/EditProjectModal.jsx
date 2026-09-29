@@ -269,129 +269,14 @@ export default function EditProjectModal({ project, onClose, onSave }) {
       </div>
 
       <style>{`
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.45);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 200;
-          padding: 24px;
-          backdrop-filter: blur(2px);
-        }
-
+        /* Modal shell + form base now live in index.css (design tokens) */
         .modal {
-          background: #ffffff;
-          border-radius: 16px;
-          width: 100%;
           max-width: 580px;
-          max-height: 90vh;
-          display: flex;
-          flex-direction: column;
-          box-shadow:
-            0 20px 60px rgba(0, 0, 0, 0.18),
-            0 4px 16px rgba(0, 0, 0, 0.08);
-          overflow: hidden;
-        }
-
-        .modal-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 22px 24px 18px;
-          border-bottom: 1px solid #f1f5f9;
-          flex-shrink: 0;
-        }
-
-        .modal-title {
-          font-family: 'DM Serif Display', Georgia, serif;
-          font-size: 22px;
-          font-weight: 400;
-          color: #1a2340;
-          margin: 0;
-        }
-
-        .modal-close {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          border: none;
-          background: #f1f5f9;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: #64748b;
-          transition:
-            background 0.15s ease,
-            color 0.15s ease;
-          padding: 0;
-        }
-
-        .modal-close:hover {
-          background: #e2e8f0;
-          color: #1e293b;
-        }
-
-        .modal-body {
-          overflow-y: auto;
-          flex: 1;
-          padding: 20px 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .form-field {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .form-label {
-          font-size: 13px;
-          font-weight: 600;
-          color: #374151;
         }
 
         .form-label-required::after {
           content: ' *';
           color: #ef4444;
-        }
-
-        .form-input {
-          padding: 9px 12px;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          color: #1e293b;
-          outline: none;
-          transition:
-            border-color 0.15s ease,
-            box-shadow 0.15s ease;
-          background: #fff;
-          resize: vertical;
-        }
-
-        .form-input:focus {
-          border-color: #4f63d2;
-          box-shadow:
-            0 0 0 3px rgba(79, 99, 210, 0.1);
-        }
-
-        .form-select {
-          padding: 9px 12px;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          color: #1e293b;
-          outline: none;
-          background: #fff;
-          cursor: pointer;
-          width: 100%;
         }
 
         .fields-section-label {
@@ -489,33 +374,6 @@ export default function EditProjectModal({ project, onClose, onSave }) {
           flex-shrink: 0;
         }
 
-        .btn-add-field {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 9px 14px;
-          border: 1.5px dashed #cbd5e1;
-          border-radius: 8px;
-          background: transparent;
-          font-family: 'Inter', sans-serif;
-          font-size: 13px;
-          font-weight: 500;
-          color: #64748b;
-          cursor: pointer;
-          transition:
-            border-color 0.15s ease,
-            color 0.15s ease,
-            background 0.15s ease;
-          white-space: nowrap;
-          flex-shrink: 0;
-        }
-
-        .btn-add-field:hover {
-          border-color: #4f63d2;
-          color: #4f63d2;
-          background: rgba(79, 99, 210, 0.04);
-        }
-
         .edit-project-error {
           margin: 0 24px 4px;
           padding: 10px 12px;
@@ -525,61 +383,6 @@ export default function EditProjectModal({ project, onClose, onSave }) {
           color: #b91c1c;
           font-size: 12px;
           line-height: 1.45;
-        }
-
-        .modal-footer {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 8px;
-          padding: 16px 24px;
-          border-top: 1px solid #f1f5f9;
-          flex-shrink: 0;
-        }
-
-        .btn-cancel {
-          padding: 9px 18px;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
-          background: #ffffff;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          color: #64748b;
-          cursor: pointer;
-          transition: background 0.15s ease;
-        }
-
-        .btn-cancel:hover {
-          background: #f8fafc;
-        }
-
-        .btn-save {
-          padding: 9px 20px;
-          border: none;
-          border-radius: 8px;
-          background: #4f63d2;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          color: #ffffff;
-          cursor: pointer;
-          transition:
-            background 0.15s ease,
-            box-shadow 0.15s ease;
-        }
-
-        .btn-save:hover:not(:disabled) {
-          background: #3d50bf;
-          box-shadow:
-            0 2px 10px rgba(79, 99, 210, 0.3);
-        }
-
-        .btn-save:disabled,
-        .btn-cancel:disabled,
-        .modal-close:disabled {
-          opacity: 0.65;
-          cursor: not-allowed;
         }
 
         @media (max-width: 600px) {

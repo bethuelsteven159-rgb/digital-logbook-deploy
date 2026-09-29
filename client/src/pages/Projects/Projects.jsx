@@ -340,32 +340,7 @@ export default function Projects() {
           margin: 0;
         }
 
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 9px 18px;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          border: none;
-          transition: background 0.15s ease, box-shadow 0.15s ease;
-          white-space: nowrap;
-        }
-        .btn-primary {
-          background: #4f63d2;
-          color: #ffffff;
-        }
-        .btn-primary:hover {
-          background: #3d50bf;
-          box-shadow: 0 2px 10px rgba(79,99,210,0.3);
-        }
-        .btn-primary:focus-visible {
-          outline: 2px solid #4f63d2;
-          outline-offset: 2px;
-        }
+        /* Buttons: base .btn system now lives in index.css (design tokens) */
 
         /* Projects content */
         .projects-content {

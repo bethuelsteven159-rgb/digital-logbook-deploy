@@ -1,28 +1,20 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { useNavigate, useParams } from 'react-router-dom';
 
-import Sidebar from "../../components/Sidebar";
-import { X, Plus, Zap } from "lucide-react";
-import EditProjectModal from "../../components/EditProjectModal";
-import NewEntryModal from "./NewEntryModal";
-import EditEntryModal from "./EditEntryModal";
-import EntryHistoryModal from "./EntryHistoryModal";
-import EntryDetailsModal from "./EntryDetailsModal";
-import AutomationRulesModal from "./AutomationRulesModal";
-import CalendarView from "./CalendarView";
-import BoardView from "./BoardView";
-import RecurringEntriesModal from "./RecurringEntriesModal";
-import AiProjectInsight from "./AiProjectInsight";
-import LearningVideos from "./LearningVideos";
+import Sidebar from '../../components/Sidebar';
+import { X, Plus, Zap, Check } from 'lucide-react';
+import EditProjectModal from '../../components/EditProjectModal';
+import NewEntryModal from './NewEntryModal';
+import EditEntryModal from './EditEntryModal';
+import EntryHistoryModal from './EntryHistoryModal';
+import EntryDetailsModal from './EntryDetailsModal';
+import AutomationRulesModal from './AutomationRulesModal';
+import CalendarView from './CalendarView';
+import BoardView from './BoardView';
+import RecurringEntriesModal from './RecurringEntriesModal';
+import AiProjectInsight from './AiProjectInsight';
+import LearningVideos from './LearningVideos';
 
 import {
   createProjectEntry,
@@ -39,103 +31,78 @@ import {
   fetchOutstandingEntries,
   fetchIncompleteEntries,
   searchProjectEntries,
-} from "../../api/projectDetailsApi";
+} from '../../api/projectDetailsApi';
 
-import {
-  fetchProjects,
-  setProjectArchived,
-  updateProject,
-} from "../../api/projectsApi";
+import { fetchProjects, setProjectArchived, updateProject } from '../../api/projectsApi';
 
-import useOnlineStatus from "../../hooks/useOnlineStatus";
+import useOnlineStatus from '../../hooks/useOnlineStatus';
 import {
   getQueueForProject,
   addToQueue,
   removeFromQueue,
   updateQueueItem,
-} from "../../offline/entryQueue";
+} from '../../offline/entryQueue';
 
 import {
   updateChecklistItem,
   deleteChecklistItem,
   updateProjectReferences,
   updateEntry,
-} from "../../api/entryFeaturesApi";
+} from '../../api/entryFeaturesApi';
 
-import {
-  generateDueRecurringEntries,
-} from "../../api/recurringEntriesApi";
+import { generateDueRecurringEntries } from '../../api/recurringEntriesApi';
 export default function ProjectDetails() {
   const { id } = useParams();
 
   const navigate = useNavigate();
 
-  const [collapsed, setSidebarCollapsed] =
-    useState(false);
+  const [collapsed, setSidebarCollapsed] = useState(false);
 
   const [details, setDetails] = useState(null);
 
   const [projects, setProjects] = useState([]);
 
-  const [projectReferenceSaving, setProjectReferenceSaving] =
-    useState(false);
+  const [projectReferenceSaving, setProjectReferenceSaving] = useState(false);
 
-  const [showProjectReferenceModal, setShowProjectReferenceModal] =
-    useState(false);
+  const [showProjectReferenceModal, setShowProjectReferenceModal] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  const [showEntryModal, setShowEntryModal] =
-    useState(false);
+  const [showEntryModal, setShowEntryModal] = useState(false);
 
-  const [showEditEntryModal, setShowEditEntryModal] =
-    useState(false);
+  const [showEditEntryModal, setShowEditEntryModal] = useState(false);
 
-  const [selectedEntryForEdit, setSelectedEntryForEdit] =
-    useState(null);
+  const [selectedEntryForEdit, setSelectedEntryForEdit] = useState(null);
 
-    const [selectedEntryForDetails, setSelectedEntryForDetails] =
-    useState(null);
+  const [selectedEntryForDetails, setSelectedEntryForDetails] = useState(null);
 
-  const [selectedEntryForHistory, setSelectedEntryForHistory] =
-    useState(null);
+  const [selectedEntryForHistory, setSelectedEntryForHistory] = useState(null);
 
-  const [entryDeleteSaving, setEntryDeleteSaving] =
-    useState(false);
+  const [entryDeleteSaving, setEntryDeleteSaving] = useState(false);
   const [archiveSaving, setArchiveSaving] = useState(false);
   const [showArchivedEntries, setShowArchivedEntries] = useState(false);
 
   const [checklistSaving, setChecklistSaving] = useState({});
 
-  const [entryView, setEntryView] =
-    useState("list");
+  const [entryView, setEntryView] = useState('list');
 
-  const [projectActionSaving, setProjectActionSaving] =
-    useState(false);
+  const [projectActionSaving, setProjectActionSaving] = useState(false);
 
-  const [
-    showEditProjectModal,
-    setShowEditProjectModal,
-  ] = useState(false);
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
 
-  const [showAutomationRulesModal, setShowAutomationRulesModal] =
-    useState(false);
+  const [showAutomationRulesModal, setShowAutomationRulesModal] = useState(false);
 
-  const [showRecurringModal, setShowRecurringModal] =
-    useState(false);
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
 
-  const [generatedNotice, setGeneratedNotice] =
-    useState("");
+  const [generatedNotice, setGeneratedNotice] = useState('');
 
   const generateDueRef = useRef(null);
 
   const isOnline = useOnlineStatus();
 
-  const [pendingEntries, setPendingEntries] = useState(() =>
-    getQueueForProject(id),
-  );
+  const [pendingEntries, setPendingEntries] = useState(() => getQueueForProject(id));
 
   const [syncing, setSyncing] = useState(false);
 
@@ -143,39 +110,39 @@ export default function ProjectDetails() {
   const [activeFilterId, setActiveFilterId] = useState(null);
   const [filteredEntries, setFilteredEntries] = useState(null);
   const [entryStatusView, setEntryStatusView] = useState(null);
-  const [entrySearchQuery, setEntrySearchQuery] = useState("");
-  const [entrySearchField, setEntrySearchField] = useState("all");
+  const [entrySearchQuery, setEntrySearchQuery] = useState('');
+  const [entrySearchField, setEntrySearchField] = useState('all');
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFromDate, setSearchFromDate] = useState("");
-  const [searchToDate, setSearchToDate] = useState("");
-  const [searchMinDuration, setSearchMinDuration] = useState("");
-  const [searchMaxDuration, setSearchMaxDuration] = useState("");
-  const [searchCompleted, setSearchCompleted] = useState("all");
-  const [searchSort, setSearchSort] = useState("newest");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFromDate, setSearchFromDate] = useState('');
+  const [searchToDate, setSearchToDate] = useState('');
+  const [searchMinDuration, setSearchMinDuration] = useState('');
+  const [searchMaxDuration, setSearchMaxDuration] = useState('');
+  const [searchCompleted, setSearchCompleted] = useState('all');
+  const [searchSort, setSearchSort] = useState('newest');
   const [searchCustomFields, setSearchCustomFields] = useState([]);
   const [searchActive, setSearchActive] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState("");
+  const [searchError, setSearchError] = useState('');
   const [showSearchFilters, setShowSearchFilters] = useState(false);
 
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
   const [editingFilterId, setEditingFilterId] = useState(null);
-  const [filterName, setFilterName] = useState("");
+  const [filterName, setFilterName] = useState('');
   const [filterConditions, setFilterConditions] = useState([
-    { targetField: "durationMinutes", operator: "greater_than", value: "" },
+    { targetField: 'durationMinutes', operator: 'greater_than', value: '' },
   ]);
 
   const loadProject = useCallback(async () => {
     if (!id) {
-      setError("No project ID was provided.");
+      setError('No project ID was provided.');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      setError("");
+      setError('');
 
       // Generate due recurring entries once per project load. The
       // ref is set before awaiting so repeat renders (including
@@ -185,21 +152,17 @@ export default function ProjectDetails() {
         generateDueRef.current = id;
 
         try {
-          const generation =
-            await generateDueRecurringEntries(id);
+          const generation = await generateDueRecurringEntries(id);
 
           setGeneratedNotice(
             generation?.generatedCount > 0
               ? generation.generatedCount === 1
-                ? "1 recurring entry was generated."
+                ? '1 recurring entry was generated.'
                 : `${generation.generatedCount} recurring entries were generated.`
-              : "",
+              : '',
           );
         } catch (generationError) {
-          console.error(
-            "Failed to generate recurring entries:",
-            generationError,
-          );
+          console.error('Failed to generate recurring entries:', generationError);
         }
       }
 
@@ -207,27 +170,20 @@ export default function ProjectDetails() {
       setDetails(data);
 
       try {
-        const allProjects = await fetchProjects("all");
+        const allProjects = await fetchProjects('all');
         setProjects(Array.isArray(allProjects) ? allProjects : []);
       } catch (projectsError) {
-        console.error("Failed to load projects for references:", projectsError);
+        console.error('Failed to load projects for references:', projectsError);
         setProjects([]);
       }
-      if (typeof fetchSavedFilters === "function") {
+      if (typeof fetchSavedFilters === 'function') {
         const filters = await fetchSavedFilters(id);
         setSavedFilters(filters || []);
       }
-
     } catch (requestError) {
-      console.error(
-        "Failed to load project:",
-        requestError,
-      );
+      console.error('Failed to load project:', requestError);
 
-      setError(
-        requestError.message ||
-          "Failed to load project.",
-      );
+      setError(requestError.message || 'Failed to load project.');
     } finally {
       setLoading(false);
     }
@@ -247,22 +203,18 @@ export default function ProjectDetails() {
     setSyncing(true);
 
     for (const item of queue) {
-      updateQueueItem(item.localId, { status: "syncing" });
+      updateQueueItem(item.localId, { status: 'syncing' });
 
       try {
         await createProjectEntry(item.projectId, item.payload);
 
         removeFromQueue(item.localId);
 
-        setPendingEntries((current) =>
-          current.filter(
-            (entry) => entry.localId !== item.localId,
-          ),
-        );
+        setPendingEntries((current) => current.filter((entry) => entry.localId !== item.localId));
       } catch (syncError) {
         updateQueueItem(item.localId, {
-          status: "failed",
-          lastError: syncError.message || "Sync failed",
+          status: 'failed',
+          lastError: syncError.message || 'Sync failed',
         });
 
         setPendingEntries((current) =>
@@ -270,7 +222,7 @@ export default function ProjectDetails() {
             entry.localId === item.localId
               ? {
                   ...entry,
-                  status: "failed",
+                  status: 'failed',
                   lastError: syncError.message,
                 }
               : entry,
@@ -296,8 +248,8 @@ export default function ProjectDetails() {
     const targetId = window.location.hash.slice(1);
     const timer = window.setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
+        behavior: 'smooth',
+        block: 'center',
       });
     }, 100);
     return () => window.clearTimeout(timer);
@@ -318,14 +270,9 @@ export default function ProjectDetails() {
 
     try {
       setChecklistSaving((current) => ({ ...current, [key]: true }));
-      setError("");
+      setError('');
 
-      const updated = await updateChecklistItem(
-        id,
-        entryId,
-        itemId,
-        { completed },
-      );
+      const updated = await updateChecklistItem(id, entryId, itemId, { completed });
 
       setDetails((current) => {
         if (!current) return current;
@@ -358,7 +305,7 @@ export default function ProjectDetails() {
         };
       });
     } catch (requestError) {
-      setError(requestError.message || "Failed to update checklist item.");
+      setError(requestError.message || 'Failed to update checklist item.');
     } finally {
       setChecklistSaving((current) => {
         const next = { ...current };
@@ -375,34 +322,34 @@ export default function ProjectDetails() {
       setSelectedEntryForEdit(null);
       await loadProject();
     } catch (requestError) {
-      console.error("Failed to update entry:", requestError);
+      console.error('Failed to update entry:', requestError);
       throw requestError;
     }
   }
 
   async function handleDeleteEntry(entry) {
-  if (!entry?.id) {
-    return;
+    if (!entry?.id) {
+      return;
+    }
+
+    try {
+      setEntryDeleteSaving(true);
+      setError('');
+
+      await deleteProjectEntry(id, entry.id);
+
+      setSelectedEntryForDetails(null);
+      setSelectedEntryForEdit(null);
+      setShowEditEntryModal(false);
+
+      await loadProject();
+    } catch (requestError) {
+      console.error('Failed to delete entry:', requestError);
+      setError(requestError.message || 'Failed to delete entry.');
+    } finally {
+      setEntryDeleteSaving(false);
+    }
   }
-
-  try {
-    setEntryDeleteSaving(true);
-    setError("");
-
-    await deleteProjectEntry(id, entry.id);
-
-    setSelectedEntryForDetails(null);
-    setSelectedEntryForEdit(null);
-    setShowEditEntryModal(false);
-
-    await loadProject();
-  } catch (requestError) {
-    console.error("Failed to delete entry:", requestError);
-    setError(requestError.message || "Failed to delete entry.");
-  } finally {
-    setEntryDeleteSaving(false);
-  }
-}
 
 async function handleArchiveEntry(entry) {
   if (!entry?.id) {
@@ -487,10 +434,7 @@ async function handleUnarchiveEntry(entry) {
        */
       await loadProject();
     } catch (requestError) {
-      console.error(
-        "Failed to create entry:",
-        requestError,
-      );
+      console.error('Failed to create entry:', requestError);
 
       // A real network failure (server unreachable) has no HTTP status.
       // A validation/auth error (400/401/etc) does — don't silently
@@ -513,22 +457,16 @@ async function handleUnarchiveEntry(entry) {
   async function handleUpdateProjectReferences(referencedProjectIds) {
     try {
       setProjectReferenceSaving(true);
-      setError("");
+      setError('');
 
       await updateProjectReferences(id, referencedProjectIds);
 
       setShowProjectReferenceModal(false);
       await loadProject();
     } catch (requestError) {
-      console.error(
-        "Failed to update project references:",
-        requestError,
-      );
+      console.error('Failed to update project references:', requestError);
 
-      setError(
-        requestError.message ||
-          "Failed to update project references.",
-      );
+      setError(requestError.message || 'Failed to update project references.');
     } finally {
       setProjectReferenceSaving(false);
     }
@@ -536,174 +474,150 @@ async function handleUnarchiveEntry(entry) {
 
   async function handleCreateSavedFilter(payload) {
     try {
-    const newFilter = await createSavedFilter(id, payload);
+      const newFilter = await createSavedFilter(id, payload);
 
-    setSavedFilters((current) => [newFilter, ...current]);
+      setSavedFilters((current) => [newFilter, ...current]);
     } catch (submitError) {
-      console.error(
-        "Failed to create saved filter:",
-        submitError,
-      );
+      console.error('Failed to create saved filter:', submitError);
     }
   }
 
+  async function handleUpdateSavedFilter(filterId, payload) {
+    try {
+      const updatedFilter = await updateSavedFilter(filterId, payload);
 
-async function handleUpdateSavedFilter(filterId, payload) {
-  try {
-    const updatedFilter = await updateSavedFilter(filterId, payload);
-
-    setSavedFilters((current) =>
-      current.map((filter) =>
-        filter.id === filterId ? updatedFilter : filter,
-      ),
-    );
-  } catch (submitError) {
-    console.error(
-      "Failed to update saved filter:",
-      submitError,
-    );
-  }
-}
-
-function handleOpenEditFilter(filter) {
-  setEditingFilterId(filter.id);
-  setFilterName(filter.name);
-  setFilterConditions(
-    filter.criteria.map((criterion) => ({
-      targetField: criterion.fieldName || criterion.fieldId,
-      operator: criterion.operator,
-      value: criterion.value,
-    })),
-  );
-  setShowFilterBuilder(true);
-}
-
-async function handleApplyFilter(filterId) {
-  setShowArchivedEntries(false);
-  if (!filterId) {
-    setActiveFilterId(null);
-    setFilteredEntries(null);
-    return;
+      setSavedFilters((current) =>
+        current.map((filter) =>
+          filter.id === filterId ? updatedFilter : filter,
+        ),
+      );
+    } catch (submitError) {
+      console.error('Failed to update saved filter:', submitError);
+    }
   }
 
-  try {
-    setSearchActive(false);
-    setSearchError("");
-    const results = await applySavedFilter(id, filterId);
-
-    setActiveFilterId(filterId);
-    setFilteredEntries(results || []);
-  } catch (applyError) {
-    console.error(
-      "Failed to apply saved filter:",
-      applyError,
+  function handleOpenEditFilter(filter) {
+    setEditingFilterId(filter.id);
+    setFilterName(filter.name);
+    setFilterConditions(
+      filter.criteria.map((criterion) => ({
+        targetField: criterion.fieldName || criterion.fieldId,
+        operator: criterion.operator,
+        value: criterion.value,
+      })),
     );
+    setShowFilterBuilder(true);
   }
-}
 
-  async function handleDeleteFilter(filterId) {
-  try {
-    await deleteSavedFilter(filterId);
+  async function handleApplyFilter(filterId) {
+    setShowArchivedEntries(false);
 
-    setSavedFilters((current) =>
-      current.filter((filter) => filter.id !== filterId),
-    );
-
-    if (activeFilterId === filterId) {
+    if (!filterId) {
       setActiveFilterId(null);
       setFilteredEntries(null);
+      return;
     }
-  } catch (deleteError) {
-    console.error(
-      "Failed to delete saved filter:",
-      deleteError,
+
+    try {
+      setSearchActive(false);
+      setSearchError('');
+
+      const results = await applySavedFilter(id, filterId);
+
+      setActiveFilterId(filterId);
+      setFilteredEntries(results || []);
+    } catch (applyError) {
+      console.error('Failed to apply saved filter:', applyError);
+    }
+  }
+
+  async function handleDeleteFilter(filterId) {
+    try {
+      await deleteSavedFilter(filterId);
+
+      setSavedFilters((current) => current.filter((filter) => filter.id !== filterId));
+
+      if (activeFilterId === filterId) {
+        setActiveFilterId(null);
+        setFilteredEntries(null);
+      }
+    } catch (deleteError) {
+      console.error('Failed to delete saved filter:', deleteError);
+    }
+  }
+
+  function addFilterCondition() {
+    setFilterConditions((current) => [
+      ...current,
+      { targetField: 'durationMinutes', operator: 'greater_than', value: '' },
+    ]);
+  }
+
+  function updateFilterCondition(index, updates) {
+    setFilterConditions((current) =>
+      current.map((condition, i) => (i === index ? { ...condition, ...updates } : condition)),
     );
   }
-}
 
-function addFilterCondition() {
-  setFilterConditions((current) => [
-    ...current,
-    { targetField: "durationMinutes", operator: "greater_than", value: "" },
-  ]);
-}
-
-function updateFilterCondition(index, updates) {
-  setFilterConditions((current) =>
-    current.map((condition, i) =>
-      i === index ? { ...condition, ...updates } : condition,
-    ),
-  );
-}
-
-function removeFilterCondition(index) {
-  setFilterConditions((current) =>
-    current.filter((_, i) => i !== index),
-  );
-}
-async function handleMarkComplete(entryId) {
-  try {
-    await markEntryComplete(id, entryId);
-
-    await loadProject();
-  } catch (completeError) {
-    console.error(
-      "Failed to mark entry complete:",
-      completeError,
-    );
+  function removeFilterCondition(index) {
+    setFilterConditions((current) => current.filter((_, i) => i !== index));
   }
-}
-
-
-async function handleShowOverdue() {
-  setShowArchivedEntries(false);
-  if (entryStatusView === "overdue") {
-    setEntryStatusView(null);
-    setFilteredEntries(null);
-    setActiveFilterId(null);
-    return;
+  async function handleMarkComplete(entryId) {
+    try {
+      await markEntryComplete(id, entryId);
+      await loadProject();
+    } catch (completeError) {
+      console.error('Failed to mark entry complete:', completeError);
+    }
   }
 
-  try {
-    setSearchActive(false);
-    setSearchError("");
-    const results = await fetchOutstandingEntries(id);
+  async function handleShowOverdue() {
+    setShowArchivedEntries(false);
 
-    setEntryStatusView("overdue");
-    setActiveFilterId(null);
-    setFilteredEntries(results || []);
-  } catch (outstandingError) {
-    console.error(
-      "Failed to load overdue entries:",
-      outstandingError,
-    );
+    if (entryStatusView === 'overdue') {
+      setEntryStatusView(null);
+      setFilteredEntries(null);
+      setActiveFilterId(null);
+      return;
+    }
+
+    try {
+      setSearchActive(false);
+      setSearchError('');
+
+      const results = await fetchOutstandingEntries(id);
+
+      setEntryStatusView('overdue');
+      setActiveFilterId(null);
+      setFilteredEntries(results || []);
+    } catch (outstandingError) {
+      console.error('Failed to load overdue entries:', outstandingError);
+    }
   }
-}
 
-async function handleShowIncomplete() {
-  setShowArchivedEntries(false);
-  if (entryStatusView === "incomplete") {
-    setEntryStatusView(null);
-    setFilteredEntries(null);
-    setActiveFilterId(null);
-    return;
+  async function handleShowIncomplete() {
+    setShowArchivedEntries(false);
+
+    if (entryStatusView === 'incomplete') {
+      setEntryStatusView(null);
+      setFilteredEntries(null);
+      setActiveFilterId(null);
+      return;
+    }
+
+    try {
+      setSearchActive(false);
+      setSearchError('');
+
+      const results = await fetchIncompleteEntries(id);
+
+      setEntryStatusView('incomplete');
+      setActiveFilterId(null);
+      setFilteredEntries(results || []);
+    } catch (incompleteError) {
+      console.error('Failed to load incomplete entries:', incompleteError);
+    }
   }
-
-  try {
-    setSearchActive(false);
-    setSearchError("");
-    const results = await fetchIncompleteEntries(id);
-
-    setEntryStatusView("incomplete");
-    setActiveFilterId(null);
-    setFilteredEntries(results || []);
-  } catch (incompleteError) {
-    console.error(
-      "Failed to load incomplete entries:",
-      incompleteError,
-    );
-  }
-}
   async function handleUpdateProject(payload) {
     try {
       await updateProject(id, payload);
@@ -714,10 +628,7 @@ async function handleShowIncomplete() {
       setFilteredEntries(null);
       await loadProject();
     } catch (requestError) {
-      console.error(
-        "Failed to update project:",
-        requestError,
-      );
+      console.error('Failed to update project:', requestError);
 
       throw requestError;
     }
@@ -729,25 +640,15 @@ async function handleShowIncomplete() {
 
     try {
       setProjectActionSaving(true);
-      setError("");
+      setError('');
 
       await setProjectArchived(id, shouldArchive);
 
-      navigate(
-        shouldArchive
-          ? "/projects?tab=archived"
-          : "/projects",
-      );
+      navigate(shouldArchive ? '/projects?tab=archived' : '/projects');
     } catch (requestError) {
-      console.error(
-        "Failed to change archive status:",
-        requestError,
-      );
+      console.error('Failed to change archive status:', requestError);
 
-      setError(
-        requestError.message ||
-          "Failed to update project archive status.",
-      );
+      setError(requestError.message || 'Failed to update project archive status.');
     } finally {
       setProjectActionSaving(false);
     }
@@ -769,29 +670,25 @@ async function handleShowIncomplete() {
 
   function formatDate(value) {
     if (!value) {
-      return "—";
+      return '—';
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-      return "—";
+      return '—';
     }
 
-    return new Intl.DateTimeFormat("en-ZA", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+    return new Intl.DateTimeFormat('en-ZA', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
     }).format(date);
   }
 
-
   function addSearchCustomField() {
-    const firstAvailableField = searchableFields[0]?.id || "";
-    setSearchCustomFields((current) => [
-      ...current,
-      { fieldId: firstAvailableField, value: "" },
-    ]);
+    const firstAvailableField = searchableFields[0]?.id || '';
+    setSearchCustomFields((current) => [...current, { fieldId: firstAvailableField, value: '' }]);
   }
 
   function updateSearchCustomField(index, updates) {
@@ -803,9 +700,7 @@ async function handleShowIncomplete() {
   }
 
   function removeSearchCustomField(index) {
-    setSearchCustomFields((current) =>
-      current.filter((_, filterIndex) => filterIndex !== index),
-    );
+    setSearchCustomFields((current) => current.filter((_, filterIndex) => filterIndex !== index));
   }
 
   async function handleStructuredSearch(event) {
@@ -813,13 +708,13 @@ async function handleShowIncomplete() {
 
     try {
       setSearching(true);
-      setSearchError("");
-      setError("");
+      setSearchError('');
+      setError('');
 
       const completed =
-        searchCompleted === "completed"
+        searchCompleted === 'completed'
           ? true
-          : searchCompleted === "incomplete"
+          : searchCompleted === 'incomplete'
             ? false
             : undefined;
 
@@ -840,25 +735,23 @@ async function handleShowIncomplete() {
       setFilteredEntries(Array.isArray(results) ? results : []);
       setSearchActive(true);
     } catch (requestError) {
-      console.error("Failed to search entries:", requestError);
-      setSearchError(
-        requestError.message || "Unable to search entries.",
-      );
+      console.error('Failed to search entries:', requestError);
+      setSearchError(requestError.message || 'Unable to search entries.');
     } finally {
       setSearching(false);
     }
   }
 
   function handleClearStructuredSearch() {
-    setSearchQuery("");
-    setSearchFromDate("");
-    setSearchToDate("");
-    setSearchMinDuration("");
-    setSearchMaxDuration("");
-    setSearchCompleted("all");
-    setSearchSort("newest");
+    setSearchQuery('');
+    setSearchFromDate('');
+    setSearchToDate('');
+    setSearchMinDuration('');
+    setSearchMaxDuration('');
+    setSearchCompleted('all');
+    setSearchSort('newest');
     setSearchCustomFields([]);
-    setSearchError("");
+    setSearchError('');
     setSearchActive(false);
     setActiveFilterId(null);
     setEntryStatusView(null);
@@ -874,19 +767,19 @@ async function handleShowIncomplete() {
   async function loadArchivedEntries(filters = {}) {
     try {
       setSearching(true);
-      setSearchError("");
+      setSearchError('');
 
       const results = await searchProjectEntries(id, {
-        sort: "newest",
+        sort: 'newest',
         ...filters,
         archived: true,
       });
 
       setFilteredEntries(Array.isArray(results) ? results : []);
     } catch (requestError) {
-      console.error("Failed to load archived entries:", requestError);
+      console.error('Failed to load archived entries:', requestError);
       setSearchError(
-        requestError.message || "Unable to load archived entries.",
+        requestError.message || 'Unable to load archived entries.',
       );
     } finally {
       setSearching(false);
@@ -894,15 +787,15 @@ async function handleShowIncomplete() {
   }
 
   async function handleToggleArchivedView() {
-    setSearchQuery("");
-    setSearchFromDate("");
-    setSearchToDate("");
-    setSearchMinDuration("");
-    setSearchMaxDuration("");
-    setSearchCompleted("all");
-    setSearchSort("newest");
+    setSearchQuery('');
+    setSearchFromDate('');
+    setSearchToDate('');
+    setSearchMinDuration('');
+    setSearchMaxDuration('');
+    setSearchCompleted('all');
+    setSearchSort('newest');
     setSearchCustomFields([]);
-    setSearchError("");
+    setSearchError('');
     setSearchActive(false);
     setActiveFilterId(null);
     setEntryStatusView(null);
@@ -921,7 +814,7 @@ async function handleShowIncomplete() {
     const safeMinutes = Number(minutes) || 0;
 
     if (safeMinutes === 0) {
-      return "0 hrs";
+      return '0 hrs';
     }
 
     const hours = Math.floor(safeMinutes / 60);
@@ -943,17 +836,12 @@ async function handleShowIncomplete() {
       <div className="app-shell">
         <Sidebar
           collapsed={collapsed}
-          onToggle={() =>
-            setSidebarCollapsed(
-              (current) => !current,
-            )
-          }
+          onToggle={() => setSidebarCollapsed((current) => !current)}
         />
 
         <main className="app-main">
           <div className="project-status">
             <IconEntryLarge />
-
             <p>Loading project...</p>
           </div>
         </main>
@@ -968,19 +856,13 @@ async function handleShowIncomplete() {
       <div className="app-shell">
         <Sidebar
           collapsed={collapsed}
-          onToggle={() =>
-            setSidebarCollapsed(
-              (current) => !current,
-            )
-          }
+          onToggle={() => setSidebarCollapsed((current) => !current)}
         />
 
         <main className="app-main">
           <div className="project-status">
             <IconEntryLarge />
-
             <h2>Unable to load project</h2>
-
             <p>{error}</p>
 
             <button
@@ -994,7 +876,7 @@ async function handleShowIncomplete() {
             <button
               type="button"
               className="breadcrumb-link"
-              onClick={() => navigate("/projects")}
+              onClick={() => navigate('/projects')}
             >
               Back to Projects
             </button>
@@ -1018,28 +900,39 @@ async function handleShowIncomplete() {
     lastActivity: null,
   };
 
-  const fields = Array.isArray(details.fields)
-    ? details.fields
-    : [];
+  const fields = Array.isArray(details.fields) ? details.fields : [];
 
   const searchableFields = (() => {
     const byId = new Map();
+
     fields.forEach((field) => {
-      if (field?.id) byId.set(field.id, field);
+      if (field?.id) {
+        byId.set(field.id, field);
+      }
     });
-    const projectEntries = Array.isArray(details.entries) ? details.entries : [];
+
+    const projectEntries = Array.isArray(details.entries)
+      ? details.entries
+      : [];
+
     projectEntries.forEach((entry) => {
       const values = Array.isArray(entry?.values) ? entry.values : [];
+
       values.forEach((value) => {
         const fieldId = value?.fieldId || value?.id;
-        if (!fieldId || byId.has(fieldId)) return;
+
+        if (!fieldId || byId.has(fieldId)) {
+          return;
+        }
+
         byId.set(fieldId, {
           id: fieldId,
-          name: value?.name || "Custom field",
-          fieldType: value?.type || "text",
+          name: value?.name || 'Custom field',
+          fieldType: value?.type || 'text',
         });
       });
     });
+
     return Array.from(byId.values());
   })();
 
@@ -1067,28 +960,35 @@ async function handleShowIncomplete() {
   const normalizedEntrySearch = entrySearchQuery.trim().toLowerCase();
 
   function entryMatchesSearch(entry) {
-    if (!normalizedEntrySearch) return true;
+    if (!normalizedEntrySearch) {
+      return true;
+    }
 
-    const name = String(entry.name ?? "").toLowerCase();
+    const name = String(entry.name ?? '').toLowerCase();
+
     const tags = Array.isArray(entry.tags)
-      ? entry.tags.map((tag) => String(tag ?? "").toLowerCase())
+      ? entry.tags.map((tag) => String(tag ?? '').toLowerCase())
       : [];
+
     const values = Array.isArray(entry.values) ? entry.values : [];
 
-    if (entrySearchField === "name") {
+    if (entrySearchField === 'name') {
       return name.includes(normalizedEntrySearch);
     }
 
-    if (entrySearchField === "tags") {
+    if (entrySearchField === 'tags') {
       return tags.some((tag) => tag.includes(normalizedEntrySearch));
     }
 
-    if (entrySearchField.startsWith("custom:")) {
-      const fieldId = entrySearchField.slice("custom:".length);
+    if (entrySearchField.startsWith('custom:')) {
+      const fieldId = entrySearchField.slice('custom:'.length);
+
       return values.some(
         (value) =>
-          String(value?.fieldId ?? "") === fieldId &&
-          String(value?.value ?? "").toLowerCase().includes(normalizedEntrySearch),
+          String(value?.fieldId ?? '') === fieldId &&
+          String(value?.value ?? '')
+            .toLowerCase()
+            .includes(normalizedEntrySearch),
       );
     }
 
@@ -1096,8 +996,8 @@ async function handleShowIncomplete() {
       name,
       ...tags,
       ...values.flatMap((value) => [
-        String(value?.name ?? "").toLowerCase(),
-        String(value?.value ?? "").toLowerCase(),
+        String(value?.name ?? '').toLowerCase(),
+        String(value?.value ?? '').toLowerCase(),
       ]),
     ].some((part) => part.includes(normalizedEntrySearch));
   }
@@ -1108,10 +1008,10 @@ async function handleShowIncomplete() {
 
   const entrySearchCountText = normalizedEntrySearch
     ? `${displayEntries.length} of ${baseDisplayEntries.length} ${
-        baseDisplayEntries.length === 1 ? "entry" : "entries"
+        baseDisplayEntries.length === 1 ? 'entry' : 'entries'
       }`
     : `${baseDisplayEntries.length} ${
-        baseDisplayEntries.length === 1 ? "entry" : "entries"
+        baseDisplayEntries.length === 1 ? 'entry' : 'entries'
       }`;
 
   const usedFieldIds = new Set(
@@ -1123,8 +1023,8 @@ async function handleShowIncomplete() {
   );
 
   const editableProject = {
-    name: project.name || "",
-    description: project.description || "",
+    name: project.name || '',
+    description: project.description || '',
     fields: fields.map((field) => ({
       id: field.id,
       label: field.name,
@@ -1136,11 +1036,7 @@ async function handleShowIncomplete() {
     <div className="app-shell">
       <Sidebar
         collapsed={collapsed}
-        onToggle={() =>
-          setSidebarCollapsed(
-            (current) => !current,
-          )
-        }
+        onToggle={() => setSidebarCollapsed((current) => !current)}
       />
 
       <main className="app-main">
@@ -1149,7 +1045,7 @@ async function handleShowIncomplete() {
           <button
             type="button"
             className="breadcrumb-link"
-            onClick={() => navigate("/projects")}
+            onClick={() => navigate('/projects')}
           >
             Projects
           </button>
@@ -1158,22 +1054,16 @@ async function handleShowIncomplete() {
             <IconChevronRight />
           </span>
 
-          <span className="breadcrumb-current">
-            Project Details
-          </span>
+          <span className="breadcrumb-current">Project Details</span>
         </div>
 
         {/* Page header */}
         <header className="page-header">
           <div className="page-header-left">
-            <p className="page-header-eyebrow">
-              Project
-            </p>
+            <p className="page-header-eyebrow">Project</p>
 
             <h1 className="page-header-title">
-              {project.name ||
-                project.title ||
-                "Untitled Project"}
+              {project.name || project.title || 'Untitled Project'}
             </h1>
 
             {project.description && (
@@ -1184,41 +1074,22 @@ async function handleShowIncomplete() {
           </div>
 
           <div className="page-header-actions">
-            {/*
-             * Archive belongs to project management.
-             *
-             * Keep the button and styling here.
-             * Do not implement their backend operation
-             * inside Project Details.
-             */}
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={handleToggleArchive}
-              disabled={projectActionSaving}
-            >
-              <IconArchive />
-              {project.archivedAt ? "Restore" : "Archive"}
-            </button>
+            {!project.archivedAt && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowEntryModal(true)}
+                disabled={projectActionSaving}
+              >
+                <IconPlus />
+                Add New Entry
+              </button>
+            )}
 
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() =>
-                setShowEditProjectModal(true)
-              }
-              disabled={projectActionSaving}
-            >
-              <IconEdit />
-              Edit Project
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() =>
-                setShowAutomationRulesModal(true)
-              }
+              onClick={() => setShowAutomationRulesModal(true)}
               disabled={projectActionSaving}
             >
               <Zap size={14} />
@@ -1229,9 +1100,7 @@ async function handleShowIncomplete() {
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() =>
-                  setShowRecurringModal(true)
-                }
+                onClick={() => setShowRecurringModal(true)}
                 disabled={projectActionSaving}
               >
                 <IconRepeat />
@@ -1239,19 +1108,30 @@ async function handleShowIncomplete() {
               </button>
             )}
 
-            {!project.archivedAt && (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() =>
-                  setShowEntryModal(true)
-                }
-                disabled={projectActionSaving}
-              >
-                <IconPlus />
-                Add New Entry
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setShowEditProjectModal(true)}
+              disabled={projectActionSaving}
+            >
+              <IconEdit />
+              Edit Project
+            </button>
+
+            <span
+              className="header-action-divider"
+              aria-hidden="true"
+            />
+
+            <button
+              type="button"
+              className="btn btn-ghost btn-ghost-archive"
+              onClick={handleToggleArchive}
+              disabled={projectActionSaving}
+            >
+              <IconArchive />
+              {project.archivedAt ? 'Restore' : 'Archive'}
+            </button>
           </div>
         </header>
 
@@ -1268,14 +1148,10 @@ async function handleShowIncomplete() {
             </div>
           )}
 
-          {/* Statistics */}
           <div className="project-stat-strip">
             <ProjectStat
               label="Total Entries"
-              value={
-                stats.totalEntries ??
-                entries.length
-              }
+              value={stats.totalEntries ?? entries.length}
               icon={<IconEntry />}
             />
 
@@ -1283,9 +1159,7 @@ async function handleShowIncomplete() {
 
             <ProjectStat
               label="Logged Time"
-              value={formatLoggedTime(
-                stats.loggedMinutes,
-              )}
+              value={formatLoggedTime(stats.loggedMinutes)}
               icon={<IconClock />}
             />
 
@@ -1293,9 +1167,7 @@ async function handleShowIncomplete() {
 
             <ProjectStat
               label="Last Activity"
-              value={formatDate(
-                stats.lastActivity,
-              )}
+              value={formatDate(stats.lastActivity)}
               icon={<IconCalendar />}
             />
 
@@ -1303,28 +1175,25 @@ async function handleShowIncomplete() {
 
             <ProjectStat
               label="Created"
-              value={formatDate(
-                project.createdAt,
-              )}
+              value={formatDate(project.createdAt)}
               icon={<IconInfo />}
             />
           </div>
 
-          <AiProjectInsight
-            projectId={id}
-          />
-
+          <AiProjectInsight projectId={id} />
 
           <LearningVideos
             projectId={id}
             projectName={project.name}
           />
 
-          {/* Project references */}
           <section className="references-section">
             <div className="references-section-header">
               <div>
-                <h2 className="entries-title">Project references</h2>
+                <h2 className="entries-title">
+                  Project references
+                </h2>
+
                 <p className="references-description">
                   Projects related to this project.
                 </p>
@@ -1343,54 +1212,84 @@ async function handleShowIncomplete() {
               )}
             </div>
 
-            {Array.isArray(details.references) && details.references.length > 0 ? (
+            {Array.isArray(details.references) &&
+            details.references.length > 0 ? (
               <div className="entry-reference-list project-reference-list">
                 {details.references.map((reference) => (
                   <button
                     type="button"
                     className="entry-reference-link"
                     key={reference.id}
-                    onClick={() => navigate(`/projects/${reference.referencedProjectId}`)}
+                    onClick={() =>
+                      navigate(
+                        `/projects/${reference.referencedProjectId}`,
+                      )
+                    }
                   >
                     {reference.referencedProjectName}
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="references-empty">No project references.</p>
+              <div className="references-empty">
+                <p className="references-empty-title">
+                  No linked projects yet.
+                </p>
+
+                <p className="references-empty-hint">
+                  Connect related projects to keep context together.
+                </p>
+              </div>
             )}
           </section>
 
-          {/* Entries */}
           <section className="entries-section">
             <div className="entries-header entries-header-with-views">
               <div>
-                <h2 className="entries-title">{showArchivedEntries ? "Archived entries" : "Entries"}</h2>
+                <h2 className="entries-title">
+                  {showArchivedEntries
+                    ? 'Archived entries'
+                    : 'Entries'}
+                </h2>
+
                 <span className="entries-count">
-                  {entries.length} {entries.length === 1 ? "entry" : "entries"}
+                  {entries.length}{' '}
+                  {entries.length === 1 ? 'entry' : 'entries'}
                 </span>
+
                 <button
                   type="button"
                   className="btn-cancel"
-                  style={{ marginLeft: "12px" }}
+                  style={{ marginLeft: '12px' }}
                   onClick={handleToggleArchivedView}
                   disabled={searching}
                 >
-                  {showArchivedEntries ? "Back to active entries" : "View archive"}
+                  {showArchivedEntries
+                    ? 'Back to active entries'
+                    : 'View archive'}
                 </button>
               </div>
 
               {entries.length > 0 && (
-                <div className="entry-view-switcher" aria-label="Entry view">
+                <div
+                  className="segmented"
+                  role="group"
+                  aria-label="Entry view"
+                >
                   {[
-                    ["list", "List"],
-                    ["calendar", "Calendar"],
-                    ["board", "Board"],
+                    ['list', 'List'],
+                    ['calendar', 'Calendar'],
+                    ['board', 'Board'],
                   ].map(([value, label]) => (
                     <button
                       key={value}
                       type="button"
-                      className={`view-btn ${entryView === value ? "view-btn-active" : ""}`}
+                      className={`segmented-btn ${
+                        entryView === value
+                          ? 'segmented-btn-active'
+                          : ''
+                      }`}
+                      aria-pressed={entryView === value}
                       onClick={() => setEntryView(value)}
                     >
                       {label}
@@ -1405,38 +1304,52 @@ async function handleShowIncomplete() {
                 className="entry-search-field"
                 aria-label="Search field"
                 value={entrySearchField}
-                onChange={(event) => setEntrySearchField(event.target.value)}
+                onChange={(event) =>
+                  setEntrySearchField(event.target.value)
+                }
               >
                 <option value="all">All fields</option>
                 <option value="name">Entry name</option>
                 <option value="tags">Tags</option>
+
                 {fields
-                  .filter((field) => field.fieldType !== "computed")
+                  .filter(
+                    (field) => field.fieldType !== 'computed',
+                  )
                   .map((field) => (
-                    <option key={field.id} value={`custom:${field.id}`}>
+                    <option
+                      key={field.id}
+                      value={`custom:${field.id}`}
+                    >
                       {field.name}
                     </option>
                   ))}
               </select>
 
               <div className="entry-simple-search">
-                <span className="entry-simple-search-icon">⌕</span>
+                <span className="entry-simple-search-icon">
+                  ⌕
+                </span>
+
                 <input
                   type="search"
                   aria-label="Search entries"
                   placeholder={
-                    entrySearchField === "all"
-                      ? "Search entries by name, tag, or custom field value..."
-                      : "Search selected field..."
+                    entrySearchField === 'all'
+                      ? 'Search entries by name, tag, or custom field value...'
+                      : 'Search selected field...'
                   }
                   value={entrySearchQuery}
-                  onChange={(event) => setEntrySearchQuery(event.target.value)}
+                  onChange={(event) =>
+                    setEntrySearchQuery(event.target.value)
+                  }
                 />
+
                 {entrySearchQuery && (
                   <button
                     type="button"
                     className="entry-simple-search-clear"
-                    onClick={() => setEntrySearchQuery("")}
+                    onClick={() => setEntrySearchQuery('')}
                   >
                     Clear
                   </button>
@@ -1444,119 +1357,105 @@ async function handleShowIncomplete() {
               </div>
             </div>
 
-            <div className="entry-search-status" aria-live="polite">
+            <div
+              className="entry-search-status"
+              aria-live="polite"
+            >
               <span>{entrySearchCountText}</span>
-              {normalizedEntrySearch && displayEntries.length === 0 && (
-                <span>
-                  No entries match &quot;{entrySearchQuery.trim()}&quot;.
-                </span>
-              )}
+
+              {normalizedEntrySearch &&
+                displayEntries.length === 0 && (
+                  <span>
+                    No entries match &quot;
+                    {entrySearchQuery.trim()}
+                    &quot;.
+                  </span>
+                )}
             </div>
 
             <div className="saved-filters-bar">
-  <select
-    className="form-select"
-    value={activeFilterId || ""}
-    onChange={(event) =>
-      handleApplyFilter(
-        event.target.value || null,
-      )
-    }
-  >
-    <option value="">
-      All entries
-    </option>
+              <div className="saved-filters-group">
+                <select
+                  className="form-select saved-filters-select"
+                  value={activeFilterId || ''}
+                  onChange={(event) => handleApplyFilter(event.target.value || null)}
+                >
+                  <option value="">All entries</option>
+                  {savedFilters.map((filter) => (
+                    <option key={filter.id} value={filter.id}>
+                      {filter.name}
+                    </option>
+                  ))}
+                </select>
 
-    {savedFilters.map((filter) => (
-      <option
-        key={filter.id}
-        value={filter.id}
-      >
-        {filter.name}
-      </option>
-    ))}
-  </select>
+                {activeFilterId && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-small"
+                      onClick={() => {
+                        const filter = savedFilters.find((f) => f.id === activeFilterId);
 
-  {activeFilterId && (
-  <>
-    <button
-      type="button"
-      className="btn-cancel"
-      onClick={() => {
-        const filter = savedFilters.find(
-          (f) => f.id === activeFilterId,
-        );
+                        if (filter) {
+                          handleOpenEditFilter(filter);
+                        }
+                      }}
+                    >
+                      Edit filter
+                    </button>
 
-        if (filter) {
-          handleOpenEditFilter(filter);
-        }
-      }}
-    >
-      Edit filter
-    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-small"
+                      onClick={() => handleDeleteFilter(activeFilterId)}
+                    >
+                      Delete filter
+                    </button>
+                  </>
+                )}
 
-    <button
-      type="button"
-      className="btn-cancel"
-      onClick={() =>
-        handleDeleteFilter(activeFilterId)
-      }
-    >
-      Delete filter
-    </button>
-  </>
-)}
+                <button
+                  type="button"
+                  className="btn-add-field"
+                  onClick={() => setShowFilterBuilder(true)}
+                >
+                  + New filter
+                </button>
+              </div>
 
-  <button
-    type="button"
-    className="btn-add-field"
-    onClick={() => setShowFilterBuilder(true)}
-  >
-    + New filter
-  </button>
-</div>
-<button
-  type="button"
-  className={
-    entryStatusView === "overdue"
-      ? "btn-save"
-      : "btn-cancel"
-  }
-  onClick={handleShowOverdue}
->
-  {entryStatusView === "overdue"
-    ? "Showing overdue only"
-    : "Show overdue only"}
-</button>
+              <div className="saved-filters-status" role="group" aria-label="Entry status">
+                <button
+                  type="button"
+                  className={`status-toggle status-toggle--overdue ${entryStatusView === 'overdue' ? 'status-toggle--active' : ''}`}
+                  aria-pressed={entryStatusView === 'overdue'}
+                  onClick={handleShowOverdue}
+                >
+                  Overdue
+                </button>
 
-<button
-  type="button"
-  className={
-    entryStatusView === "incomplete"
-      ? "btn-save"
-      : "btn-cancel"
-  }
-  onClick={handleShowIncomplete}
->
-  {entryStatusView === "incomplete"
-    ? "Showing incomplete only"
-    : "Show incomplete only"}
-</button>
+                <button
+                  type="button"
+                  className={`status-toggle ${entryStatusView === 'incomplete' ? 'status-toggle--active' : ''}`}
+                  aria-pressed={entryStatusView === 'incomplete'}
+                  onClick={handleShowIncomplete}
+                >
+                  Incomplete
+                </button>
+              </div>
+            </div>
 
-            <form
-              className="structured-search"
-              onSubmit={handleStructuredSearch}
-            >
+            <form className="structured-search" onSubmit={handleStructuredSearch}>
               <div className="structured-search-header">
                 <div>
                   <h3 className="structured-search-title">Search entries</h3>
                   <p className="structured-search-description">
-                    Find entries by name, tags, or custom field values. Add filters when you need to narrow the results.
+                    Find entries by name, tags, or custom field values. Add filters when you need to
+                    narrow the results.
                   </p>
                 </div>
                 {searchActive && (
                   <span className="search-result-count">
-                    {entries.length} result{entries.length === 1 ? "" : "s"}
+                    {entries.length} result{entries.length === 1 ? '' : 's'}
                   </span>
                 )}
               </div>
@@ -1566,12 +1465,13 @@ async function handleShowIncomplete() {
                   id="entry-search-query"
                   className="form-input structured-search-main-input"
                   type="search"
+                  aria-label="Search entries"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search entries..."
                 />
                 <button type="submit" className="btn-save" disabled={searching}>
-                  {searching ? "Searching..." : "Search"}
+                  {searching ? 'Searching...' : 'Search'}
                 </button>
               </div>
 
@@ -1581,39 +1481,89 @@ async function handleShowIncomplete() {
                 onClick={() => setShowSearchFilters((current) => !current)}
                 aria-expanded={showSearchFilters}
               >
-                {showSearchFilters ? "− Fewer filters" : "+ More filters"}
+                {showSearchFilters ? '− Fewer filters' : '+ More filters'}
               </button>
 
               {showSearchFilters && (
                 <div className="search-more-filters-panel">
                   <div className="structured-search-grid">
                     <div className="form-field">
-                      <label className="form-label" htmlFor="entry-search-from">From date</label>
-                      <input id="entry-search-from" className="form-input" type="date" value={searchFromDate} onChange={(event) => setSearchFromDate(event.target.value)} />
+                      <label className="form-label" htmlFor="entry-search-from">
+                        From date
+                      </label>
+                      <input
+                        id="entry-search-from"
+                        className="form-input"
+                        type="date"
+                        value={searchFromDate}
+                        onChange={(event) => setSearchFromDate(event.target.value)}
+                      />
                     </div>
                     <div className="form-field">
-                      <label className="form-label" htmlFor="entry-search-to">To date</label>
-                      <input id="entry-search-to" className="form-input" type="date" value={searchToDate} onChange={(event) => setSearchToDate(event.target.value)} />
+                      <label className="form-label" htmlFor="entry-search-to">
+                        To date
+                      </label>
+                      <input
+                        id="entry-search-to"
+                        className="form-input"
+                        type="date"
+                        value={searchToDate}
+                        onChange={(event) => setSearchToDate(event.target.value)}
+                      />
                     </div>
                     <div className="form-field">
-                      <label className="form-label" htmlFor="entry-search-min-duration">Min minutes</label>
-                      <input id="entry-search-min-duration" className="form-input" type="number" min="0" value={searchMinDuration} onChange={(event) => setSearchMinDuration(event.target.value)} placeholder="Any" />
+                      <label className="form-label" htmlFor="entry-search-min-duration">
+                        Min minutes
+                      </label>
+                      <input
+                        id="entry-search-min-duration"
+                        className="form-input"
+                        type="number"
+                        min="0"
+                        value={searchMinDuration}
+                        onChange={(event) => setSearchMinDuration(event.target.value)}
+                        placeholder="Any"
+                      />
                     </div>
                     <div className="form-field">
-                      <label className="form-label" htmlFor="entry-search-max-duration">Max minutes</label>
-                      <input id="entry-search-max-duration" className="form-input" type="number" min="0" value={searchMaxDuration} onChange={(event) => setSearchMaxDuration(event.target.value)} placeholder="Any" />
+                      <label className="form-label" htmlFor="entry-search-max-duration">
+                        Max minutes
+                      </label>
+                      <input
+                        id="entry-search-max-duration"
+                        className="form-input"
+                        type="number"
+                        min="0"
+                        value={searchMaxDuration}
+                        onChange={(event) => setSearchMaxDuration(event.target.value)}
+                        placeholder="Any"
+                      />
                     </div>
                     <div className="form-field">
-                      <label className="form-label" htmlFor="entry-search-completed">Status</label>
-                      <select id="entry-search-completed" className="form-select" value={searchCompleted} onChange={(event) => setSearchCompleted(event.target.value)}>
+                      <label className="form-label" htmlFor="entry-search-completed">
+                        Status
+                      </label>
+                      <select
+                        id="entry-search-completed"
+                        className="form-select"
+                        value={searchCompleted}
+                        onChange={(event) => setSearchCompleted(event.target.value)}
+                      >
                         <option value="all">All statuses</option>
                         <option value="completed">Completed</option>
                         <option value="incomplete">Incomplete</option>
                       </select>
                     </div>
                     <div className="form-field">
-                      <label className="form-label" htmlFor="entry-search-sort">Sort by</label>
-                      <select id="entry-search-sort" className="form-select" value={searchSort} onChange={(event) => setSearchSort(event.target.value)}>
+                      <label className="form-label" htmlFor="entry-search-sort">
+                        Sort by
+                      </label>
+                      <select
+                        id="entry-search-sort"
+                        className="form-select"
+                        value={searchSort}
+                        onChange={(event) => setSearchSort(event.target.value)}
+                      >
                         <option value="newest">Newest first</option>
                         <option value="oldest">Oldest first</option>
                         <option value="name">Name A-Z</option>
@@ -1626,27 +1576,57 @@ async function handleShowIncomplete() {
                     <div className="specific-field-filters">
                       <div className="specific-field-filter-heading">
                         <span className="form-label">Custom fields</span>
-                        <p className="specific-field-filter-help">Search for a value within a particular field.</p>
+                        <p className="specific-field-filter-help">
+                          Search for a value within a particular field.
+                        </p>
                       </div>
 
                       {searchCustomFields.map((filter, index) => (
-                        <div className="custom-search-filter-row" key={`${index}-${filter.fieldId}`}>
-                          <select className="form-select" value={filter.fieldId} onChange={(event) => updateSearchCustomField(index, { fieldId: event.target.value })}>
+                        <div
+                          className="custom-search-filter-row"
+                          key={`${index}-${filter.fieldId}`}
+                        >
+                          <select
+                            className="form-select"
+                            value={filter.fieldId}
+                            onChange={(event) =>
+                              updateSearchCustomField(index, { fieldId: event.target.value })
+                            }
+                          >
                             <option value="">Choose field</option>
                             {searchableFields.map((field) => (
-                              <option key={field.id} value={field.id}>{field.name}</option>
+                              <option key={field.id} value={field.id}>
+                                {field.name}
+                              </option>
                             ))}
                           </select>
-                          <input className="form-input" type="text" value={filter.value} onChange={(event) => updateSearchCustomField(index, { value: event.target.value })} placeholder="Value to match" />
-                          <button type="button" className="field-row-remove" onClick={() => removeSearchCustomField(index)} aria-label="Remove field filter">
+                          <input
+                            className="form-input"
+                            type="text"
+                            value={filter.value}
+                            onChange={(event) =>
+                              updateSearchCustomField(index, { value: event.target.value })
+                            }
+                            placeholder="Value to match"
+                          />
+                          <button
+                            type="button"
+                            className="field-row-remove"
+                            onClick={() => removeSearchCustomField(index)}
+                            aria-label="Remove field filter"
+                          >
                             <X size={14} />
                           </button>
                         </div>
                       ))}
 
-                      <button type="button" className="btn-add-field custom-field-add-button" onClick={addSearchCustomField}>
+                      <button
+                        type="button"
+                        className="btn-add-field custom-field-add-button"
+                        onClick={addSearchCustomField}
+                      >
                         <Plus size={14} />
-                        {searchCustomFields.length > 0 ? "Add another field" : "Add field filter"}
+                        {searchCustomFields.length > 0 ? 'Add another field' : 'Add field filter'}
                       </button>
                     </div>
                   )}
@@ -1655,30 +1635,38 @@ async function handleShowIncomplete() {
 
               {searchError && <div className="structured-search-error">{searchError}</div>}
 
-              {(searchActive || searchQuery || searchFromDate || searchToDate || searchMinDuration || searchMaxDuration || searchCompleted !== "all" || searchSort !== "newest" || searchCustomFields.length > 0) && (
+              {(searchActive ||
+                searchQuery ||
+                searchFromDate ||
+                searchToDate ||
+                searchMinDuration ||
+                searchMaxDuration ||
+                searchCompleted !== 'all' ||
+                searchSort !== 'newest' ||
+                searchCustomFields.length > 0) && (
                 <div className="structured-search-clear-row">
-                  <button type="button" className="btn-cancel" onClick={handleClearStructuredSearch} disabled={searching}>Clear search</button>
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={handleClearStructuredSearch}
+                    disabled={searching}
+                  >
+                    Clear search
+                  </button>
                 </div>
               )}
             </form>
 
             {(pendingEntries.length > 0 || !isOnline) && (
               <div className="offline-banner">
-                {!isOnline && (
-                  <span>
-                    You're offline — new entries will
-                    be saved locally.
-                  </span>
-                )}
+                {!isOnline && <span>You're offline — new entries will be saved locally.</span>}
 
                 {isOnline && pendingEntries.length > 0 && (
                   <span>
                     {syncing
-                      ? "Syncing…"
+                      ? 'Syncing…'
                       : `${pendingEntries.length} entr${
-                          pendingEntries.length === 1
-                            ? "y"
-                            : "ies"
+                          pendingEntries.length === 1 ? 'y' : 'ies'
                         } waiting to sync`}
                   </span>
                 )}
@@ -1695,12 +1683,13 @@ async function handleShowIncomplete() {
                   <>
                     <p className="empty-heading">No matching entries</p>
                     <p className="empty-body">
-                      No entries match &quot;{entrySearchQuery.trim()}&quot;. Try another search term or clear the search.
+                      No entries match &quot;{entrySearchQuery.trim()}&quot;. Try another search
+                      term or clear the search.
                     </p>
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      onClick={() => setEntrySearchQuery("")}
+                      onClick={() => setEntrySearchQuery('')}
                     >
                       Clear search
                     </button>
@@ -1730,7 +1719,8 @@ async function handleShowIncomplete() {
                   <>
                     <p className="empty-heading">No entries yet.</p>
                     <p className="empty-body">
-                      Add your first entry to start building a record for this project. Each entry captures a piece of your work.
+                      Add your first entry to start building a record for this project. Each entry
+                      captures a piece of your work.
                     </p>
                     {!project.archivedAt && (
                       <button
@@ -1746,133 +1736,152 @@ async function handleShowIncomplete() {
 
                 )}
               </div>
-            ) : entryView === "calendar" ? (
+            ) : entryView === 'calendar' ? (
               <CalendarView entries={displayEntries} formatLoggedTime={formatLoggedTime} />
-            ) : entryView === "board" ? (
-              <BoardView entries={displayEntries} fields={fields} formatLoggedTime={formatLoggedTime} />
+            ) : entryView === 'board' ? (
+              <BoardView
+                entries={displayEntries}
+                fields={fields}
+                formatLoggedTime={formatLoggedTime}
+              />
             ) : (
               <div className="entries-list">
                 {displayEntries.map((entry) => {
-                  const values = Array.isArray(
-                    entry.values,
-                  )
-                    ? entry.values
+                  const values = Array.isArray(entry.values) ? entry.values : [];
+                  const linkedEntries = Array.isArray(entry.linkedEntries)
+                    ? entry.linkedEntries
                     : [];
-                  const linkedEntries = Array.isArray(entry.linkedEntries) ? entry.linkedEntries : [];
                   const checklist = Array.isArray(entry.checklist) ? entry.checklist : [];
                   const completedChecklist = checklist.filter((item) => item.completed).length;
 
-                                    const isOverdue =
-                    entry.dueAt &&
-                    !entry.completedAt &&
-                    new Date(entry.dueAt) < new Date();
+                  const isOverdue =
+                    entry.dueAt && !entry.completedAt && new Date(entry.dueAt) < new Date();
+
+                  const status = getEntryCardStatus(entry, isOverdue);
 
                   return (
-                    <button
-                      type="button"
-                      className="entry-row entry-row-clickable"
+                    <div
+                      className="entry-row entry-row-clickable entry-card"
                       id={`entry-${entry.id}`}
                       key={entry.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => openEntryDetails(entry)}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) {
+                          return;
+                        }
+
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openEntryDetails(entry);
+                        }
+                      }}
                     >
-                      <div className="entry-row-header">
-                        <div>
-                          <h3 className="entry-row-title">
-                            {entry.name ||
-                              "Logbook Entry"}
+                      <div className="entry-card-top">
+                        <div className="entry-card-heading">
+                          <span
+                            className={`entry-status-dot entry-status-dot--${status.key}`}
+                            aria-hidden="true"
+                          />
 
-                            {entry.isPending && (
-                              <span className="entry-pending-badge">
-                                {entry.syncStatus ===
-                                "failed"
-                                  ? "Sync failed"
-                                  : "Pending sync"}
-                              </span>
-                            )}
-                          </h3>
+                          <h3 className="entry-row-title">{entry.name || 'Logbook Entry'}</h3>
+                        </div>
 
-                          <p className="entry-row-date">
-                            {formatDate(
-                              entry.occurredAt ||
-                                entry.createdAt,
-                            )}
-                          </p>
+                        <div className="entry-card-top-meta">
+                          <span className={`entry-status-badge badge badge--${status.variant}`}>
+                            {status.label}
+                          </span>
 
-                          {entry.dueAt && (
-                            <p
-                              className={
-                                isOverdue
-                                  ? "entry-due-date entry-due-overdue"
-                                  : "entry-due-date"
-                              }
-                            >
-                              {entry.completedAt
-                                ? "Completed"
-                                : isOverdue
-                                  ? `Overdue — was due ${formatDate(entry.dueAt)}`
-                                  : `Due ${formatDate(entry.dueAt)}`}
-                            </p>
+                          <span className="entry-duration">
+                            <IconClockSmall />
+                            {formatLoggedTime(entry.durationMinutes)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="entry-card-subline">
+                        <span>{formatDate(entry.occurredAt || entry.createdAt)}</span>
+
+                        {entry.dueAt && (
+                          <span
+                            className={
+                              isOverdue ? 'entry-due-date entry-due-overdue' : 'entry-due-date'
+                            }
+                          >
+                            {entry.completedAt
+                              ? 'Completed'
+                              : isOverdue
+                                ? `Overdue — was due ${formatDate(entry.dueAt)}`
+                                : `Due ${formatDate(entry.dueAt)}`}
+                          </span>
+                        )}
+                      </p>
+
+                      {values.length > 0 && (
+                        <div className="entry-card-preview">
+                          <span className="entry-card-preview-label">
+                            {values[0].name || 'Field'}
+                            {values[0].archived ? ' (removed)' : ''}
+                          </span>
+                          <span className="entry-card-preview-value">
+                            <FormattedFieldValue field={values[0]} />
+                          </span>
+                        </div>
+                      )}
+
+                      {(checklist.length > 0 || linkedEntries.length > 0 || values.length > 1) && (
+                        <div className="entry-card-meta">
+                          {checklist.length > 0 && (
+                            <span>
+                              {completedChecklist}/{checklist.length} checklist
+                            </span>
+                          )}
+                          {linkedEntries.length > 0 && (
+                            <span>
+                              {linkedEntries.length} linked{' '}
+                              {linkedEntries.length === 1 ? 'entry' : 'entries'}
+                            </span>
+                          )}
+                          {values.length > 1 && (
+                            <span>
+                              +{values.length - 1} more{' '}
+                              {values.length - 1 === 1 ? 'field' : 'fields'}
+                            </span>
                           )}
                         </div>
-                        <span className="entry-duration"><IconClockSmall />{formatLoggedTime(entry.durationMinutes)}</span>
-                      </div>
+                      )}
 
-                      {Array.isArray(entry.tags) &&
-                        entry.tags.length > 0 && (
-                          <div className="entry-tags">
-                            {entry.tags.map((tag) => (
-                              <span
-                                className="entry-tag"
-                                key={tag}
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
+                      {Array.isArray(entry.tags) && entry.tags.length > 0 && (
+                        <div className="entry-tags">
+                          {entry.tags.map((tag) => (
+                            <span className="entry-tag" key={tag}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="entry-card-footer">
+                        {entry.dueAt && !entry.completedAt && (
+                          <button
+                            type="button"
+                            className="entry-card-action"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleMarkComplete(entry.id);
+                            }}
+                          >
+                            <Check size={13} />
+                            Mark as complete
+                          </button>
                         )}
 
-
-                      {linkedEntries.length > 0 && (
-                        <div className="entry-links">
-                          <span className="entry-links-label">Linked entries:</span>
-                          {linkedEntries.map((linked) => (
-                            <span className="entry-link-chip" key={linked.id}>{linked.name}</span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="entry-row-summary">
-                        <span>{values.length} {values.length === 1 ? "field" : "fields"}</span>
-                        <span>{checklist.length ? `${completedChecklist}/${checklist.length} checklist` : "No checklist"}</span>
-                        {entry.dueAt && <span>Due {formatDate(entry.dueAt)}</span>}
-                      </div>
-
-                      {entry.dueAt && !entry.completedAt && (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          className="btn-cancel"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleMarkComplete(entry.id);
-                          }}
-                        >
-                          Mark as complete
+                        <span className="entry-row-open-hint">
+                          Click entry to view full contents <span aria-hidden="true">→</span>
                         </span>
-                      )}
-                      {values.length > 0 && (
-                        <div className="entry-values entry-values-preview">
-                          {values.slice(0, 3).map((field, index) => (
-                            <div className="entry-value" key={field.fieldId || field.id || index}>
-                              <span className="entry-value-name">{field.name || "Field"}{field.archived ? ' (removed)' : ''}</span>
-                              <span className="entry-value-content"><FormattedFieldValue field={field} /></span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="entry-row-open-hint">Click entry to view full contents <span>→</span></div>
-                    </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -1881,7 +1890,7 @@ async function handleShowIncomplete() {
         </div>
       </main>
 
-            {selectedEntryForDetails && (
+      {selectedEntryForDetails && (
         <EntryDetailsModal
           entry={selectedEntryForDetails}
           archived={Boolean(project.archivedAt)}
@@ -1925,9 +1934,7 @@ async function handleShowIncomplete() {
             setShowEditEntryModal(false);
             setSelectedEntryForEdit(null);
           }}
-          onSave={(payload) =>
-            handleUpdateEntry(selectedEntryForEdit.id, payload)
-          }
+          onSave={(payload) => handleUpdateEntry(selectedEntryForEdit.id, payload)}
         />
       )}
 
@@ -1938,9 +1945,7 @@ async function handleShowIncomplete() {
           projects={projects}
           entries={entries}
           currentProjectId={project.id}
-          onClose={() =>
-            setShowEntryModal(false)
-          }
+          onClose={() => setShowEntryModal(false)}
           onCreate={handleCreateEntry}
         />
       )}
@@ -1952,13 +1957,11 @@ async function handleShowIncomplete() {
           options={projects.filter((candidate) => candidate.id !== project.id)}
           selectedIds={
             Array.isArray(details.references)
-              ? details.references.map(
-                  (reference) => reference.referencedProjectId,
-                )
+              ? details.references.map((reference) => reference.referencedProjectId)
               : []
           }
           getOptionId={(option) => option.id}
-          getOptionLabel={(option) => option.name || "Untitled Project"}
+          getOptionLabel={(option) => option.name || 'Untitled Project'}
           onClose={() => setShowProjectReferenceModal(false)}
           onSave={handleUpdateProjectReferences}
           saving={projectReferenceSaving}
@@ -1969,9 +1972,7 @@ async function handleShowIncomplete() {
       {showEditProjectModal && (
         <EditProjectModal
           project={editableProject}
-          onClose={() =>
-            setShowEditProjectModal(false)
-          }
+          onClose={() => setShowEditProjectModal(false)}
           onSave={handleUpdateProject}
         />
       )}
@@ -1980,9 +1981,7 @@ async function handleShowIncomplete() {
         <AutomationRulesModal
           projectId={id}
           fields={fields}
-          onClose={() =>
-            setShowAutomationRulesModal(false)
-          }
+          onClose={() => setShowAutomationRulesModal(false)}
         />
       )}
 
@@ -2010,15 +2009,11 @@ function ReferenceSelectionModal({
   onSave,
   saving = false,
 }) {
-  const [selected, setSelected] = useState(
-    Array.isArray(selectedIds) ? selectedIds : [],
-  );
+  const [selected, setSelected] = useState(Array.isArray(selectedIds) ? selectedIds : []);
 
   function toggle(id) {
     setSelected((current) =>
-      current.includes(id)
-        ? current.filter((currentId) => currentId !== id)
-        : [...current, id],
+      current.includes(id) ? current.filter((currentId) => currentId !== id) : [...current, id],
     );
   }
 
@@ -2042,11 +2037,7 @@ function ReferenceSelectionModal({
             <h2 className="modal-title" id="reference-modal-title">
               {title}
             </h2>
-            {description && (
-              <p className="reference-modal-description">
-                {description}
-              </p>
-            )}
+            {description && <p className="reference-modal-description">{description}</p>}
           </div>
 
           <button
@@ -2062,9 +2053,7 @@ function ReferenceSelectionModal({
 
         <div className="modal-body">
           {options.length === 0 ? (
-            <div className="references-empty-modal">
-              No other items are available to reference.
-            </div>
+            <div className="references-empty-modal">No other items are available to reference.</div>
           ) : (
             <div className="reference-selection-list">
               {options.map((option) => {
@@ -2074,7 +2063,7 @@ function ReferenceSelectionModal({
                 return (
                   <label
                     className={`reference-selection-option${
-                      checked ? " reference-selection-option--selected" : ""
+                      checked ? ' reference-selection-option--selected' : ''
                     }`}
                     key={optionId}
                   >
@@ -2093,12 +2082,7 @@ function ReferenceSelectionModal({
         </div>
 
         <div className="modal-footer">
-          <button
-            type="button"
-            className="btn-cancel"
-            onClick={onClose}
-            disabled={saving}
-          >
+          <button type="button" className="btn-cancel" onClick={onClose} disabled={saving}>
             Cancel
           </button>
 
@@ -2108,7 +2092,7 @@ function ReferenceSelectionModal({
             onClick={() => onSave(selected)}
             disabled={saving}
           >
-            {saving ? "Saving..." : "Save references"}
+            {saving ? 'Saving...' : 'Save references'}
           </button>
         </div>
       </div>
@@ -2119,22 +2103,18 @@ function ReferenceSelectionModal({
 function FormattedFieldValue({ field }) {
   const value = field.value;
 
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "—";
+  if (value === null || value === undefined || value === '') {
+    return '—';
   }
 
-  if (field.type === "date") {
+  if (field.type === 'date') {
     const date = new Date(value);
 
     if (!Number.isNaN(date.getTime())) {
-      return new Intl.DateTimeFormat("en-ZA", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
+      return new Intl.DateTimeFormat('en-ZA', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
       }).format(date);
     }
   }
@@ -2142,29 +2122,41 @@ function FormattedFieldValue({ field }) {
   return String(value);
 }
 
+function getEntryCardStatus(entry, isOverdue) {
+  if (entry.completedAt) {
+    return { key: 'completed', label: 'Completed', variant: 'success' };
+  }
+
+  if (entry.isPending) {
+    return entry.syncStatus === 'failed'
+      ? { key: 'sync-failed', label: 'Sync failed', variant: 'danger' }
+      : { key: 'pending', label: 'Pending sync', variant: 'warning' };
+  }
+
+  if (isOverdue) {
+    return { key: 'overdue', label: 'Overdue', variant: 'danger' };
+  }
+
+  if (entry.dueAt) {
+    return { key: 'upcoming', label: 'Upcoming', variant: 'warning' };
+  }
+
+  return { key: 'open', label: 'Open', variant: 'neutral' };
+}
+
 /* =========================================================
  * SUB COMPONENTS
  * ======================================================= */
 
-function ProjectStat({
-  label,
-  value,
-  icon,
-}) {
+function ProjectStat({ label, value, icon }) {
   return (
     <div className="project-stat">
-      <div className="project-stat-icon">
-        {icon}
-      </div>
+      <div className="project-stat-icon">{icon}</div>
 
       <div className="project-stat-text">
-        <span className="project-stat-label">
-          {label}
-        </span>
+        <span className="project-stat-label">{label}</span>
 
-        <span className="project-stat-value">
-          {value}
-        </span>
+        <span className="project-stat-value">{value}</span>
       </div>
     </div>
   );
@@ -2367,70 +2359,23 @@ function ProjectDetailsStyles() {
         padding-top: 8px;
       }
 
-      /* Buttons */
-
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        padding: 9px 16px;
-        border-radius: 8px;
-        font-family: 'Inter', sans-serif;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        border: none;
-        transition:
-          background 0.15s ease,
-          box-shadow 0.15s ease,
-          color 0.15s ease;
-        white-space: nowrap;
+      .header-action-divider {
+        width: 1px;
+        height: 20px;
+        background: var(--border, #d6dbe4);
+        margin: 0 4px;
+        flex-shrink: 0;
       }
 
-      .btn-primary {
-        background: #4f63d2;
-        color: #ffffff;
+      .btn-ghost-archive {
+        color: var(--text-muted, #5b6b83);
+      }
+      .btn-ghost-archive:hover:not(:disabled) {
+        background: var(--danger-soft, #fceded);
+        color: var(--danger, #dc4444);
       }
 
-      .btn-primary:hover {
-        background: #3d50bf;
-        box-shadow:
-          0 2px 10px
-          rgba(79, 99, 210, 0.3);
-      }
-
-      .btn-secondary {
-        background: #ffffff;
-        color: #1e293b;
-        border: 1.5px solid #e2e8f0;
-      }
-
-      .btn-secondary:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-      }
-
-      .btn-ghost {
-        background: transparent;
-        color: #64748b;
-        border: 1.5px solid transparent;
-      }
-
-      .btn-ghost:hover {
-        background: #f1f5f9;
-        color: #1e293b;
-      }
-
-      .btn:focus-visible {
-        outline: 2px solid #4f63d2;
-        outline-offset: 2px;
-      }
-
-      .btn:disabled {
-        cursor: not-allowed;
-        opacity: 0.65;
-      }
+      /* Buttons: base .btn system now lives in index.css (design tokens) */
 
       /* Content */
 
@@ -2487,12 +2432,10 @@ function ProjectDetailsStyles() {
       }
 
       .project-stat-value {
-        font-family:
-          'DM Serif Display',
-          Georgia,
-          serif;
-        font-size: 22px;
-        font-weight: 400;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
         color: #1a2340;
         line-height: 1.1;
       }
@@ -2576,7 +2519,7 @@ function ProjectDetailsStyles() {
       }
 
       .entry-row {
-        padding: 20px 24px;
+        padding: 16px 24px;
         border-bottom: 1px solid #f1f5f9;
         transition: background 0.15s ease;
       }
@@ -2589,11 +2532,38 @@ function ProjectDetailsStyles() {
         background: #fbfcfe;
       }
 
-      .entry-row-header {
+      .entry-card-top {
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
+        gap: 12px;
+      }
+
+      .entry-card-heading {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+
+      .entry-status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        flex-shrink: 0;
+      }
+      .entry-status-dot--completed { background: var(--success-text, #166534); }
+      .entry-status-dot--pending,
+      .entry-status-dot--upcoming { background: var(--warning-text, #d97706); }
+      .entry-status-dot--overdue,
+      .entry-status-dot--sync-failed { background: var(--danger, #dc2626); }
+
+      .entry-card-top-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
       }
 
       .entry-row-title {
@@ -2602,25 +2572,36 @@ function ProjectDetailsStyles() {
         font-weight: 600;
         color: #1a2340;
         margin: 0;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .entry-row-date {
+      .entry-card-subline {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        column-gap: 8px;
+        margin: 5px 0 0;
         font-family: 'Inter', sans-serif;
         font-size: 12px;
         color: #94a3b8;
-        margin: 4px 0 0;
       }
 
-            .entry-due-date {
-        font-family: 'Inter', sans-serif;
-        font-size: 12px;
-        color: #64748b;
-        margin: 4px 0 0;
+      .entry-card-subline > span + span::before {
+        content: '·';
+        margin-right: 8px;
+        color: #cbd5e1;
+      }
+
+      .entry-due-date {
         font-weight: 600;
+        color: #64748b;
       }
 
       .entry-due-overdue {
-        color: #dc2626;
+        color: var(--danger, #dc2626);
       }
 
       .entry-duration {
@@ -2629,8 +2610,8 @@ function ProjectDetailsStyles() {
         gap: 5px;
         padding: 5px 9px;
         border-radius: 6px;
-        background: #f1f5f9;
-        color: #64748b;
+        background: var(--surface-subtle, #f1f5f9);
+        color: var(--text-muted, #64748b);
         font-family: 'Inter', sans-serif;
         font-size: 12px;
         font-weight: 500;
@@ -2641,7 +2622,7 @@ function ProjectDetailsStyles() {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-top: 10px;
+        margin-top: 9px;
       }
 
       .entry-tag {
@@ -2649,24 +2630,12 @@ function ProjectDetailsStyles() {
         align-items: center;
         padding: 3px 9px;
         border-radius: 999px;
-        background: #eef2ff;
-        color: #4338ca;
+        background: var(--accent-soft, #eef2ff);
+        color: var(--accent-text, #4338ca);
         font-family: 'Inter', sans-serif;
         font-size: 11px;
         font-weight: 500;
         white-space: nowrap;
-      }
-
-      .entry-pending-badge {
-        display: inline-block;
-        margin-left: 8px;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: #fef3c7;
-        color: #92400e;
-        font-size: 10px;
-        font-weight: 600;
-        vertical-align: middle;
       }
 
       .offline-banner {
@@ -2755,12 +2724,9 @@ function ProjectDetailsStyles() {
       }
 
       .project-status h2 {
-        font-family:
-          'DM Serif Display',
-          Georgia,
-          serif;
-        font-size: 22px;
-        font-weight: 400;
+        font-family: 'Inter', sans-serif;
+        font-size: 18px;
+        font-weight: 600;
         color: #1a2340;
         margin: 0;
       }
@@ -2770,105 +2736,9 @@ function ProjectDetailsStyles() {
         font-size: 13px;
       }
 
-      /* Modal */
+      /* Modal shell: .modal-overlay/.modal/.modal-header/.modal-title/.modal-close/.modal-form/.modal-body now live in index.css */
 
-      .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.45);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 200;
-        padding: 24px;
-        backdrop-filter: blur(2px);
-      }
-
-      .modal {
-        background: #ffffff;
-        border-radius: 16px;
-        width: 100%;
-        max-width: 560px;
-        max-height: 90vh;
-        display: flex;
-        flex-direction: column;
-        box-shadow:
-          0 20px 60px rgba(0,0,0,0.18),
-          0 4px 16px rgba(0,0,0,0.08);
-        overflow: hidden;
-      }
-
-      .modal-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 22px 24px 18px;
-        border-bottom: 1px solid #f1f5f9;
-        flex-shrink: 0;
-      }
-
-      .modal-title {
-        font-family:
-          'DM Serif Display',
-          Georgia,
-          serif;
-        font-size: 22px;
-        font-weight: 400;
-        color: #1a2340;
-        margin: 0;
-      }
-
-      .modal-close {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: none;
-        background: #f1f5f9;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        color: #64748b;
-        transition:
-          background 0.15s ease,
-          color 0.15s ease;
-        padding: 0;
-      }
-
-      .modal-close:hover {
-        background: #e2e8f0;
-        color: #1e293b;
-      }
-
-      .modal-form {
-        min-height: 0;
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-      }
-
-      .modal-body {
-        overflow-y: auto;
-        flex: 1;
-        padding: 20px 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      /* Form */
-
-      .form-field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .form-label {
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-      }
+      /* Form base: .form-field/.form-label/.form-input/.form-select now live in index.css */
 
       .form-label-required::after {
         content: ' *';
@@ -2877,62 +2747,6 @@ function ProjectDetailsStyles() {
 
       .required {
         color: #ef4444;
-      }
-
-      .form-input {
-        box-sizing: border-box;
-        width: 100%;
-        padding: 9px 12px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 8px;
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        color: #1e293b;
-        outline: none;
-        transition:
-          border-color 0.15s ease,
-          box-shadow 0.15s ease;
-        background: #ffffff;
-      }
-
-      textarea.form-input {
-        resize: vertical;
-        min-height: 90px;
-      }
-
-      .form-input:focus {
-        border-color: #4f63d2;
-        box-shadow:
-          0 0 0 3px
-          rgba(79,99,210,0.1);
-      }
-
-      .form-input::placeholder {
-        color: #94a3b8;
-      }
-
-      .form-select {
-        box-sizing: border-box;
-        padding: 9px 12px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 8px;
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        color: #1e293b;
-        outline: none;
-        background: #ffffff;
-        cursor: pointer;
-        width: 100%;
-        transition:
-          border-color 0.15s ease,
-          box-shadow 0.15s ease;
-      }
-
-      .form-select:focus {
-        border-color: #4f63d2;
-        box-shadow:
-          0 0 0 3px
-          rgba(79,99,210,0.1);
       }
 
       .fields-block {
@@ -3038,100 +2852,7 @@ function ProjectDetailsStyles() {
         flex-shrink: 0;
       }
 
-      .btn-add-field {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 9px 14px;
-        border: 1.5px dashed #cbd5e1;
-        border-radius: 8px;
-        background: transparent;
-        font-family: 'Inter', sans-serif;
-        font-size: 13px;
-        font-weight: 500;
-        color: #64748b;
-        cursor: pointer;
-        transition:
-          border-color 0.15s ease,
-          color 0.15s ease,
-          background 0.15s ease;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-
-      .btn-add-field:hover {
-        border-color: #4f63d2;
-        color: #4f63d2;
-        background:
-          rgba(79,99,210,0.04);
-      }
-
-      .form-error {
-        padding: 10px 12px;
-        margin: 0;
-        border-radius: 8px;
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #b91c1c;
-        font-size: 12px;
-      }
-
-      .modal-footer {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 8px;
-        padding: 16px 24px;
-        border-top: 1px solid #f1f5f9;
-        flex-shrink: 0;
-      }
-
-      .btn-cancel {
-        padding: 9px 18px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 8px;
-        background: #ffffff;
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        font-weight: 500;
-        color: #64748b;
-        cursor: pointer;
-        transition: background 0.15s ease;
-      }
-
-      .btn-cancel:hover {
-        background: #f8fafc;
-      }
-
-      .btn-save {
-        padding: 9px 20px;
-        border: none;
-        border-radius: 8px;
-        background: #4f63d2;
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        font-weight: 500;
-        color: #ffffff;
-        cursor: pointer;
-        transition:
-          background 0.15s ease,
-          box-shadow 0.15s ease;
-      }
-
-      .btn-save:hover:not(:disabled) {
-        background: #3d50bf;
-        box-shadow:
-          0 2px 10px
-          rgba(79,99,210,0.3);
-      }
-
-      .btn-save:disabled,
-      .btn-cancel:disabled,
-      .modal-close:disabled {
-        cursor: not-allowed;
-        opacity: 0.65;
-      }
+      /* .btn-add-field/.form-error/.modal-footer/.btn-cancel/.btn-save now live in index.css */
 
       /* Responsive */
 
@@ -3141,58 +2862,10 @@ function ProjectDetailsStyles() {
         flex-wrap: wrap;
       }
 
-      .entry-view-switcher {
-        display: flex;
-        gap: 6px;
-        padding: 4px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        background: #f8fafc;
-      }
-
-      .view-btn {
-        border: 0;
-        border-radius: 7px;
-        padding: 8px 12px;
-        background: transparent;
-        color: #64748b;
-        font: inherit;
-        font-size: 12px;
-        cursor: pointer;
-      }
-
-      .view-btn-active {
-        background: #ffffff;
-        color: #1a2340;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
-      }
-
-      .entry-links {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 6px;
-        margin-top: 10px;
-      }
-
-      .entry-links-label {
-        font-size: 11px;
-        font-weight: 600;
-        color: #64748b;
-      }
-
-      .entry-link-chip {
-        padding: 4px 8px;
-        border-radius: 999px;
-        background: #eef2ff;
-        color: #3949ab;
-        font-size: 11px;
-      }
-
       .structured-search {
         padding: 18px 24px;
         border-bottom: 1px solid #f1f5f9;
-        background: #ffffff;
+        background: var(--surface-subtle, #f8fafc);
       }
 
       .structured-search-header {
@@ -3205,14 +2878,14 @@ function ProjectDetailsStyles() {
 
       .structured-search-title {
         margin: 0;
-        color: #1a2340;
+        color: var(--text-strong, #1a2340);
         font-size: 14px;
         font-weight: 600;
       }
 
       .structured-search-description {
         margin: 4px 0 0;
-        color: #64748b;
+        color: var(--text-muted, #64748b);
         font-size: 12px;
         line-height: 1.5;
       }
@@ -3221,8 +2894,8 @@ function ProjectDetailsStyles() {
         flex-shrink: 0;
         padding: 5px 9px;
         border-radius: 999px;
-        background: #eef2ff;
-        color: #3949ab;
+        background: var(--accent-soft, #eef2ff);
+        color: var(--accent-text, #3949ab);
         font-size: 11px;
         font-weight: 600;
       }
@@ -3282,15 +2955,64 @@ function ProjectDetailsStyles() {
       .saved-filters-bar {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 12px 24px;
-        border-bottom: 1px solid #f1f5f9;
-        background: #fbfcfe;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 10px 24px;
+        border-bottom: 1px solid var(--border, #f1f5f9);
+        background: var(--surface, #ffffff);
       }
 
-      .saved-filters-bar .form-select {
+      .saved-filters-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .saved-filters-select {
         width: auto;
-        min-width: 190px;
+        min-width: 160px;
+      }
+
+      .saved-filters-status {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 999px;
+        background: var(--surface-subtle, #f8fafc);
+      }
+
+      .status-toggle {
+        border: 0;
+        border-radius: 999px;
+        padding: 4px 12px;
+        background: transparent;
+        color: var(--text-muted, #64748b);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      .status-toggle:hover:not(.status-toggle--active) {
+        color: var(--text-strong, #1a2340);
+      }
+
+      .status-toggle--active,
+      .status-toggle[aria-pressed='true'] {
+        background: var(--surface, #ffffff);
+        color: var(--text-strong, #1a2340);
+        box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.12));
+      }
+
+      .status-toggle--overdue.status-toggle--active,
+      .status-toggle--overdue[aria-pressed='true'] {
+        background: var(--danger-soft, #fef2f2);
+        color: var(--danger-text, #b91c1c);
+        box-shadow: none;
       }
 
       .calendar-toolbar,
@@ -3305,8 +3027,9 @@ function ProjectDetailsStyles() {
       .calendar-grid {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
-        border-left: 1px solid #e2e8f0;
-        border-top: 1px solid #e2e8f0;
+        border-left: 1px solid var(--border, #e2e8f0);
+        border-top: 1px solid var(--border, #e2e8f0);
+        border-top-right-radius: var(--radius-md, 8px);
       }
 
       .calendar-weekdays {
@@ -3318,32 +3041,37 @@ function ProjectDetailsStyles() {
         text-align: center;
         font-size: 11px;
         font-weight: 700;
-        color: #64748b;
+        color: var(--text-muted, #64748b);
       }
 
       .calendar-cell {
         min-height: 112px;
         padding: 8px;
-        border-right: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
-        background: #fff;
+        border-right: 1px solid var(--border, #e2e8f0);
+        border-bottom: 1px solid var(--border, #e2e8f0);
+        background: var(--surface, #fff);
       }
 
-      .calendar-cell-empty { background: #f8fafc; }
-      .calendar-day-number { font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; }
-      .calendar-entry { display: grid; gap: 2px; margin-bottom: 6px; padding: 6px; border-radius: 7px; background: #eef2ff; font-size: 10px; color: #334155; }
+      .calendar-cell-empty { background: var(--surface-subtle, #f8fafc); }
+      .calendar-month-label { color: var(--text-strong, #1a2340); font-size: 14px; font-weight: 600; }
+      .calendar-day-number { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 4px; font-size: 11px; font-weight: 700; color: var(--text-muted, #475569); margin-bottom: 6px; border-radius: 999px; }
+      .calendar-cell-today .calendar-day-number { background: var(--accent, #4f63d2); color: #ffffff; }
+      .calendar-cell-overdue .calendar-day-number { background: var(--danger-soft, #fef2f2); color: var(--danger-text, #b91c1c); }
+      .calendar-entry { display: grid; gap: 2px; margin-bottom: 6px; padding: 6px; border-radius: var(--radius-sm, 7px); background: var(--accent-soft, #eef2ff); font-size: 10px; color: var(--text, #334155); }
       .calendar-entry strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .calendar-entry span, .calendar-entry small { color: #64748b; }
+      .calendar-entry span, .calendar-entry small { color: var(--text-muted, #64748b); }
 
       .board-toolbar { justify-content: flex-start; }
-      .board-toolbar label { font-size: 12px; font-weight: 600; color: #475569; }
-      .board-select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+      .board-toolbar label { font-size: 12px; font-weight: 600; color: var(--text-muted, #475569); }
+      .board-select { padding: 8px 10px; border: 1px solid var(--border, #cbd5e1); border-radius: var(--radius-md, 8px); background: var(--surface, #fff); color: var(--text, #334155); font: inherit; font-size: 13px; }
       .board-columns { display: flex; gap: 14px; overflow-x: auto; padding: 4px 0 12px; }
-      .board-column { flex: 0 0 260px; padding: 10px; border-radius: 10px; background: #f1f5f9; }
-      .board-column-header { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: #334155; font-size: 12px; }
-      .board-card { display: grid; gap: 5px; padding: 10px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 12px; }
-      .board-card span, .board-card small { color: #64748b; }
-      .view-empty { padding: 28px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 10px; }
+      .board-column { flex: 0 0 260px; padding: 10px; border-radius: var(--radius-lg, 12px); background: var(--surface-subtle, #f1f5f9); }
+      .board-column-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: var(--text-strong, #334155); font-size: 12px; font-weight: 600; }
+      .board-column-header span { padding: 1px 8px; border-radius: 999px; background: var(--surface, #fff); color: var(--text-muted, #64748b); font-size: 11px; font-weight: 600; box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.08)); }
+      .board-card { display: grid; gap: 5px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border, #e2e8f0); border-radius: var(--radius-md, 8px); background: var(--surface, #fff); font-size: 12px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06)); transition: border-color 120ms ease, box-shadow 120ms ease; }
+      .board-card:hover { border-color: var(--accent-border, #c7d2fe); box-shadow: var(--shadow-md, 0 2px 6px rgba(15, 23, 42, 0.1)); }
+      .board-card span, .board-card small { color: var(--text-muted, #64748b); }
+      .view-empty { padding: 28px; text-align: center; color: var(--text-muted, #64748b); border: 1px dashed var(--border-strong, #cbd5e1); border-radius: var(--radius-lg, 12px); background: var(--surface-subtle, #f8fafc); font-size: 13px; }
 
       @media (max-width: 900px) {
         .structured-search-grid {
@@ -3374,6 +3102,19 @@ function ProjectDetailsStyles() {
         .page-header {
           flex-direction: column;
           align-items: flex-start;
+        }
+
+        .calendar-cell {
+          min-height: 72px;
+          padding: 4px;
+        }
+
+        .calendar-day-number {
+          font-size: 11px;
+        }
+
+        .board-column {
+          flex-basis: 232px;
         }
 
         .page-header-actions {
@@ -3408,111 +3149,17 @@ function ProjectDetailsStyles() {
           width: 100%;
         }
 
-        .entry-row-header {
-          flex-direction: column;
-        }
-
-        .entry-row-actions {
+        .saved-filters-group {
           width: 100%;
-          justify-content: flex-start;
         }
 
-        .structured-search {
-        padding: 18px 24px;
-        border-bottom: 1px solid #f1f5f9;
-        background: #ffffff;
-      }
-
-      .structured-search-header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 16px;
-      }
-
-      .structured-search-title {
-        margin: 0;
-        color: #1a2340;
-        font-size: 14px;
-        font-weight: 600;
-      }
-
-      .structured-search-description {
-        margin: 4px 0 0;
-        color: #64748b;
-        font-size: 12px;
-        line-height: 1.5;
-      }
-
-      .search-result-count {
-        flex-shrink: 0;
-        padding: 5px 9px;
-        border-radius: 999px;
-        background: #eef2ff;
-        color: #3949ab;
-        font-size: 11px;
-        font-weight: 600;
-      }
-
-      .structured-search-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .search-field-wide {
-        grid-column: span 2;
-      }
-
-      .custom-search-filters {
-        display: grid;
-        gap: 8px;
-        margin-top: 14px;
-        padding-top: 14px;
-        border-top: 1px solid #f1f5f9;
-      }
-
-      .custom-search-filter-row {
-        display: grid;
-        grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .structured-search-actions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-top: 16px;
-      }
-
-      .structured-search-actions .btn-add-field {
-        width: auto;
-      }
-
-      .structured-search-actions-right {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .structured-search-error {
-        margin-top: 12px;
-        padding: 9px 11px;
-        border-radius: 8px;
-        background: #fff1f2;
-        color: #be123c;
-        font-size: 12px;
-      }
-
-      .saved-filters-bar {
-          flex-wrap: wrap;
+        .saved-filters-select {
+          flex: 1;
+          min-width: 0;
         }
 
-        .saved-filters-bar .form-select {
-          width: 100%;
+        .saved-filters-status {
+          margin-left: auto;
         }
       }
       .entry-feature-block {
@@ -3711,17 +3358,25 @@ function ProjectDetailsStyles() {
 
       .references-empty {
         margin: 0;
-        color: #94a3b8;
+        padding: 16px 18px;
+        background: var(--surface-subtle, #f4f6f9);
+        border: 1px dashed var(--border, #d6dbe4);
+        border-radius: var(--radius-md, 8px);
+      }
+      .references-empty-title {
+        margin: 0 0 3px;
         font-size: 13px;
+        font-weight: 500;
+        color: var(--text-muted, #5b6b83);
+      }
+      .references-empty-hint {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-faint, #8494ab);
       }
 
       .project-reference-list {
         margin-top: 4px;
-      }
-
-      .btn-small {
-        padding: 7px 10px;
-        font-size: 12px;
       }
 
       .entry-reference-manage {
@@ -3807,12 +3462,7 @@ function ProjectDetailsStyles() {
 
       .entry-row-clickable {
         width: 100%;
-        appearance: none;
-        border: 0;
         text-align: left;
-        font: inherit;
-        color: inherit;
-        background: transparent;
         cursor: pointer;
       }
 
@@ -3821,29 +3471,85 @@ function ProjectDetailsStyles() {
         outline-offset: -2px;
       }
 
-      .entry-row-summary {
+      .entry-card-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+        margin-top: 10px;
+        padding: 9px 12px;
+        background: var(--surface-subtle, #f4f6f9);
+        border-radius: var(--radius-sm, 6px);
+      }
+
+      .entry-card-preview-label {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-faint, #94a3b8);
+      }
+
+      .entry-card-preview-value {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--text, #334155);
+        overflow-wrap: anywhere;
+      }
+
+      .entry-card-meta {
         display: flex;
         flex-wrap: wrap;
-        gap: 7px;
+        column-gap: 14px;
+        row-gap: 3px;
+        margin-top: 9px;
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        color: var(--text-faint, #8494ab);
+      }
+
+      .entry-card-footer {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         margin-top: 12px;
       }
 
-      .entry-row-summary span {
-        padding: 4px 8px;
-        border-radius: 999px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        color: #64748b;
-        font-size: 11px;
+      .entry-card-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: var(--radius-sm, 6px);
+        border: 1px solid var(--border, #d6dbe4);
+        background: var(--surface, #ffffff);
+        color: var(--text-muted, #5b6b83);
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          background 0.15s ease,
+          border-color 0.15s ease,
+          color 0.15s ease;
       }
-
-      .entry-values-preview {
-        margin-top: 12px;
+      .entry-card-action:hover {
+        background: var(--success-soft, #f0fdf4);
+        border-color: var(--success-border, #bbf7d0);
+        color: var(--success-text, #166534);
+      }
+      .entry-card-action:focus-visible {
+        outline: 2px solid var(--accent, #4f63d2);
+        outline-offset: 2px;
       }
 
       .entry-row-open-hint {
-        margin-top: 13px;
-        color: #4f63d2;
+        margin-left: auto;
+        color: var(--accent, #4f63d2);
         font-size: 12px;
         font-weight: 600;
       }
@@ -4038,17 +3744,40 @@ function ProjectDetailsStyles() {
 
       .structured-search-main-row { display: flex; gap: 12px; align-items: center; }
       .structured-search-main-input { flex: 1; min-width: 0; }
-      .search-more-filters-toggle { margin-top: 12px; border: 0; background: transparent; padding: 4px 0; color: #334155; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-      .search-more-filters-toggle:hover { color: #1d4ed8; }
-      .search-more-filters-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e2e8f0; }
-      .search-more-filters-panel .form-label, .specific-field-filters .form-label { color: #1e293b !important; font-weight: 700 !important; opacity: 1 !important; }
-      .specific-field-filters { margin-top: 18px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+
+      .search-more-filters-toggle {
+        margin-top: 12px;
+        border: 0;
+        background: transparent;
+        padding: 4px 0;
+        color: var(--text-muted, #334155);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: var(--radius-sm, 6px);
+      }
+
+      .search-more-filters-toggle:hover {
+        color: var(--accent-text, #1d4ed8);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .search-more-filters-toggle:focus-visible {
+        outline: 2px solid var(--ring, #4f63d2);
+        outline-offset: 2px;
+      }
+
+      .search-more-filters-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border, #e2e8f0); }
+      .search-more-filters-panel .form-label, .specific-field-filters .form-label { color: var(--text-strong, #1e293b) !important; font-weight: 700 !important; opacity: 1 !important; }
+      .specific-field-filters { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border, #e2e8f0); }
       .specific-field-filter-heading { display: block; margin-bottom: 12px; }
-      .specific-field-filter-help { margin: 4px 0 0; color: #475569 !important; font-size: 12px; line-height: 1.45; opacity: 1 !important; }
-      .specific-field-filter-empty { margin: 8px 0 0; color: #64748b; font-size: 12px; }
-      .specific-field-filters .btn-add-field:not(:disabled) { color: #334155; border-color: #94a3b8; background: #fff; }
+      .specific-field-filter-help { margin: 4px 0 0; color: var(--text-muted, #475569) !important; font-size: 12px; line-height: 1.45; opacity: 1 !important; }
+      .specific-field-filter-empty { margin: 8px 0 0; color: var(--text-faint, #64748b); font-size: 12px; }
+      .specific-field-filters .btn-add-field:not(:disabled) { color: var(--text, #334155); border-color: var(--border-strong, #94a3b8); background: var(--surface, #fff); }
       .custom-field-add-button { margin-top: 10px; }
-      .specific-field-filters .btn-add-field:disabled { color: #94a3b8; border-color: #cbd5e1; background: #f8fafc; cursor: not-allowed; opacity: 1; }
+      .specific-field-filters .btn-add-field:disabled { color: var(--text-faint, #94a3b8); border-color: var(--border, #cbd5e1); background: var(--surface-subtle, #f8fafc); cursor: not-allowed; opacity: 1; }
       .structured-search-clear-row { display: flex; justify-content: flex-end; margin-top: 12px; }
       @media (max-width: 720px) { .structured-search-main-row { flex-direction: column; align-items: stretch; } }
     `}</style>
@@ -4061,7 +3790,16 @@ function ProjectDetailsStyles() {
 
 function IconLink() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </svg>
@@ -4070,7 +3808,16 @@ function IconLink() {
 
 function CheckSquare({ size = 16 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="m8 12 2.5 2.5L16 9" />
     </svg>
@@ -4106,19 +3853,9 @@ function IconPlus({ size = 16 }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <line
-        x1="12"
-        y1="5"
-        x2="12"
-        y2="19"
-      />
+      <line x1="12" y1="5" x2="12" y2="19" />
 
-      <line
-        x1="5"
-        y1="12"
-        x2="19"
-        y2="12"
-      />
+      <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
   );
 }
@@ -4179,19 +3916,9 @@ function IconArchive() {
     >
       <polyline points="21 8 21 21 3 21 3 8" />
 
-      <rect
-        x="1"
-        y="3"
-        width="22"
-        height="5"
-      />
+      <rect x="1" y="3" width="22" height="5" />
 
-      <line
-        x1="10"
-        y1="12"
-        x2="14"
-        y2="12"
-      />
+      <line x1="10" y1="12" x2="14" y2="12" />
     </svg>
   );
 }
@@ -4212,19 +3939,9 @@ function IconEntry() {
 
       <polyline points="14 2 14 8 20 8" />
 
-      <line
-        x1="9"
-        y1="13"
-        x2="15"
-        y2="13"
-      />
+      <line x1="9" y1="13" x2="15" y2="13" />
 
-      <line
-        x1="9"
-        y1="17"
-        x2="13"
-        y2="17"
-      />
+      <line x1="9" y1="17" x2="13" y2="17" />
     </svg>
   );
 }
@@ -4245,19 +3962,9 @@ function IconEntryLarge() {
 
       <polyline points="14 2 14 8 20 8" />
 
-      <line
-        x1="9"
-        y1="13"
-        x2="15"
-        y2="13"
-      />
+      <line x1="9" y1="13" x2="15" y2="13" />
 
-      <line
-        x1="9"
-        y1="17"
-        x2="13"
-        y2="17"
-      />
+      <line x1="9" y1="17" x2="13" y2="17" />
     </svg>
   );
 }
@@ -4274,11 +3981,7 @@ function IconClock() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
+      <circle cx="12" cy="12" r="10" />
 
       <polyline points="12 6 12 12 16 14" />
     </svg>
@@ -4297,11 +4000,7 @@ function IconClockSmall() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
+      <circle cx="12" cy="12" r="10" />
 
       <polyline points="12 6 12 12 16 14" />
     </svg>
@@ -4320,34 +4019,13 @@ function IconCalendar() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <rect
-        x="3"
-        y="4"
-        width="18"
-        height="18"
-        rx="2"
-      />
+      <rect x="3" y="4" width="18" height="18" rx="2" />
 
-      <line
-        x1="16"
-        y1="2"
-        x2="16"
-        y2="6"
-      />
+      <line x1="16" y1="2" x2="16" y2="6" />
 
-      <line
-        x1="8"
-        y1="2"
-        x2="8"
-        y2="6"
-      />
+      <line x1="8" y1="2" x2="8" y2="6" />
 
-      <line
-        x1="3"
-        y1="10"
-        x2="21"
-        y2="10"
-      />
+      <line x1="3" y1="10" x2="21" y2="10" />
     </svg>
   );
 }
@@ -4364,25 +4042,11 @@ function IconInfo() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
+      <circle cx="12" cy="12" r="10" />
 
-      <line
-        x1="12"
-        y1="8"
-        x2="12"
-        y2="12"
-      />
+      <line x1="12" y1="8" x2="12" y2="12" />
 
-      <line
-        x1="12"
-        y1="16"
-        x2="12.01"
-        y2="16"
-      />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   );
 }
@@ -4399,19 +4063,9 @@ function IconXSmall() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <line
-        x1="18"
-        y1="6"
-        x2="6"
-        y2="18"
-      />
+      <line x1="18" y1="6" x2="6" y2="18" />
 
-      <line
-        x1="6"
-        y1="6"
-        x2="18"
-        y2="18"
-      />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   );
 }
@@ -4428,49 +4082,17 @@ function IconGrip() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <circle
-        cx="9"
-        cy="6"
-        r="1"
-        fill="currentColor"
-      />
+      <circle cx="9" cy="6" r="1" fill="currentColor" />
 
-      <circle
-        cx="15"
-        cy="6"
-        r="1"
-        fill="currentColor"
-      />
+      <circle cx="15" cy="6" r="1" fill="currentColor" />
 
-      <circle
-        cx="9"
-        cy="12"
-        r="1"
-        fill="currentColor"
-      />
+      <circle cx="9" cy="12" r="1" fill="currentColor" />
 
-      <circle
-        cx="15"
-        cy="12"
-        r="1"
-        fill="currentColor"
-      />
+      <circle cx="15" cy="12" r="1" fill="currentColor" />
 
-      <circle
-        cx="9"
-        cy="18"
-        r="1"
-        fill="currentColor"
-      />
+      <circle cx="9" cy="18" r="1" fill="currentColor" />
 
-
-      <circle
-        cx="15"
-        cy="18"
-        r="1"
-        fill="currentColor"
-      />
+      <circle cx="15" cy="18" r="1" fill="currentColor" />
     </svg>
   );
 }
-

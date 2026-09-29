@@ -951,7 +951,7 @@ export default function Stats() {
         .stats-shell {
           display: flex;
           min-height: 100vh;
-          background: #f8fafc;
+          background: var(--bg, #f8fafc);
         }
 
         .stats-main {
@@ -970,19 +970,19 @@ export default function Stats() {
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: .08em;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
         }
 
         .stats-title {
           margin: 0;
-          color: #1a2340;
+          color: var(--text-strong, #1a2340);
           font: 400 30px 'DM Serif Display', Georgia, serif;
         }
 
         .stats-subtitle {
           margin: 8px 0 0;
           max-width: 650px;
-          color: #64748b;
+          color: var(--text-muted, #64748b);
           font-size: 14px;
           line-height: 1.6;
         }
@@ -1002,16 +1002,16 @@ export default function Stats() {
         }
 
         .stats-loading {
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          color: #64748b;
+          background: var(--surface, #fff);
+          border: 1px solid var(--border, #e2e8f0);
+          color: var(--text-muted, #64748b);
         }
 
         .stats-error,
         .stats-inline-error {
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #b91c1c;
+          background: var(--danger-soft, #fef2f2);
+          border: 1px solid var(--danger-border, #fecaca);
+          color: var(--danger-text, #b91c1c);
         }
 
         .stats-error {
@@ -1036,9 +1036,9 @@ export default function Stats() {
         .stats-summary-card,
         .stats-panel,
         .stats-detail-card {
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
+          background: var(--surface, #fff);
+          border: 1px solid var(--border, #e2e8f0);
+          border-radius: var(--radius-lg, 12px);
         }
 
         .stats-summary-card {
@@ -1054,15 +1054,15 @@ export default function Stats() {
         .stats-summary-label {
           font-size: 13px;
           font-weight: 500;
-          color: #64748b;
+          color: var(--text-muted, #64748b);
         }
 
         .stats-summary-icon {
           width: 32px;
           height: 32px;
-          border-radius: 8px;
-          background: #f1f5f9;
-          color: #64748b;
+          border-radius: var(--radius-md, 8px);
+          background: var(--surface-subtle, #f1f5f9);
+          color: var(--text-muted, #64748b);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1070,7 +1070,7 @@ export default function Stats() {
 
         .stats-summary-value {
           margin-top: 18px;
-          color: #1a2340;
+          color: var(--text-strong, #1a2340);
           font: 400 34px/1 'DM Serif Display', Georgia, serif;
         }
 
@@ -1083,13 +1083,13 @@ export default function Stats() {
           align-items: center;
           justify-content: space-between;
           padding: 20px 22px;
-          border-bottom: 1px solid #eef2f7;
+          border-bottom: 1px solid var(--border, #eef2f7);
         }
 
         .stats-panel-heading h2,
         .stats-detail-card h2 {
           margin: 0;
-          color: #1a2340;
+          color: var(--text-strong, #1a2340);
           font: 400 20px 'DM Serif Display', Georgia, serif;
         }
 
@@ -1097,7 +1097,7 @@ export default function Stats() {
           display: block;
           margin-top: 4px;
           font-size: 12px;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
         }
 
         .stats-empty {
@@ -1114,8 +1114,8 @@ export default function Stats() {
           width: 52px;
           height: 52px;
           border-radius: 50%;
-          background: #f1f5f9;
-          color: #94a3b8;
+          background: var(--surface-subtle, #f1f5f9);
+          color: var(--text-faint, #94a3b8);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1124,13 +1124,13 @@ export default function Stats() {
 
         .stats-empty h3 {
           margin: 0;
-          color: #334155;
+          color: var(--text, #334155);
           font: 500 16px Inter, system-ui, sans-serif;
         }
 
         .stats-empty p {
           margin: 7px 0 0;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 13px;
         }
 
@@ -1145,7 +1145,7 @@ export default function Stats() {
           justify-content: space-between;
           gap: 16px;
           padding: 14px 0;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid var(--border, #f1f5f9);
         }
 
         .activity-row:last-child,
@@ -1163,14 +1163,14 @@ export default function Stats() {
 
         .activity-row strong,
         .project-stat-row strong {
-          color: #334155;
+          color: var(--text, #334155);
           font-size: 13px;
           font-weight: 600;
         }
 
         .activity-row span,
         .project-stat-row span {
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 11px;
         }
 
@@ -1179,9 +1179,9 @@ export default function Stats() {
           align-items: center;
           gap: 5px;
           padding: 5px 9px;
-          border-radius: 6px;
-          background: #f1f5f9;
-          color: #64748b !important;
+          border-radius: var(--radius-sm, 6px);
+          background: var(--surface-subtle, #f1f5f9);
+          color: var(--text-muted, #64748b) !important;
           white-space: nowrap;
         }
 
@@ -1211,7 +1211,7 @@ export default function Stats() {
         }
 
         .stats-control label {
-          color: #64748b;
+          color: var(--text-muted, #64748b);
           font-size: 12px;
           font-weight: 600;
         }
@@ -1221,10 +1221,10 @@ export default function Stats() {
           width: 100%;
           min-height: 38px;
           padding: 0 10px;
-          border: 1px solid #cbd5e1;
-          border-radius: 7px;
-          background: #fff;
-          color: #334155;
+          border: 1px solid var(--border-strong, #cbd5e1);
+          border-radius: var(--radius-sm, 7px);
+          background: var(--surface, #fff);
+          color: var(--text, #334155);
           font-size: 13px;
           box-sizing: border-box;
         }
@@ -1233,13 +1233,17 @@ export default function Stats() {
           min-height: 38px;
           padding: 0 14px;
           border: 0;
-          border-radius: 7px;
-          background: #4f63d2;
+          border-radius: var(--radius-sm, 7px);
+          background: var(--accent, #4f63d2);
           color: #fff;
           font-size: 12px;
           font-weight: 600;
           cursor: pointer;
           white-space: nowrap;
+        }
+
+        .stats-load-btn:hover:not(:disabled) {
+          background: var(--accent-hover, #4f63d2);
         }
 
         .stats-load-btn:disabled {
@@ -1249,7 +1253,7 @@ export default function Stats() {
 
         .stats-selection-empty {
           padding: 20px 22px 24px;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 12px;
         }
 
@@ -1265,21 +1269,21 @@ export default function Stats() {
 
         .statistics-summary-item {
           padding: 14px;
-          border: 1px solid #eef2f7;
-          border-radius: 8px;
-          background: #f8fafc;
+          border: 1px solid var(--border, #eef2f7);
+          border-radius: var(--radius-md, 8px);
+          background: var(--surface-subtle, #f8fafc);
         }
 
         .statistics-summary-item span {
           display: block;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 11px;
         }
 
         .statistics-summary-item strong {
           display: block;
           margin-top: 6px;
-          color: #334155;
+          color: var(--text, #334155);
           font-size: 16px;
         }
 
@@ -1295,14 +1299,14 @@ export default function Stats() {
           justify-content: space-between;
           gap: 16px;
           padding: 10px 12px;
-          background: #f8fafc;
-          border-radius: 7px;
+          background: var(--surface-subtle, #f8fafc);
+          border-radius: var(--radius-sm, 7px);
           font-size: 12px;
-          color: #475569;
+          color: var(--text-muted, #475569);
         }
 
         .statistics-group-row strong {
-          color: #334155;
+          color: var(--text, #334155);
         }
 
         .statistics-plot {
@@ -1324,13 +1328,13 @@ export default function Stats() {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          color: #475569;
+          color: var(--text-muted, #475569);
         }
 
         .statistics-plot-track {
           height: 10px;
           border-radius: 999px;
-          background: #e2e8f0;
+          background: var(--surface-subtle, #e2e8f0);
           overflow: hidden;
         }
 
@@ -1338,12 +1342,12 @@ export default function Stats() {
           height: 100%;
           min-width: 2px;
           border-radius: 999px;
-          background: #4f63d2;
+          background: var(--accent, #4f63d2);
         }
 
         .statistics-plot-value {
           text-align: right;
-          color: #334155;
+          color: var(--text, #334155);
           font-weight: 600;
         }
 
@@ -1355,26 +1359,26 @@ export default function Stats() {
 
         .statistics-compare-card {
           padding: 16px;
-          border: 1px solid #eef2f7;
-          border-radius: 8px;
-          background: #f8fafc;
+          border: 1px solid var(--border, #eef2f7);
+          border-radius: var(--radius-md, 8px);
+          background: var(--surface-subtle, #f8fafc);
         }
 
         .statistics-compare-card h3 {
           margin: 0 0 12px;
-          color: #334155;
+          color: var(--text, #334155);
           font-size: 13px;
           font-weight: 600;
         }
 
         .statistics-compare-card p {
           margin: 6px 0 0;
-          color: #64748b;
+          color: var(--text-muted, #64748b);
           font-size: 12px;
         }
 
         .statistics-compare-card strong {
-          color: #334155;
+          color: var(--text, #334155);
         }
 
         .stats-detail-grid {
@@ -1398,9 +1402,9 @@ export default function Stats() {
         .stats-detail-icon {
           width: 36px;
           height: 36px;
-          border-radius: 9px;
-          background: #eef2ff;
-          color: #4f63d2;
+          border-radius: var(--radius-md, 9px);
+          background: var(--accent-soft, #eef2ff);
+          color: var(--accent, #4f63d2);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1408,7 +1412,7 @@ export default function Stats() {
 
         .stats-detail-card p {
           margin: 18px 0 0;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 13px;
           line-height: 1.6;
         }
@@ -1426,20 +1430,20 @@ export default function Stats() {
 
         .entry-summary div {
           padding: 14px;
-          background: #f8fafc;
-          border-radius: 8px;
+          background: var(--surface-subtle, #f8fafc);
+          border-radius: var(--radius-md, 8px);
         }
 
         .entry-summary span {
           display: block;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 11px;
         }
 
         .entry-summary strong {
           display: block;
           margin-top: 6px;
-          color: #334155;
+          color: var(--text, #334155);
           font-size: 18px;
         }
 
@@ -1457,7 +1461,7 @@ export default function Stats() {
 
         .custom-stat-loading {
           padding: 20px 22px 24px;
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 12px;
         }
 
@@ -1474,9 +1478,9 @@ export default function Stats() {
           justify-content: space-between;
           gap: 14px;
           padding: 12px 14px;
-          border: 1px solid #eef2f7;
-          border-radius: 8px;
-          background: #f8fafc;
+          border: 1px solid var(--border, #eef2f7);
+          border-radius: var(--radius-md, 8px);
+          background: var(--surface-subtle, #f8fafc);
         }
 
         .custom-stat-row-main {
@@ -1487,13 +1491,13 @@ export default function Stats() {
         }
 
         .custom-stat-row-main strong {
-          color: #334155;
+          color: var(--text, #334155);
           font-size: 13px;
           font-weight: 600;
         }
 
         .custom-stat-row-main code {
-          color: #64748b;
+          color: var(--text-muted, #64748b);
           font-size: 11px;
           overflow-wrap: anywhere;
         }
@@ -1505,17 +1509,17 @@ export default function Stats() {
         }
 
         .custom-stat-value strong {
-          color: #4f63d2;
+          color: var(--accent, #4f63d2);
           font-size: 15px;
         }
 
         .custom-stat-value-empty {
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 12px;
         }
 
         .custom-stat-value-error {
-          color: #dc2626;
+          color: var(--danger, #dc2626);
           font-size: 11px;
           white-space: normal;
         }
@@ -1530,7 +1534,7 @@ export default function Stats() {
         .custom-stat-delete {
           min-height: 30px;
           padding: 0 10px;
-          border-radius: 6px;
+          border-radius: var(--radius-sm, 6px);
           font-size: 12px;
           font-weight: 600;
           cursor: pointer;
@@ -1538,15 +1542,15 @@ export default function Stats() {
 
         .custom-stat-edit,
         .custom-stat-cancel {
-          border: 1px solid #cbd5e1;
-          background: #fff;
-          color: #475569;
+          border: 1px solid var(--border-strong, #cbd5e1);
+          background: var(--surface, #fff);
+          color: var(--text-muted, #475569);
         }
 
         .custom-stat-delete {
-          border: 1px solid #fecaca;
-          background: #fef2f2;
-          color: #dc2626;
+          border: 1px solid var(--danger-border, #fecaca);
+          background: var(--danger-soft, #fef2f2);
+          color: var(--danger, #dc2626);
         }
 
         .custom-stat-delete:disabled,
@@ -1558,9 +1562,9 @@ export default function Stats() {
         .custom-stat-form {
           margin: 16px 22px 22px;
           padding: 16px;
-          border: 1px solid #eef2f7;
-          border-radius: 10px;
-          background: #f8fafc;
+          border: 1px solid var(--border, #eef2f7);
+          border-radius: var(--radius-lg, 10px);
+          background: var(--surface-subtle, #f8fafc);
         }
 
         .custom-stat-fields {
@@ -1579,7 +1583,7 @@ export default function Stats() {
         }
 
         .custom-stat-chip-label {
-          color: #64748b;
+          color: var(--text-muted, #64748b);
           font-size: 12px;
           font-weight: 600;
         }
@@ -1587,17 +1591,17 @@ export default function Stats() {
         .custom-stat-chip {
           min-height: 28px;
           padding: 0 10px;
-          border: 1px solid #dbe3f0;
+          border: 1px solid var(--accent-border, #dbe3f0);
           border-radius: 999px;
-          background: #eef2ff;
-          color: #4f63d2;
+          background: var(--accent-soft, #eef2ff);
+          color: var(--accent, #4f63d2);
           font-size: 12px;
           font-weight: 600;
           cursor: pointer;
         }
 
         .custom-stat-chip-empty {
-          color: #94a3b8;
+          color: var(--text-faint, #94a3b8);
           font-size: 12px;
         }
 
