@@ -3,6 +3,7 @@ const express = require("express");
 const {
   getProjectDetails,
   getAiProjectProgress,
+  getLearningVideos,
   getAiProjectSpeech,
   searchProjectEntries,
   searchOwnedEntries,
@@ -47,6 +48,10 @@ router.post(
   getAiProjectSpeech,
 );
 
+router.get(
+  "/:projectId/learning-videos",
+  getLearningVideos,
+);
 router.get(
   "/:projectId/entries/search",
   searchProjectEntries,

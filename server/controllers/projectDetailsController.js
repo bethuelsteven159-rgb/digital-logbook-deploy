@@ -28,6 +28,10 @@ const {
 );
 
 const {
+  searchLearningVideos,
+} = require("../services/youtubeSearchService");
+
+const {
   generateInsightSpeech,
 } = require(
   "../services/aiProjectTtsService",
@@ -123,6 +127,26 @@ async function getAiProjectProgress(
   }
 }
 
+async function getLearningVideos(req, res, next) {
+  try {
+    const userId = requireUserId(req);
+
+    // Confirms the project exists and belongs to this user.
+    const projectDetails = await getProjectDetailsService({
+      projectId: req.params.projectId,
+      userId,
+    });
+
+    const query =
+      req.query?.q || projectDetails?.project?.name || "";
+
+    const data = await searchLearningVideos(query);
+
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
 async function getAiProjectSpeech(
   req,
   res,
@@ -886,6 +910,7 @@ async function restoreEntryRevision(
 module.exports = {
   getProjectDetails,
   getAiProjectProgress,
+  getLearningVideos,
   getAiProjectSpeech,
   searchProjectEntries,
   searchOwnedEntries,
