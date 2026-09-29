@@ -35,7 +35,7 @@ function createRepository(queryable) {
           ),
 
           queryable.query(
-            `SELECT id, project_id, name, duration_minutes, occurred_at, created_at, updated_at
+            `SELECT id, project_id, name, duration_minutes, occurred_at, archived_at, tags, due_at, completed_at, created_at, updated_at
              FROM entries
              WHERE project_id = ANY($1::uuid[])
              ORDER BY project_id, occurred_at, created_at, id`,
@@ -286,16 +286,24 @@ function createRepository(queryable) {
                  duration_minutes = $2,
                  occurred_at = COALESCE($3::timestamptz, occurred_at),
                  created_at = COALESCE($4::timestamptz, created_at),
-                 updated_at = COALESCE($5::timestamptz, NOW())
-             WHERE id = $6
-               AND project_id = $7
-               AND created_by_id = $8`,
+                 updated_at = COALESCE($5::timestamptz, NOW()),
+                 archived_at = $6::timestamptz,
+                 tags = $7::text[],
+                 due_at = $8::timestamptz,
+                 completed_at = $9::timestamptz
+             WHERE id = $10
+               AND project_id = $11
+               AND created_by_id = $12`,
             [
               entry.name,
               entry.durationMinutes,
               entry.occurredAt ?? null,
               entry.createdAt ?? null,
               entry.updatedAt ?? null,
+              entry.archivedAt ?? null,
+              Array.isArray(entry.tags) ? entry.tags : [],
+              entry.dueAt ?? null,
+              entry.completedAt ?? null,
               entry.id,
               projectId,
               userId,
@@ -307,12 +315,13 @@ function createRepository(queryable) {
         } else {
           await queryable.query(
             `INSERT INTO entries
-               (id, project_id, created_by_id, name, duration_minutes, occurred_at, created_at, updated_at)
+               (id, project_id, created_by_id, name, duration_minutes, occurred_at, created_at, updated_at, archived_at, tags, due_at, completed_at)
              VALUES
                ($1, $2, $3, $4, $5,
                 COALESCE($6::timestamptz, NOW()),
                 COALESCE($7::timestamptz, NOW()),
-                COALESCE($8::timestamptz, NOW()))`,
+                COALESCE($8::timestamptz, NOW()),
+                $9::timestamptz, $10::text[], $11::timestamptz, $12::timestamptz)`,
             [
               entry.id,
               projectId,
@@ -322,6 +331,10 @@ function createRepository(queryable) {
               entry.occurredAt ?? null,
               entry.createdAt ?? null,
               entry.updatedAt ?? null,
+              entry.archivedAt ?? null,
+              Array.isArray(entry.tags) ? entry.tags : [],
+              entry.dueAt ?? null,
+              entry.completedAt ?? null,
             ],
           );
 

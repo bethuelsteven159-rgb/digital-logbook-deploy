@@ -19,6 +19,8 @@ import LearningVideos from './LearningVideos';
 import {
   createProjectEntry,
   deleteProjectEntry,
+  archiveProjectEntry,
+  unarchiveProjectEntry,
   fetchProjectDetails,
   fetchSavedFilters,
   createSavedFilter,
@@ -79,6 +81,8 @@ export default function ProjectDetails() {
   const [selectedEntryForHistory, setSelectedEntryForHistory] = useState(null);
 
   const [entryDeleteSaving, setEntryDeleteSaving] = useState(false);
+  const [archiveSaving, setArchiveSaving] = useState(false);
+  const [showArchivedEntries, setShowArchivedEntries] = useState(false);
 
   const [checklistSaving, setChecklistSaving] = useState({});
 
@@ -347,6 +351,59 @@ export default function ProjectDetails() {
     }
   }
 
+async function handleArchiveEntry(entry) {
+  if (!entry?.id) {
+    return;
+  }
+
+  try {
+    setArchiveSaving(true);
+    setError("");
+
+    await archiveProjectEntry(id, entry.id);
+
+    setFilteredEntries((current) =>
+      current ? current.filter((item) => item.id !== entry.id) : current,
+    );
+
+    setSelectedEntryForDetails(null);
+    setSelectedEntryForEdit(null);
+    setShowEditEntryModal(false);
+
+    await loadProject();
+  } catch (requestError) {
+    console.error("Failed to archive entry:", requestError);
+    setError(requestError.message || "Failed to archive entry.");
+  } finally {
+    setArchiveSaving(false);
+  }
+}
+
+async function handleUnarchiveEntry(entry) {
+  if (!entry?.id) {
+    return;
+  }
+
+  try {
+    setArchiveSaving(true);
+    setError("");
+
+    await unarchiveProjectEntry(id, entry.id);
+
+    setSelectedEntryForDetails(null);
+    setFilteredEntries((current) =>
+      current ? current.filter((item) => item.id !== entry.id) : current,
+    );
+
+    await loadProject();
+  } catch (requestError) {
+    console.error("Failed to unarchive entry:", requestError);
+    setError(requestError.message || "Failed to unarchive entry.");
+  } finally {
+    setArchiveSaving(false);
+  }
+}
+
   async function handleCreateEntry(payload) {
     if (!isOnline) {
       const queued = addToQueue(id, payload);
@@ -430,7 +487,9 @@ export default function ProjectDetails() {
       const updatedFilter = await updateSavedFilter(filterId, payload);
 
       setSavedFilters((current) =>
-        current.map((filter) => (filter.id === filterId ? updatedFilter : filter)),
+        current.map((filter) =>
+          filter.id === filterId ? updatedFilter : filter,
+        ),
       );
     } catch (submitError) {
       console.error('Failed to update saved filter:', submitError);
@@ -451,6 +510,8 @@ export default function ProjectDetails() {
   }
 
   async function handleApplyFilter(filterId) {
+    setShowArchivedEntries(false);
+
     if (!filterId) {
       setActiveFilterId(null);
       setFilteredEntries(null);
@@ -460,6 +521,7 @@ export default function ProjectDetails() {
     try {
       setSearchActive(false);
       setSearchError('');
+
       const results = await applySavedFilter(id, filterId);
 
       setActiveFilterId(filterId);
@@ -503,7 +565,6 @@ export default function ProjectDetails() {
   async function handleMarkComplete(entryId) {
     try {
       await markEntryComplete(id, entryId);
-
       await loadProject();
     } catch (completeError) {
       console.error('Failed to mark entry complete:', completeError);
@@ -511,6 +572,8 @@ export default function ProjectDetails() {
   }
 
   async function handleShowOverdue() {
+    setShowArchivedEntries(false);
+
     if (entryStatusView === 'overdue') {
       setEntryStatusView(null);
       setFilteredEntries(null);
@@ -521,6 +584,7 @@ export default function ProjectDetails() {
     try {
       setSearchActive(false);
       setSearchError('');
+
       const results = await fetchOutstandingEntries(id);
 
       setEntryStatusView('overdue');
@@ -532,6 +596,8 @@ export default function ProjectDetails() {
   }
 
   async function handleShowIncomplete() {
+    setShowArchivedEntries(false);
+
     if (entryStatusView === 'incomplete') {
       setEntryStatusView(null);
       setFilteredEntries(null);
@@ -542,6 +608,7 @@ export default function ProjectDetails() {
     try {
       setSearchActive(false);
       setSearchError('');
+
       const results = await fetchIncompleteEntries(id);
 
       setEntryStatusView('incomplete');
@@ -556,6 +623,7 @@ export default function ProjectDetails() {
       await updateProject(id, payload);
 
       setShowEditProjectModal(false);
+      setShowArchivedEntries(false);
       setActiveFilterId(null);
       setFilteredEntries(null);
       await loadProject();
@@ -659,6 +727,7 @@ export default function ProjectDetails() {
         completed,
         sort: searchSort,
         customFields: searchCustomFields,
+        archived: showArchivedEntries,
       });
 
       setActiveFilterId(null);
@@ -684,9 +753,61 @@ export default function ProjectDetails() {
     setSearchCustomFields([]);
     setSearchError('');
     setSearchActive(false);
-    setFilteredEntries(null);
     setActiveFilterId(null);
     setEntryStatusView(null);
+
+    if (showArchivedEntries) {
+      loadArchivedEntries();
+      return;
+    }
+
+    setFilteredEntries(null);
+  }
+
+  async function loadArchivedEntries(filters = {}) {
+    try {
+      setSearching(true);
+      setSearchError('');
+
+      const results = await searchProjectEntries(id, {
+        sort: 'newest',
+        ...filters,
+        archived: true,
+      });
+
+      setFilteredEntries(Array.isArray(results) ? results : []);
+    } catch (requestError) {
+      console.error('Failed to load archived entries:', requestError);
+      setSearchError(
+        requestError.message || 'Unable to load archived entries.',
+      );
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function handleToggleArchivedView() {
+    setSearchQuery('');
+    setSearchFromDate('');
+    setSearchToDate('');
+    setSearchMinDuration('');
+    setSearchMaxDuration('');
+    setSearchCompleted('all');
+    setSearchSort('newest');
+    setSearchCustomFields([]);
+    setSearchError('');
+    setSearchActive(false);
+    setActiveFilterId(null);
+    setEntryStatusView(null);
+
+    if (showArchivedEntries) {
+      setShowArchivedEntries(false);
+      setFilteredEntries(null);
+      return;
+    }
+
+    setShowArchivedEntries(true);
+    await loadArchivedEntries();
   }
 
   function formatLoggedTime(minutes = 0) {
@@ -721,7 +842,6 @@ export default function ProjectDetails() {
         <main className="app-main">
           <div className="project-status">
             <IconEntryLarge />
-
             <p>Loading project...</p>
           </div>
         </main>
@@ -742,16 +862,22 @@ export default function ProjectDetails() {
         <main className="app-main">
           <div className="project-status">
             <IconEntryLarge />
-
             <h2>Unable to load project</h2>
-
             <p>{error}</p>
 
-            <button type="button" className="btn btn-primary" onClick={loadProject}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={loadProject}
+            >
               Try Again
             </button>
 
-            <button type="button" className="breadcrumb-link" onClick={() => navigate('/projects')}>
+            <button
+              type="button"
+              className="breadcrumb-link"
+              onClick={() => navigate('/projects')}
+            >
               Back to Projects
             </button>
           </div>
@@ -778,15 +904,27 @@ export default function ProjectDetails() {
 
   const searchableFields = (() => {
     const byId = new Map();
+
     fields.forEach((field) => {
-      if (field?.id) byId.set(field.id, field);
+      if (field?.id) {
+        byId.set(field.id, field);
+      }
     });
-    const projectEntries = Array.isArray(details.entries) ? details.entries : [];
+
+    const projectEntries = Array.isArray(details.entries)
+      ? details.entries
+      : [];
+
     projectEntries.forEach((entry) => {
       const values = Array.isArray(entry?.values) ? entry.values : [];
+
       values.forEach((value) => {
         const fieldId = value?.fieldId || value?.id;
-        if (!fieldId || byId.has(fieldId)) return;
+
+        if (!fieldId || byId.has(fieldId)) {
+          return;
+        }
+
         byId.set(fieldId, {
           id: fieldId,
           name: value?.name || 'Custom field',
@@ -794,6 +932,7 @@ export default function ProjectDetails() {
         });
       });
     });
+
     return Array.from(byId.values());
   })();
 
@@ -805,7 +944,7 @@ export default function ProjectDetails() {
         : [];
 
   const baseDisplayEntries = [
-    ...pendingEntries.map((item) => ({
+    ...(showArchivedEntries ? [] : pendingEntries).map((item) => ({
       id: item.localId,
       name: item.payload.name,
       durationMinutes: item.payload.durationMinutes,
@@ -821,12 +960,16 @@ export default function ProjectDetails() {
   const normalizedEntrySearch = entrySearchQuery.trim().toLowerCase();
 
   function entryMatchesSearch(entry) {
-    if (!normalizedEntrySearch) return true;
+    if (!normalizedEntrySearch) {
+      return true;
+    }
 
     const name = String(entry.name ?? '').toLowerCase();
+
     const tags = Array.isArray(entry.tags)
       ? entry.tags.map((tag) => String(tag ?? '').toLowerCase())
       : [];
+
     const values = Array.isArray(entry.values) ? entry.values : [];
 
     if (entrySearchField === 'name') {
@@ -839,6 +982,7 @@ export default function ProjectDetails() {
 
     if (entrySearchField.startsWith('custom:')) {
       const fieldId = entrySearchField.slice('custom:'.length);
+
       return values.some(
         (value) =>
           String(value?.fieldId ?? '') === fieldId &&
@@ -866,7 +1010,9 @@ export default function ProjectDetails() {
     ? `${displayEntries.length} of ${baseDisplayEntries.length} ${
         baseDisplayEntries.length === 1 ? 'entry' : 'entries'
       }`
-    : `${baseDisplayEntries.length} ${baseDisplayEntries.length === 1 ? 'entry' : 'entries'}`;
+    : `${baseDisplayEntries.length} ${
+        baseDisplayEntries.length === 1 ? 'entry' : 'entries'
+      }`;
 
   const usedFieldIds = new Set(
     entries.flatMap((entry) =>
@@ -888,12 +1034,19 @@ export default function ProjectDetails() {
 
   return (
     <div className="app-shell">
-      <Sidebar collapsed={collapsed} onToggle={() => setSidebarCollapsed((current) => !current)} />
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setSidebarCollapsed((current) => !current)}
+      />
 
       <main className="app-main">
         {/* Breadcrumb */}
         <div className="breadcrumb-bar">
-          <button type="button" className="breadcrumb-link" onClick={() => navigate('/projects')}>
+          <button
+            type="button"
+            className="breadcrumb-link"
+            onClick={() => navigate('/projects')}
+          >
             Projects
           </button>
 
@@ -914,7 +1067,9 @@ export default function ProjectDetails() {
             </h1>
 
             {project.description && (
-              <p className="page-header-description">{project.description}</p>
+              <p className="page-header-description">
+                {project.description}
+              </p>
             )}
           </div>
 
@@ -963,15 +1118,11 @@ export default function ProjectDetails() {
               Edit Project
             </button>
 
-            <span className="header-action-divider" aria-hidden="true" />
+            <span
+              className="header-action-divider"
+              aria-hidden="true"
+            />
 
-            {/*
-             * Archive belongs to project management.
-             *
-             * Keep the button and styling here.
-             * Do not implement their backend operation
-             * inside Project Details.
-             */}
             <button
               type="button"
               className="btn btn-ghost btn-ghost-archive"
@@ -985,11 +1136,18 @@ export default function ProjectDetails() {
         </header>
 
         <div className="project-content">
-          {error && <div className="project-inline-error">{error}</div>}
+          {error && (
+            <div className="project-inline-error">
+              {error}
+            </div>
+          )}
 
-          {generatedNotice && <div className="project-inline-notice">{generatedNotice}</div>}
+          {generatedNotice && (
+            <div className="project-inline-notice">
+              {generatedNotice}
+            </div>
+          )}
 
-          {/* Statistics */}
           <div className="project-stat-strip">
             <ProjectStat
               label="Total Entries"
@@ -1024,14 +1182,21 @@ export default function ProjectDetails() {
 
           <AiProjectInsight projectId={id} />
 
-          <LearningVideos projectId={id} projectName={project.name} />
+          <LearningVideos
+            projectId={id}
+            projectName={project.name}
+          />
 
-          {/* Project references */}
           <section className="references-section">
             <div className="references-section-header">
               <div>
-                <h2 className="entries-title">Project references</h2>
-                <p className="references-description">Projects related to this project.</p>
+                <h2 className="entries-title">
+                  Project references
+                </h2>
+
+                <p className="references-description">
+                  Projects related to this project.
+                </p>
               </div>
 
               {!project.archivedAt && (
@@ -1047,14 +1212,19 @@ export default function ProjectDetails() {
               )}
             </div>
 
-            {Array.isArray(details.references) && details.references.length > 0 ? (
+            {Array.isArray(details.references) &&
+            details.references.length > 0 ? (
               <div className="entry-reference-list project-reference-list">
                 {details.references.map((reference) => (
                   <button
                     type="button"
                     className="entry-reference-link"
                     key={reference.id}
-                    onClick={() => navigate(`/projects/${reference.referencedProjectId}`)}
+                    onClick={() =>
+                      navigate(
+                        `/projects/${reference.referencedProjectId}`,
+                      )
+                    }
                   >
                     {reference.referencedProjectName}
                   </button>
@@ -1062,7 +1232,10 @@ export default function ProjectDetails() {
               </div>
             ) : (
               <div className="references-empty">
-                <p className="references-empty-title">No linked projects yet.</p>
+                <p className="references-empty-title">
+                  No linked projects yet.
+                </p>
+
                 <p className="references-empty-hint">
                   Connect related projects to keep context together.
                 </p>
@@ -1070,18 +1243,39 @@ export default function ProjectDetails() {
             )}
           </section>
 
-          {/* Entries */}
           <section className="entries-section">
             <div className="entries-header entries-header-with-views">
               <div>
-                <h2 className="entries-title">Entries</h2>
+                <h2 className="entries-title">
+                  {showArchivedEntries
+                    ? 'Archived entries'
+                    : 'Entries'}
+                </h2>
+
                 <span className="entries-count">
-                  {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+                  {entries.length}{' '}
+                  {entries.length === 1 ? 'entry' : 'entries'}
                 </span>
+
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  style={{ marginLeft: '12px' }}
+                  onClick={handleToggleArchivedView}
+                  disabled={searching}
+                >
+                  {showArchivedEntries
+                    ? 'Back to active entries'
+                    : 'View archive'}
+                </button>
               </div>
 
               {entries.length > 0 && (
-                <div className="segmented" role="group" aria-label="Entry view">
+                <div
+                  className="segmented"
+                  role="group"
+                  aria-label="Entry view"
+                >
                   {[
                     ['list', 'List'],
                     ['calendar', 'Calendar'],
@@ -1090,7 +1284,11 @@ export default function ProjectDetails() {
                     <button
                       key={value}
                       type="button"
-                      className={`segmented-btn ${entryView === value ? 'segmented-btn-active' : ''}`}
+                      className={`segmented-btn ${
+                        entryView === value
+                          ? 'segmented-btn-active'
+                          : ''
+                      }`}
                       aria-pressed={entryView === value}
                       onClick={() => setEntryView(value)}
                     >
@@ -1100,27 +1298,39 @@ export default function ProjectDetails() {
                 </div>
               )}
             </div>
+
             <div className="entry-search-wrap">
               <select
                 className="entry-search-field"
                 aria-label="Search field"
                 value={entrySearchField}
-                onChange={(event) => setEntrySearchField(event.target.value)}
+                onChange={(event) =>
+                  setEntrySearchField(event.target.value)
+                }
               >
                 <option value="all">All fields</option>
                 <option value="name">Entry name</option>
                 <option value="tags">Tags</option>
+
                 {fields
-                  .filter((field) => field.fieldType !== 'computed')
+                  .filter(
+                    (field) => field.fieldType !== 'computed',
+                  )
                   .map((field) => (
-                    <option key={field.id} value={`custom:${field.id}`}>
+                    <option
+                      key={field.id}
+                      value={`custom:${field.id}`}
+                    >
                       {field.name}
                     </option>
                   ))}
               </select>
 
               <div className="entry-simple-search">
-                <span className="entry-simple-search-icon">⌕</span>
+                <span className="entry-simple-search-icon">
+                  ⌕
+                </span>
+
                 <input
                   type="search"
                   aria-label="Search entries"
@@ -1130,8 +1340,11 @@ export default function ProjectDetails() {
                       : 'Search selected field...'
                   }
                   value={entrySearchQuery}
-                  onChange={(event) => setEntrySearchQuery(event.target.value)}
+                  onChange={(event) =>
+                    setEntrySearchQuery(event.target.value)
+                  }
                 />
+
                 {entrySearchQuery && (
                   <button
                     type="button"
@@ -1144,11 +1357,20 @@ export default function ProjectDetails() {
               </div>
             </div>
 
-            <div className="entry-search-status" aria-live="polite">
+            <div
+              className="entry-search-status"
+              aria-live="polite"
+            >
               <span>{entrySearchCountText}</span>
-              {normalizedEntrySearch && displayEntries.length === 0 && (
-                <span>No entries match &quot;{entrySearchQuery.trim()}&quot;.</span>
-              )}
+
+              {normalizedEntrySearch &&
+                displayEntries.length === 0 && (
+                  <span>
+                    No entries match &quot;
+                    {entrySearchQuery.trim()}
+                    &quot;.
+                  </span>
+                )}
             </div>
 
             <div className="saved-filters-bar">
@@ -1457,7 +1679,7 @@ export default function ProjectDetails() {
                   <IconEntryLarge />
                 </div>
 
-                {normalizedEntrySearch ? (
+           {normalizedEntrySearch ? (
                   <>
                     <p className="empty-heading">No matching entries</p>
                     <p className="empty-body">
@@ -1486,6 +1708,13 @@ export default function ProjectDetails() {
                       Clear search
                     </button>
                   </>
+                ) : showArchivedEntries ? (
+                  <>
+                    <p className="empty-heading">No archived entries.</p>
+                    <p className="empty-body">
+                      Entries you archive appear here. Unarchive an entry to return it to the main list.
+                    </p>
+                  </>
                 ) : (
                   <>
                     <p className="empty-heading">No entries yet.</p>
@@ -1504,6 +1733,7 @@ export default function ProjectDetails() {
                       </button>
                     )}
                   </>
+
                 )}
               </div>
             ) : entryView === 'calendar' ? (
@@ -1667,11 +1897,14 @@ export default function ProjectDetails() {
           onClose={() => setSelectedEntryForDetails(null)}
           onEdit={() => openEditEntryModal(selectedEntryForDetails)}
           onDelete={handleDeleteEntry}
+          onArchive={handleArchiveEntry}
+          onUnarchive={handleUnarchiveEntry}
           onHistory={(entry) => {
             setSelectedEntryForDetails(null);
             setSelectedEntryForHistory(entry);
           }}
           deleteSaving={entryDeleteSaving}
+          archiveSaving={archiveSaving}
           onChecklistToggle={handleChecklistToggle}
           checklistSaving={checklistSaving}
           onProjectReferenceClick={(projectId) => {

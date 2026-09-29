@@ -319,7 +319,65 @@ async function getPlotStatistics(projectId, field) {
     })),
   };
 }
+async function getProjectSummary(projectId) {
+  const result = await db.query(
+    `
+      SELECT
+        COALESCE(SUM(duration_minutes), 0)::int AS logged_minutes,
+        COUNT(id)::int AS total_entries,
+        COALESCE(AVG(duration_minutes), 0)::float AS avg_duration_minutes,
+        MAX(occurred_at) AS last_activity
+      FROM entries
+      WHERE project_id = $1
+        AND archived_at IS NULL
+    `,
+    [projectId],
+  );
 
+  return result.rows[0];
+}
+
+/**
+ * GET /api/stats/compare-projects?projectId=<uuid>&otherProjectId=<uuid>
+ */
+router.get("/compare-projects", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const { projectId, otherProjectId } = req.query;
+
+    if (!projectId || !otherProjectId) {
+      return res.status(400).json({ error: "projectId and otherProjectId are required" });
+    }
+    if (projectId === otherProjectId) {
+      return res.status(400).json({ error: "Cannot compare a project with itself" });
+    }
+
+    const [projectA, projectB] = await Promise.all([
+      getOwnedProject(projectId, userId),
+      getOwnedProject(otherProjectId, userId),
+    ]);
+
+    if (!projectA) return res.status(404).json({ error: "First project not found" });
+    if (!projectB) return res.status(404).json({ error: "Second project not found" });
+
+    const [summaryA, summaryB] = await Promise.all([
+      getProjectSummary(projectId),
+      getProjectSummary(otherProjectId),
+    ]);
+
+    return res.json({
+      projectA: { projectId, ...summaryA },
+      projectB: { projectId: otherProjectId, ...summaryB },
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Failed to compare projects" });
+  }
+});
 /*
  * Dashboard statistics.
  *
