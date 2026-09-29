@@ -270,6 +270,8 @@ async function searchProjectEntries(
 
           sort:
             req.query.sort,
+          archived:
+            req.query.archived === "true",
 
           customFields,
         },
