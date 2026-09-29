@@ -12,7 +12,8 @@
     "test:node:coverage": "c8 --reporter=text --reporter=lcov --report-dir=coverage-node --exclude=tests/** --exclude=**/*_mine* node --test tests/*.test.js",
     "migrate:entry-links": "node scripts/applyEntryLinksMigration.js",
     "benchmark:custom-statistics": "node scripts/benchmarkCustomStatistics.js",
-    "migrate:custom-dashboard": "node scripts/applyCustomDashboardMigration.js"
+    "migrate:custom-dashboard": "node scripts/applyCustomDashboardMigration.js",
+    "benchmark:dashboard": "node scripts/benchmarkDashboard.js"
   },
   "keywords": [],
   "author": "",
