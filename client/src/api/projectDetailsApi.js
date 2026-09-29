@@ -236,11 +236,15 @@ export async function searchProjectEntries(
     );
   }
 
-  if (filters.sort) {
+    if (filters.sort) {
     params.set(
       "sort",
       filters.sort,
     );
+  }
+
+  if (filters.archived === true) {
+    params.set("archived", "true");
   }
 
   const customFields =
