@@ -339,3 +339,75 @@ describe("old export files remain readable (US-106d)", () => {
     expect(normalized.projects[0].archivedAt ?? null).toBeNull();
   });
 });
+describe("export includes reminder and tag fields", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("exports tags, dueAt, completedAt and archivedAt on entries", async () => {
+    const rows = buildLogbookRows();
+    rows.entries[0].tags = ["research", "writing"];
+    rows.entries[0].due_at = "2026-10-01T00:00:00.000Z";
+    rows.entries[0].completed_at = "2026-10-02T00:00:00.000Z";
+    rows.entries[0].archived_at = "2026-10-03T00:00:00.000Z";
+    repository.getLogbook.mockResolvedValue(rows);
+
+    const result = await exportLogbookService({ userId: "user-1" });
+    const entry = result.projects[0].entries[0];
+
+    expect(entry.tags).toEqual(["research", "writing"]);
+    expect(entry.dueAt).toBe("2026-10-01T00:00:00.000Z");
+    expect(entry.completedAt).toBe("2026-10-02T00:00:00.000Z");
+    expect(entry.archivedAt).toBe("2026-10-03T00:00:00.000Z");
+  });
+
+  it("defaults tags to [] and dates to null when the row has none", async () => {
+    repository.getLogbook.mockResolvedValue(buildLogbookRows());
+
+    const result = await exportLogbookService({ userId: "user-1" });
+    const entry = result.projects[0].entries[0];
+
+    expect(entry.tags).toEqual([]);
+    expect(entry.dueAt).toBeNull();
+    expect(entry.completedAt).toBeNull();
+  });
+});
+describe("import carries reminder and tag fields to the repository", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("passes tags, dueAt, completedAt and archivedAt through on entries", async () => {
+    const tx = { insertImportedLogbook: vi.fn().mockResolvedValue({ imported: true }) };
+    repository.withTransaction.mockImplementation((callback) => callback(tx));
+
+    const payload = buildValidImportPayload();
+    Object.assign(payload.projects[0].entries[0], {
+      tags: ["research", "writing"],
+      dueAt: "2026-10-01T00:00:00.000Z",
+      completedAt: "2026-10-02T00:00:00.000Z",
+      archivedAt: "2026-10-03T00:00:00.000Z",
+    });
+
+    await importLogbookService({ userId: "user-1", payload });
+
+    const [, normalized] = tx.insertImportedLogbook.mock.calls[0];
+    expect(normalized.entries[0]).toEqual(
+      expect.objectContaining({
+        tags: ["research", "writing"],
+        dueAt: "2026-10-01T00:00:00.000Z",
+        completedAt: "2026-10-02T00:00:00.000Z",
+        archivedAt: "2026-10-03T00:00:00.000Z",
+      }),
+    );
+  });
+
+  it("still accepts old files that have none of these fields", () => {
+    const payload = buildValidImportPayload();
+    const entry = payload.projects[0].entries[0];
+    delete entry.tags;
+    delete entry.dueAt;
+    delete entry.completedAt;
+    expect(() => validateImportPayload(payload)).not.toThrow();
+  });
+});

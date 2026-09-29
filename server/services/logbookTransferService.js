@@ -41,6 +41,9 @@ function exportLogbookService({ userId }) {
           durationMinutes: entry.duration_minutes,
           occurredAt: toIso(entry.occurred_at),
           archivedAt: toIso(entry.archived_at),
+          tags: entry.tags ?? [],
+          dueAt: toIso(entry.due_at),
+          completedAt: toIso(entry.completed_at),
           createdAt: toIso(entry.created_at),
           updatedAt: toIso(entry.updated_at),
           values: data.values
