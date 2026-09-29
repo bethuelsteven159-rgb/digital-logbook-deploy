@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
 
-const FIELD_TYPES = [
-  { value: "text", label: "Short text" },
-  { value: "textarea", label: "Long text" },
-  { value: "number", label: "Number" },
-  { value: "date", label: "Date" },
-];
-
 export default function ProjectModal({
   mode = "edit",
   entries = [],
@@ -49,27 +42,24 @@ export default function ProjectModal({
 
   return (
     <div
-      className="project-modal-overlay"
+      className="modal-overlay"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="project-modal" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
-        <div className="project-modal-header">
-          <div>
-            <p className="project-modal-eyebrow">Project entries</p>
-            <h2 className="project-modal-title" id="project-modal-title">
-              {editingEntry ? "Edit Entry" : "Edit Project"}
-            </h2>
-          </div>
-          <button className="project-modal-close" onClick={onClose} aria-label="Close">
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
+        <div className="modal-header">
+          <h2 className="modal-title" id="project-modal-title">
+            {editingEntry ? "Edit Entry" : "Edit Project"}
+          </h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close" type="button">
             <IconX />
           </button>
         </div>
 
         {!editingEntry ? (
           <>
-            <div className="project-modal-body">
+            <div className="modal-body">
               <p className="project-modal-help">
                 Choose an entry below to edit its information. Project details such as the name, description, and dates are not changed here.
               </p>
@@ -108,20 +98,21 @@ export default function ProjectModal({
               )}
             </div>
 
-            <div className="project-modal-footer">
-              <button type="button" className="project-modal-cancel" onClick={onClose}>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={onClose}>
                 Close
               </button>
             </div>
           </>
         ) : (
           <form
+            className="modal-form"
             onSubmit={(e) => {
               e.preventDefault();
               saveEntry();
             }}
           >
-            <div className="project-modal-body">
+            <div className="modal-body">
               <button
                 type="button"
                 className="project-modal-back"
@@ -141,13 +132,13 @@ export default function ProjectModal({
                 </span>
               </div>
 
-              <div className="project-form-field">
-                <label className="project-form-label" htmlFor="edit-entry-name">
+              <div className="form-field">
+                <label className="form-label" htmlFor="edit-entry-name">
                   Entry name
                 </label>
                 <input
                   id="edit-entry-name"
-                  className="project-form-input"
+                  className="form-input"
                   value={editingEntry.name || editingEntry.title || ""}
                   onChange={(e) =>
                     setEditingEntry((current) => ({
@@ -160,8 +151,8 @@ export default function ProjectModal({
               </div>
 
               {(editingEntry.fields || []).map((field) => (
-                <div className="project-form-field" key={field.id}>
-                  <label className="project-form-label" htmlFor={`edit-entry-field-${field.id}`}>
+                <div className="form-field" key={field.id}>
+                  <label className="form-label" htmlFor={`edit-entry-field-${field.id}`}>
                     {field.label || field.name || "Field"}
                   </label>
                   {renderFieldInput(field, (value) => updateFieldValue(field.id, value))}
@@ -175,10 +166,10 @@ export default function ProjectModal({
               )}
             </div>
 
-            <div className="project-modal-footer">
+            <div className="modal-footer">
               <button
                 type="button"
-                className="project-modal-cancel"
+                className="btn btn-secondary"
                 onClick={() => {
                   setSelectedEntryId(null);
                   setEditingEntry(null);
@@ -186,7 +177,7 @@ export default function ProjectModal({
               >
                 Cancel
               </button>
-              <button type="submit" className="project-modal-save">
+              <button type="submit" className="btn btn-primary">
                 Save Changes
               </button>
             </div>
@@ -195,81 +186,7 @@ export default function ProjectModal({
       </div>
 
       <style>{`
-        .project-modal-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 300;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-          background: rgba(15, 23, 42, 0.48);
-          backdrop-filter: blur(3px);
-          animation: projectModalFadeIn 0.15s ease-out;
-        }
-        .project-modal {
-          width: min(100%, 560px);
-          max-height: min(720px, 90vh);
-          overflow: hidden;
-          background: #ffffff;
-          border: 1px solid rgba(226, 232, 240, 0.9);
-          border-radius: 16px;
-          box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2), 0 6px 18px rgba(15, 23, 42, 0.08);
-          animation: projectModalSlideIn 0.18s ease-out;
-        }
-        .project-modal-header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 20px;
-          padding: 24px 24px 20px;
-          border-bottom: 1px solid #f1f5f9;
-        }
-        .project-modal-eyebrow {
-          margin: 0 0 5px;
-          color: #94a3b8;
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-        .project-modal-title {
-          margin: 0;
-          color: #1a2340;
-          font-family: 'DM Serif Display', Georgia, serif;
-          font-size: 24px;
-          font-weight: 400;
-          line-height: 1.2;
-        }
-        .project-modal-close {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 34px;
-          height: 34px;
-          padding: 0;
-          flex-shrink: 0;
-          color: #64748b;
-          background: #f8fafc;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-        }
-        .project-modal-close:hover { color: #1e293b; background: #e2e8f0; }
-        .project-modal-body {
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-          padding: 22px 24px;
-          max-height: 56vh;
-          overflow-y: auto;
-        }
-        .project-modal-help {
-          margin: 0;
-          color: #64748b;
-          font-size: 13px;
-          line-height: 1.6;
-        }
+        .project-modal-help { margin: 0; color: var(--text-muted, #64748b); font-size: 13px; line-height: 1.6; }
         .project-entry-list { display: flex; flex-direction: column; gap: 8px; }
         .project-entry-item {
           display: flex;
@@ -279,30 +196,32 @@ export default function ProjectModal({
           width: 100%;
           padding: 14px 16px;
           text-align: left;
-          background: #f8fafc;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 10px;
-          color: #1e293b;
+          font: inherit;
+          background: var(--surface-subtle, #f8fafc);
+          border: 1px solid var(--border, #e2e8f0);
+          border-radius: var(--radius-md, 8px);
+          color: var(--text, #1e293b);
           cursor: pointer;
           transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
         }
         .project-entry-item:hover {
-          background: #ffffff;
-          border-color: #cbd5e1;
+          background: var(--surface, #ffffff);
+          border-color: var(--border-strong, #cbd5e1);
           transform: translateY(-1px);
         }
+        .project-entry-item:focus-visible { outline: 2px solid var(--ring, #4f63d2); outline-offset: 2px; }
         .project-entry-item-content { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-        .project-entry-item-name { font-size: 14px; font-weight: 600; color: #1e293b; }
-        .project-entry-item-meta { font-size: 12px; color: #94a3b8; }
+        .project-entry-item-name { font-size: 14px; font-weight: 600; color: var(--text, #1e293b); }
+        .project-entry-item-meta { font-size: 12px; color: var(--text-faint, #94a3b8); }
         .project-entry-empty {
           display: flex;
           flex-direction: column;
           align-items: center;
           text-align: center;
           padding: 28px 20px;
-          background: #f8fafc;
-          border: 1px dashed #cbd5e1;
-          border-radius: 10px;
+          background: var(--surface-subtle, #f8fafc);
+          border: 1px dashed var(--border-strong, #cbd5e1);
+          border-radius: var(--radius-md, 8px);
         }
         .project-entry-empty-icon {
           width: 44px;
@@ -311,12 +230,12 @@ export default function ProjectModal({
           align-items: center;
           justify-content: center;
           margin-bottom: 10px;
-          border-radius: 11px;
-          background: #e2e8f0;
-          color: #64748b;
+          border-radius: var(--radius-md, 8px);
+          background: var(--surface-hover, #e2e8f0);
+          color: var(--text-muted, #64748b);
         }
-        .project-entry-empty-title { margin: 0 0 5px; font-size: 14px; font-weight: 600; color: #1a2340; }
-        .project-entry-empty-body { margin: 0; max-width: 360px; font-size: 12px; line-height: 1.55; color: #94a3b8; }
+        .project-entry-empty-title { margin: 0 0 5px; font-size: 14px; font-weight: 600; color: var(--text-strong, #1a2340); }
+        .project-entry-empty-body { margin: 0; max-width: 360px; font-size: 12px; line-height: 1.55; color: var(--text-faint, #94a3b8); }
         .project-modal-back {
           display: inline-flex;
           align-items: center;
@@ -325,63 +244,18 @@ export default function ProjectModal({
           padding: 0;
           border: none;
           background: transparent;
-          color: #64748b;
-          font-family: 'Inter', sans-serif;
+          font: inherit;
           font-size: 12px;
           font-weight: 500;
+          color: var(--text-muted, #64748b);
           cursor: pointer;
         }
-        .project-modal-back:hover { color: #4f63d2; }
+        .project-modal-back:hover { color: var(--accent-text, #4338ca); }
+        .project-modal-back:focus-visible { outline: 2px solid var(--ring, #4f63d2); outline-offset: 2px; }
         .project-entry-edit-heading { display: flex; flex-direction: column; gap: 3px; padding-bottom: 2px; }
-        .project-entry-edit-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; }
-        .project-entry-edit-name { font-size: 17px; font-weight: 600; color: #1a2340; }
-        .project-form-field { display: flex; flex-direction: column; gap: 7px; }
-        .project-form-label { color: #374151; font-size: 13px; font-weight: 600; }
-        .project-form-input {
-          width: 100%;
-          box-sizing: border-box;
-          padding: 10px 12px;
-          color: #1e293b;
-          background: #ffffff;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
-          outline: none;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          line-height: 1.4;
-        }
-        .project-form-input:focus { border-color: #4f63d2; box-shadow: 0 0 0 3px rgba(79, 99, 210, 0.1); }
+        .project-entry-edit-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint, #94a3b8); }
+        .project-entry-edit-name { font-size: 17px; font-weight: 600; color: var(--text-strong, #1a2340); }
         .project-form-textarea { resize: vertical; min-height: 96px; }
-        .project-modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          gap: 8px;
-          padding: 16px 24px;
-          border-top: 1px solid #f1f5f9;
-          background: #ffffff;
-        }
-        .project-modal-cancel,
-        .project-modal-save {
-          padding: 9px 18px;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-        }
-        .project-modal-cancel { color: #64748b; background: #ffffff; border: 1.5px solid #e2e8f0; }
-        .project-modal-cancel:hover { background: #f8fafc; border-color: #cbd5e1; }
-        .project-modal-save { color: #ffffff; background: #4f63d2; border: 1.5px solid #4f63d2; }
-        .project-modal-save:hover { background: #3d50bf; border-color: #3d50bf; }
-        @keyframes projectModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes projectModalSlideIn { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @media (max-width: 600px) {
-          .project-modal-overlay { padding: 14px; }
-          .project-modal-header { padding: 20px; }
-          .project-modal-body { padding: 20px; }
-          .project-modal-footer { padding: 14px 20px; }
-        }
       `}</style>
     </div>
   );
@@ -395,7 +269,7 @@ function renderFieldInput(field, onChange) {
     return (
       <textarea
         id={id}
-        className="project-form-input project-form-textarea"
+        className="form-input project-form-textarea"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
@@ -406,7 +280,7 @@ function renderFieldInput(field, onChange) {
   return (
     <input
       id={id}
-      className="project-form-input"
+      className="form-input"
       type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
       value={value}
       onChange={(e) => onChange(e.target.value)}

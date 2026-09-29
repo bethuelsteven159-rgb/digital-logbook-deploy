@@ -40,11 +40,14 @@ function buildLinkedEntriesMap(entries, links) {
 function serializeEntry(entry) {
   return {
     id: entry.id,
+    projectId: entry.projectId ?? null,
+    projectName: entry.projectName ?? null,
     name: entry.name,
     durationMinutes: entry.durationMinutes,
     occurredAt: entry.occurredAt,
     dueAt: entry.dueAt,
     completedAt: entry.completedAt,
+    archivedAt: entry.archivedAt || null,
     createdAt: entry.createdAt,
 
     tags: entry.tags || [],
@@ -1536,6 +1539,83 @@ async function restoreEntryRevisionService({
   });
 }
 
+async function archiveEntryService({
+  projectId,
+  entryId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(
+    projectId,
+    userId,
+  );
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const ownedEntry = await repository.getOwnedEntry(
+    entryId,
+    userId,
+  );
+
+  if (!ownedEntry) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const archived = await repository.archiveEntry(
+    entryId,
+    projectId,
+  );
+
+  if (!archived) {
+    throw createHttpError(404, "Entry not found or already archived");
+  }
+
+  return {
+    id: archived.id,
+    projectId: archived.project_id,
+    archivedAt: archived.archived_at,
+  };
+}
+
+async function unarchiveEntryService({
+  projectId,
+  entryId,
+  userId,
+}) {
+  const project = await repository.getOwnedProject(
+    projectId,
+    userId,
+  );
+
+  if (!project) {
+    throw createHttpError(404, "Project not found");
+  }
+
+  const ownedEntry = await repository.getOwnedEntry(
+    entryId,
+    userId,
+  );
+
+  if (!ownedEntry) {
+    throw createHttpError(404, "Entry not found");
+  }
+
+  const unarchived = await repository.unarchiveEntry(
+    entryId,
+    projectId,
+  );
+
+  if (!unarchived) {
+    throw createHttpError(404, "Entry not found or not archived");
+  }
+
+  return {
+    id: unarchived.id,
+    projectId: unarchived.project_id,
+    archivedAt: unarchived.archived_at,
+  };
+}
 async function deleteEntryService({ projectId, entryId, userId }) {
   const project = await repository.getOwnedProject(projectId, userId);
 
@@ -1615,6 +1695,8 @@ async function searchProjectEntriesService({ projectId, userId, filters = {} }) 
       ? filters.sort
       : "newest",
     customFields: Array.isArray(filters.customFields) ? filters.customFields : [],
+    archived: filters.archived === true || filters.archived === "true",
+    archived: filters.archived === true || filters.archived === "true",
   };
 
   if (normalized.minDuration !== null && (!Number.isFinite(normalized.minDuration) || normalized.minDuration < 0)) {
@@ -1642,6 +1724,71 @@ async function searchProjectEntriesService({ projectId, userId, filters = {} }) 
 
   const entries = await repository.searchProjectEntries(projectId, normalized);
   return entries.map((entry) => attachComputedFields(serializeEntry(entry), fields));
+}
+
+async function searchOwnedEntriesService({ userId, filters = {} }) {
+  const normalized = {
+    projectId: String(filters.projectId || "").trim() || null,
+    query: String(filters.query || "").trim(),
+    fromDate: filters.fromDate || null,
+    toDate: filters.toDate || null,
+    minDuration: filters.minDuration === undefined ? null : Number(filters.minDuration),
+    maxDuration: filters.maxDuration === undefined ? null : Number(filters.maxDuration),
+    completed: filters.completed === "true" ? true : filters.completed === "false" ? false : null,
+    sort: ["relevance", "newest", "oldest", "name", "duration"].includes(filters.sort)
+      ? filters.sort
+      : (String(filters.query || "").trim() ? "relevance" : "newest"),
+    customFields: Array.isArray(filters.customFields) ? filters.customFields : [],
+  };
+
+  if (normalized.minDuration !== null && (!Number.isFinite(normalized.minDuration) || normalized.minDuration < 0)) {
+    throw createHttpError(400, "minDuration must be a non-negative number");
+  }
+  if (normalized.maxDuration !== null && (!Number.isFinite(normalized.maxDuration) || normalized.maxDuration < 0)) {
+    throw createHttpError(400, "maxDuration must be a non-negative number");
+  }
+  if (normalized.minDuration !== null && normalized.maxDuration !== null && normalized.minDuration > normalized.maxDuration) {
+    throw createHttpError(400, "minDuration cannot be greater than maxDuration");
+  }
+
+  normalized.customFields = normalized.customFields
+    .map((filter) => ({
+      fieldId: String(filter.fieldId || "").trim(),
+      value: String(filter.value ?? "").trim(),
+    }))
+    .filter((filter) => filter.fieldId && filter.value);
+
+  let fields = [];
+  if (normalized.projectId) {
+    const project = await repository.getOwnedProject(normalized.projectId, userId);
+    if (!project) {
+      throw createHttpError(404, "Project not found");
+    }
+    fields = await repository.getProjectFields(normalized.projectId, { includeArchived: true });
+    const fieldIds = new Set(fields.map((field) => field.id));
+    if (normalized.customFields.some((filter) => !fieldIds.has(filter.fieldId))) {
+      throw createHttpError(400, "One or more custom-field filters do not belong to this project");
+    }
+  } else {
+    if (normalized.customFields.length > 0) {
+      throw createHttpError(400, "Select a project before using specific custom-field filters");
+    }
+    fields = await repository.getOwnedProjectFields(userId, { includeArchived: true });
+  }
+
+  const entries = await repository.searchOwnedEntries(userId, normalized);
+  const fieldsByProject = new Map();
+  for (const field of fields) {
+    if (!fieldsByProject.has(field.projectId)) fieldsByProject.set(field.projectId, []);
+    fieldsByProject.get(field.projectId).push(field);
+  }
+
+  return entries.map((entry) =>
+    attachComputedFields(
+      serializeEntry(entry),
+      fieldsByProject.get(entry.projectId) || fields,
+    ),
+  );
 }
 
 async function getOutstandingEntriesService({ projectId, userId }) {
@@ -1721,6 +1868,7 @@ async function markEntryCompleteService({ projectId, userId, entryId}) {
 module.exports = {
   getProjectDetailsService,
   searchProjectEntriesService,
+  searchOwnedEntriesService,
   createEntryService,
   getOutstandingEntriesService,
   completeEntryService,
@@ -1732,6 +1880,8 @@ module.exports = {
   updateEntryProjectReferencesService,
   updateEntryReferencesService,
   updateEntryService,
+  archiveEntryService,
+  unarchiveEntryService,
   deleteEntryService,
   getEntryRevisionsService,
   getEntryRevisionService,

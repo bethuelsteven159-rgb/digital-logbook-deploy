@@ -116,6 +116,30 @@ export default function Projects() {
         setShowHoursFilter(false);
     }
 
+    const visibleProjects = projects.filter((project) => {
+        const query = searchValue.trim().toLowerCase();
+        const matchesText = !query ||
+            String(project.name || "").toLowerCase().includes(query) ||
+            String(project.description || "").toLowerCase().includes(query);
+
+        const projectStart = project.startDate ? new Date(project.startDate) : null;
+        const projectEnd = project.endDate ? new Date(project.endDate) : projectStart;
+        const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+        const to = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
+        const matchesDate =
+            (!from || (projectEnd && projectEnd >= from)) &&
+            (!to || (projectStart && projectStart <= to));
+
+        const loggedHours = (Number(project.loggedMinutes) || 0) / 60;
+        const minHours = hoursMin === "" ? null : Number(hoursMin);
+        const maxHours = hoursMax === "" ? null : Number(hoursMax);
+        const matchesHours =
+            (minHours === null || loggedHours >= minHours) &&
+            (maxHours === null || loggedHours <= maxHours);
+
+        return matchesText && matchesDate && matchesHours;
+    });
+
     return (<div className="app-shell">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)}/>
 
@@ -232,7 +256,7 @@ export default function Projects() {
               </button>
             </div>
             <span className="projects-count">
-              {loading ? "Loading..." : `${projects.length} ${projects.length === 1 ? "project" : "projects"}`}
+              {loading ? "Loading..." : `${visibleProjects.length} ${visibleProjects.length === 1 ? "project" : "projects"}`}
             </span>
           </div>
 
@@ -247,9 +271,9 @@ export default function Projects() {
               </div>
             ) : loading ? (
               <div className="projects-loading">Loading projects...</div>
-            ) : projects.length > 0 ? (
+            ) : visibleProjects.length > 0 ? (
               <div className="project-card-grid">
-                {projects.map((project) => (
+                {visibleProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
@@ -257,6 +281,8 @@ export default function Projects() {
                   />
                 ))}
               </div>
+            ) : (searchValue || hasDateFilter || hasHoursFilter) ? (
+              <div className="projects-loading">No projects match your search or filters.</div>
             ) : tab === "active" ? (
               <ActiveEmptyState onNew={() => setShowCreateProjectModal(true)}/>
             ) : (
@@ -314,32 +340,7 @@ export default function Projects() {
           margin: 0;
         }
 
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 9px 18px;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          border: none;
-          transition: background 0.15s ease, box-shadow 0.15s ease;
-          white-space: nowrap;
-        }
-        .btn-primary {
-          background: #4f63d2;
-          color: #ffffff;
-        }
-        .btn-primary:hover {
-          background: #3d50bf;
-          box-shadow: 0 2px 10px rgba(79,99,210,0.3);
-        }
-        .btn-primary:focus-visible {
-          outline: 2px solid #4f63d2;
-          outline-offset: 2px;
-        }
+        /* Buttons: base .btn system now lives in index.css (design tokens) */
 
         /* Projects content */
         .projects-content {

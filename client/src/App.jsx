@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 
 import Projects from "./pages/Projects/Projects";
 import ProjectDetails from "./pages/Projects/ProjectDetails";
+import SearchEntries from "./pages/Search/SearchEntries";
 
 import Profile from "./pages/Profile/Profile";
 import Stats from "./pages/Stats/Stats";
@@ -80,6 +81,11 @@ function AppContent() {
         <Route
           path="/projects/:id"
           element={<ProjectDetails />}
+        />
+
+        <Route
+          path="/search"
+          element={<SearchEntries />}
         />
 
         <Route
