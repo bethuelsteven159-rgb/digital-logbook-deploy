@@ -11,7 +11,8 @@
     "test": "vitest run && node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js",
     "test:run": "vitest run",
     "test:node": "node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage && npm run test:node:coverage",
+    "test:node:coverage": "c8 --reporter=text --reporter=lcov --report-dir=coverage-node --all --include=src/pages/Projects/entryViews.js --include=src/pages/Profile/profilePicture.js node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js"
   },
   "dependencies": {
     "lucide-react": "^1.33.0",
@@ -25,6 +26,8 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@vitejs/plugin-react": "^6.0.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "c8": "^12.0.0",
     "jsdom": "^26.1.0",
     "oxfmt": "^0.2.0",
     "tailwindcss": "^4.0.0",

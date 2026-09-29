@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   getProjectDetails,
+  searchProjectEntries,
   createProjectEntry,
   getOutstandingEntries,
   completeProjectEntry,
@@ -10,10 +11,15 @@ const {
   updateEntry,
   deleteEntry,
   updateChecklistItem,
+  archiveEntry,
+  unarchiveEntry,
   deleteChecklistItem,
   updateProjectReferences,
   updateEntryProjectReferences,
   updateEntryReferences,
+  getEntryRevisions,
+  getEntryRevision,
+  restoreEntryRevision,
 } = require("../controllers/projectDetailsController");
 
 const router = express.Router();
@@ -21,6 +27,11 @@ const router = express.Router();
 router.get(
   "/:projectId",
   getProjectDetails,
+);
+
+router.get(
+  "/:projectId/entries/search",
+  searchProjectEntries,
 );
 
 router.post(
@@ -53,11 +64,20 @@ router.patch(
   updateEntry,
 );
 
+router.patch(
+  "/:projectId/entries/:entryId/archive",
+  archiveEntry,
+);
+
+router.patch(
+  "/:projectId/entries/:entryId/unarchive",
+  unarchiveEntry,
+);
+
 router.delete(
   "/:projectId/entries/:entryId",
   deleteEntry,
 );
-
 /*
  * Checklist item updates
  *
@@ -87,6 +107,21 @@ router.patch(
 router.post(
   "/:projectId/entries/:entryId/complete",
   completeProjectEntry,
+);
+
+router.get(
+  "/:projectId/entries/:entryId/revisions",
+  getEntryRevisions,
+);
+
+router.get(
+  "/:projectId/entries/:entryId/revisions/:revisionId",
+  getEntryRevision,
+);
+
+router.post(
+  "/:projectId/entries/:entryId/revisions/:revisionId/restore",
+  restoreEntryRevision,
 );
 
 module.exports = router;

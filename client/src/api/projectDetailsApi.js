@@ -66,6 +66,31 @@ export async function fetchProjectDetails(projectId) {
   return request(`/api/projects/${projectId}`);
 }
 
+export async function searchProjectEntries(projectId, filters = {}) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  const params = new URLSearchParams();
+  if (filters.query?.trim()) params.set("q", filters.query.trim());
+  if (filters.fromDate) params.set("fromDate", filters.fromDate);
+  if (filters.toDate) params.set("toDate", filters.toDate);
+  if (filters.minDuration !== undefined && filters.minDuration !== null && filters.minDuration !== "") params.set("minDuration", filters.minDuration);
+  if (filters.maxDuration !== undefined && filters.maxDuration !== null && filters.maxDuration !== "") params.set("maxDuration", filters.maxDuration);
+  if (typeof filters.completed === "boolean") params.set("completed", String(filters.completed));
+  if (filters.sort) params.set("sort", filters.sort);
+  if (filters.archived === true) params.set("archived", "true");
+  if (filters.archived === true) params.set("archived", "true");
+
+  const customFields = Array.isArray(filters.customFields)
+    ? filters.customFields.filter((filter) => filter?.fieldId && String(filter.value ?? "").trim())
+    : [];
+  if (customFields.length) params.set("customFields", JSON.stringify(customFields));
+
+  const query = params.toString();
+  return request(`/api/projects/${projectId}/entries/search${query ? `?${query}` : ""}`);
+}
+
 export async function createProjectEntry(
   projectId,
   payload,
@@ -172,6 +197,46 @@ export async function updateSavedFilter(filterId, payload) {
   });
 }
 
+export async function fetchAutomationRules(projectId) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/automation-rules`);
+}
+
+export async function createAutomationRule(projectId, payload) {
+  if (!projectId) {
+    throw new Error("Project ID is required.");
+  }
+
+  return request(`/api/projects/${projectId}/automation-rules`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAutomationRule(ruleId, payload) {
+  if (!ruleId) {
+    throw new Error("Rule ID is required.");
+  }
+
+  return request(`/api/projects/automation-rules/${ruleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAutomationRule(ruleId) {
+  if (!ruleId) {
+    throw new Error("Rule ID is required.");
+  }
+
+  return request(`/api/projects/automation-rules/${ruleId}`, {
+    method: "DELETE",
+  });
+}
+
 
 export async function deleteProjectEntry(projectId, entryId) {
   if (!projectId || !entryId) {
@@ -182,6 +247,32 @@ export async function deleteProjectEntry(projectId, entryId) {
     `/api/projects/${projectId}/entries/${entryId}`,
     {
       method: "DELETE",
+    },
+  );
+}
+
+export async function archiveProjectEntry(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/archive`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
+export async function unarchiveProjectEntry(projectId, entryId) {
+  if (!projectId || !entryId) {
+    throw new Error("Project ID and entry ID are required.");
+  }
+
+  return request(
+    `/api/projects/${projectId}/entries/${entryId}/unarchive`,
+    {
+      method: "PATCH",
     },
   );
 }

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
 
     -- Profile feature support.
     bio TEXT,
+    dashboard_layout JSONB,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -129,6 +130,8 @@ CREATE TABLE IF NOT EXISTS entries (
 
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
+    archived_at TIMESTAMPTZ,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -139,6 +142,8 @@ CREATE INDEX IF NOT EXISTS idx_entries_project_id
 CREATE INDEX IF NOT EXISTS idx_entries_project_occurred_at
     ON entries(project_id, occurred_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_entries_project_archived_occurred_at
+    ON entries(project_id, archived_at, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_entries_created_by_id
     ON entries(created_by_id);
 

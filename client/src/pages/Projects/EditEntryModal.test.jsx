@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import EditEntryModal from './EditEntryModal';
+import EditEntryModal, { toLocalDateTime } from './EditEntryModal';
 
 const baseEntry = {
   id: 'entry-1',
@@ -17,7 +17,7 @@ const baseEntry = {
     { id: 'check-2', text: 'Submit report', completed: true },
   ],
   references: [{ projectId: 'project-2' }],
-  entryReferences: [{ referencedEntryId: 'entry-2' }],
+  entryReferences: [{ id: 'relationship-2', entryId: 'entry-2', entryName: 'Existing linked entry', projectId: 'project-1', projectName: 'Current project' }],
 };
 
 const baseFields = [
@@ -87,7 +87,7 @@ describe('EditEntryModal', () => {
 
     expect(
       screen.getByLabelText('Due date (optional)'),
-    ).toHaveValue('2026-09-12T12:00');
+    ).toHaveValue(toLocalDateTime(baseEntry.dueAt));
 
     expect(
       screen.getByDisplayValue('Finish notes'),
@@ -559,5 +559,103 @@ describe('EditEntryModal', () => {
     expect(
       props.onClose,
     ).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('EditEntryModal public entry-reference contract', () => {
+  it('selects existing public entryIds and preserves them when only the name changes', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    expect(screen.getByLabelText('Existing linked entry')).toBeChecked();
+    expect(screen.getByLabelText('Another entry')).not.toBeChecked();
+    await user.clear(screen.getByLabelText('Entry name'));
+    await user.type(screen.getByLabelText('Entry name'), 'Renamed only');
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Renamed only', referenceEntryIds: ['entry-2'],
+    }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).not.toContain('relationship-2');
+  });
+
+  it('submits target entry IDs when selecting and deselecting references', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    await user.click(screen.getByLabelText('Existing linked entry'));
+    await user.click(screen.getByLabelText('Another entry'));
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).toEqual(['entry-3']);
+  });
+
+  it('allows clearing all existing references', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    await user.click(screen.getByLabelText('Existing linked entry'));
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).toEqual([]);
+  });
+
+  it.each(['empty', 'missing'])('supports %s reference lists', async (kind) => {
+    const user = userEvent.setup();
+    const entry = { ...baseEntry, entryReferences: [] };
+    if (kind === 'missing') delete entry.entryReferences;
+    const props = renderModal({ entry });
+    expect(screen.getByLabelText('Existing linked entry')).not.toBeChecked();
+    expect(screen.getByLabelText('Another entry')).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].referenceEntryIds).toEqual([]);
+  });
+});
+
+
+describe('due date timezone safety', () => {
+  it('formats the runtime local clock components, including date boundaries', () => {
+    const instant = new Date(2026, 8, 13, 0, 15).toISOString();
+    expect(toLocalDateTime(instant)).toBe('2026-09-13T00:15');
+    expect(toLocalDateTime(null)).toBe('');
+  });
+
+  it('preserves the exact instant, seconds and milliseconds when unchanged', async () => {
+    const user = userEvent.setup();
+    const instant = new Date(2026, 8, 12, 14, 30, 25, 123).toISOString();
+    const props = renderModal({ entry: { ...baseEntry, dueAt: instant } });
+    expect(screen.getByLabelText('Due date (optional)')).toHaveValue('2026-09-12T14:30');
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].dueAt).toBe(instant);
+  });
+
+  it('converts a changed local due date to the API ISO instant', async () => {
+    const user = userEvent.setup();
+    const props = renderModal();
+    fireEvent.change(screen.getByLabelText('Due date (optional)'), { target: { value: '2026-09-15T09:45' } });
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].dueAt).toBe(new Date(2026, 8, 15, 9, 45).toISOString());
+  });
+
+  it.each([null, '2026-09-12T12:00:00Z'])('supports empty or cleared due dates starting from %s', async (dueAt) => {
+    const user = userEvent.setup();
+    const props = renderModal({ entry: { ...baseEntry, dueAt } });
+    fireEvent.change(screen.getByLabelText('Due date (optional)'), { target: { value: '' } });
+    await user.click(screen.getByRole('button', { name: /Save changes/i }));
+    expect(props.onSave.mock.calls[0][0].dueAt).toBeNull();
+  });
+});
+
+describe('EditEntryModal - Morare Sprint 3 tag QA', () => {
+  it('loads existing tags, allows removal/addition, and saves the edited tag set', async () => {
+    const user = userEvent.setup();
+    const props = renderModal({
+      entry: { ...baseEntry, tags: ['research', 'old-tag'] },
+    });
+
+    expect(screen.getByText('research')).toBeInTheDocument();
+    expect(screen.getByText('old-tag')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Remove old-tag' }));
+    await user.type(screen.getByLabelText('Tags'), 'C++{Enter}');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(props.onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: ['research', 'c++'] }),
+    );
   });
 });

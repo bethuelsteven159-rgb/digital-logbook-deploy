@@ -140,6 +140,7 @@ async function applySavedFilterService({ ownerId, filterId, projectId }) {
     );
     }
 module.exports = {
+  updateSavedFilterService,
   createSavedFilterService,
   listSavedFiltersService,
   deleteSavedFilterService,

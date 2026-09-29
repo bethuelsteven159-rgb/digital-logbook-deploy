@@ -142,3 +142,18 @@ describe("NewEntryModal - tags", () => {
     );
   });
 });
+
+describe("NewEntryModal - Morare Sprint 3 tag QA", () => {
+  test("accepts useful special characters and normalises case", async () => {
+    const user = userEvent.setup();
+    const { onCreate } = renderModal();
+
+    await user.type(screen.getByLabelText("Entry name"), "Tagged work");
+    await user.type(screen.getByLabelText("Tags"), "C++{Enter}UI/UX{Enter}Bug-Fix{Enter}");
+    await user.click(screen.getByRole("button", { name: /save & create entry/i }));
+
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: ["c++", "ui/ux", "bug-fix"] }),
+    );
+  });
+});

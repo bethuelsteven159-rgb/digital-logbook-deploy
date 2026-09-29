@@ -4,7 +4,7 @@
 **Module:** COMS3011A Software Design Project
 **Document Owner:** Simphiwe
 **Document Status:** Living Document
-**Last Updated:** 2026-08-24
+**Last Updated:** 2026-09-15
 
 ---
 
@@ -96,7 +96,7 @@ The student should be able to:
 
 The assigned project client acts as a stakeholder and mentor who helps the team clarify requirements and determine whether features are complete.
 
-The client provides feedback and clarification during development. The project brief states that the client is intended to guide the development process and help determine whether a feature is complete.
+The client provides feedback and clarification during development.
 
 #### Client/Mentor Requirements and Suggestions
 
@@ -145,6 +145,24 @@ The following records the requirements, recommendations, and guidance provided d
 - Users should be able to create timed log entries and record how long they worked.
 - A timed log entry should be markable as completed and display the recorded duration.
 
+**Sprint 2 Stakeholder Review / Follow-up — September 2026**
+
+The Sprint 2 review combined the original client/mentor guidance, the Digital Logbook specification, external user feedback, and the team's implementation review. In line with the client's advice, the record below does not only state who the stakeholders are; it records **what was discussed, what guidance or feedback was received, what the team decided, and what was implemented as a result**.
+
+Key outcomes recorded for Sprint 2 were:
+
+- The development team moved the application from the Basic feature set into the **Intermediate** phase by implementing selected intermediate user stories from the agreed backlog.
+- Intermediate work incorporated tags, checklists, entry-to-entry links, project references, computed fields, due dates, Calendar view, and Board view.
+- Testing became a stronger Sprint 2 focus, in line with the client/mentor guidance from the 12/08/2026 meeting.
+- External user feedback showed that some users needed clearer guidance when creating entries and when first using the application.
+- The team responded by improving Create Entry guidance, adding first-time onboarding, and connecting onboarding to the in-app Help Assistant.
+- External users also requested the ability to update and remove entries. Existing Edit Entry functionality was retained and verified, and Delete Entry functionality was added with a confirmation step.
+- The sidebar was reviewed after user feedback. The team decided not to make unnecessary changes because the current navigation was considered clear and understandable.
+- Production deployment became a technical stakeholder concern. The team reported that the backend could not be deployed directly from the official Gitea repository using the chosen deployment service.
+- The deployment owner indicated that lecturer guidance would be requested regarding the Gitea limitation.
+- To keep the official development workflow unchanged while enabling deployment, the team retained **Gitea as the authoritative development/review repository** and used a **GitHub mirror for the Render deployment connection**.
+- The frontend continued to be deployed through Netlify, while the backend was deployed through Render.
+
 ### 4.3 Development Team
 
 The development team is responsible for:
@@ -164,6 +182,23 @@ The development team is responsible for:
 The lecturer and module requirements form an additional constraint on the project.
 
 The project is assessed not only on the final software but also on development methodology, stakeholder interaction, testing, documentation, API implementation, database documentation, bug tracking, and the evolution of requirements.
+
+#### Pending Lecturer Clarification — Backend Deployment on Render
+
+During Sprint 2, the team encountered a deployment limitation when attempting to connect the Render backend deployment directly to the official Gitea repository. The issue was discussed within the development team and identified as something that should be clarified with the lecturer rather than silently changing the agreed repository workflow.
+
+**Pending question for the lecturer:**
+
+- What deployment approach should the team follow when Render cannot deploy directly from the official Gitea repository?
+- Is it acceptable to retain Gitea as the authoritative development/review repository while using a GitHub mirror only as the deployment bridge to Render?
+
+**Team action while awaiting clarification:**
+
+- The team kept all feature development, Pull Requests, reviews, and merges in Gitea.
+- Only approved/merged `main` was synchronised to the GitHub deployment repository.
+- Render was connected to the GitHub mirror so that the backend could be deployed without replacing the agreed Gitea workflow.
+
+**Status:** Pending lecturer clarification. The current mirror-based deployment approach is recorded as an interim technical decision.
 
 ---
 
@@ -405,7 +440,59 @@ Users should eventually be able to export their records and restore/import them 
 
 ---
 
-## 6.6 Advanced Functional Requirements
+## 6.6 Sprint 2 Feedback-Driven Requirements
+
+The following requirements were added or clarified during Sprint 2 after external user feedback and implementation review.
+
+### FR-033 – First-Time User Guidance
+
+The system shall provide lightweight guidance to help a first-time user understand the main Digital Logbook workflow.
+
+**Acceptance Criteria:**
+
+- The guide explains the main workflow from creating a project to reviewing recorded work.
+- The user can move forward and backward through the guide.
+- The user can dismiss or complete the guide.
+- Completion is remembered so the guide does not automatically reopen every time.
+- The guide can be reopened later from the Help Assistant.
+
+### FR-034 – Edit Log Entry
+
+A user shall be able to update an existing log entry so that incorrect or incomplete information can be corrected.
+
+**Acceptance Criteria:**
+
+- The user can open an existing entry and choose Edit Entry.
+- Existing values are loaded into the edit interface.
+- Valid updates are persisted through the backend.
+- The refreshed entry displays the updated information.
+
+### FR-035 – Delete Log Entry
+
+A user shall be able to delete an existing log entry when the record is no longer required.
+
+**Acceptance Criteria:**
+
+- Delete Entry is available from the entry details interface.
+- A confirmation warning is displayed before deletion.
+- Cancelling leaves the entry unchanged.
+- Confirming deletion removes the entry through the backend API.
+- The project view and statistics refresh after deletion.
+- The deleted entry remains absent after a page refresh.
+
+### FR-036 – In-App Help Assistant
+
+The system shall provide lightweight in-app help for common Digital Logbook actions.
+
+**Acceptance Criteria:**
+
+- Users can access help for common tasks.
+- The assistant can explain how projects, entries, custom fields, Calendar view, Board view, and linked entries work.
+- The assistant can reopen the first-time onboarding guide.
+
+---
+
+## 6.7 Advanced Functional Requirements
 
 Advanced functionality should be considered after the core system is stable.
 
@@ -763,6 +850,28 @@ Each user story is assigned a unique `US-XXX` identifier.
 
 ---
 
+## 9.6 Sprint 2 Intermediate and Feedback User Stories
+
+Sprint 2 moved the Digital Logbook into the Intermediate phase by integrating selected user stories from the agreed Intermediate backlog.
+
+| User Story | User Need | Sprint 2 Status |
+|---|---|---|
+| US-I01 – Tags | As a user, I want to tag entries so that I can classify and find related work. | Implemented |
+| US-I02 – Checklists | As a user, I want checklist items inside entries so that I can track smaller pieces of work. | Implemented |
+| US-I03 – Entry Links | As a user, I want to link related entries so that I can navigate between connected work. | Implemented |
+| US-I04 – Project References | As a user, I want entries/projects to reference related projects so that connected work is easier to follow. | Implemented |
+| US-I05 – Computed Fields | As a user, I want computed field values so that derived information can be calculated from entry data. | Implemented |
+| US-I09 – Calendar View | As a user, I want to view entries on a calendar so that I can understand when work happened or is due. | Implemented |
+| US-I10 – Board View | As a user, I want a board representation of entries so that I can review work in another useful visual format. | Implemented |
+| US-I11 – Due Dates / Outstanding Work | As a user, I want due-date information so that unfinished or time-sensitive work is visible. | Implemented |
+| US-F01 – First-Time Guidance | As a new user, I want guidance through the main workflow so that I can start using the application without confusion. | Implemented from user feedback |
+| US-F02 – Edit Entry | As a user, I want to edit an existing entry so that I can correct or update recorded work. | Implemented and verified |
+| US-F03 – Delete Entry | As a user, I want to delete an entry with confirmation so that I can remove a record intentionally. | Implemented and production-tested |
+
+The remaining Intermediate stories, including offline synchronisation and import/export, remain part of the backlog unless separately implemented and verified.
+
+---
+
 # 10. Acceptance Criteria Principles
 
 A feature should not be considered complete merely because code exists.
@@ -796,12 +905,18 @@ The following table provides the initial traceability between requirements and c
 
 | Requirement | User Story | Implementation | Test | Stakeholder Review |
 |---|---|---|---|---|
-| FR-001 – User Authentication | US-001 | Google authentication flow | Authentication/API test | Stakeholder review |
+| FR-001 – User Authentication | US-001 | Google authentication flow | Authentication/API test | Client guidance + production verification |
 | FR-006 – Create Project | US-004 | Project creation UI/API | Project creation test | Stakeholder review |
-| FR-010 – Create Log Entry | US-007 | Entry creation flow | Entry API/UI test | Stakeholder review |
+| FR-010 – Create Log Entry | US-007 | Entry creation flow | Entry API/UI test | External user feedback used to improve guidance |
 | FR-017 – Project Time Statistics | US-012 | Statistics component/API | Statistics test | Stakeholder review |
+| FR-021 – Richer Custom Fields | US-I01 / US-I02 / US-I03 / US-I04 / US-I05 | Tags, checklists, links, references, computed fields | UI/API/service tests where applicable | Sprint 2 team review |
+| FR-023 – Multiple Entry Views | US-I09 / US-I10 | Calendar view and Board view | Entry-view tests + production verification | Sprint 2 team review |
+| FR-024 – Outstanding Work | US-I11 | Due-date support | Validation/API tests where applicable | Sprint 2 team review |
+| FR-033 – First-Time User Guidance | US-F01 | Dashboard onboarding + Help Assistant | Local/production UI verification | External user feedback |
+| FR-034 – Edit Log Entry | US-F02 | Edit Entry modal/API flow | Local/production verification | External user feedback |
+| FR-035 – Delete Log Entry | US-F03 | Delete action + confirmation + DELETE API flow | Backend tests + production verification | External user feedback |
 
-This table should be expanded as implementation and testing progress.
+This table should continue to be expanded as implementation, testing, and stakeholder review progress.
 
 ---
 
@@ -827,8 +942,13 @@ This structure makes it clear which requirements originated from stakeholder fee
 | SI-006 | 12/08/2026 | How should time tracking on entries work? | Entries should be timed, marked as completed, and display the recorded duration. | Adopted. | FR-013 confirmed and completion functionality incorporated into the requirements. | Resolved |
 | SI-007 | 12/08/2026 | What tooling should the team use for documentation, project management, and methodology? | Typst for documentation; Notion or Taiga for project management; Gitea for repository management; Scrum for methodology; Bethuel as Scrum Master. | Scrum, Gitea, and Typst adopted. Final project-management-tool selection is maintained as a team confirmation item. | Documentation and project-management requirements recorded. | Partially resolved |
 | SI-008 | 12/08/2026 | What database documentation is required? | Document database structure, tables, relationships, and ERD information. | Adopted. | NFR-011 documentation scope includes database structure. | Resolved |
+| SI-009 | Sprint 2 | How should the system progress beyond the Basic feature set? | The project specification and backlog define an Intermediate level containing richer entry fields and additional views. | The team moved selected agreed Intermediate user stories into Sprint 2 implementation. | Tags, checklists, links, references, computed fields, due dates, Calendar view, and Board view were integrated. | Resolved |
+| SI-010 | Sprint 2 user testing | What areas of the interface caused confusion for external users? | Feedback included uncertainty around creating entries and getting started with the application. | Improve guidance without adding unnecessary complexity. | Create Entry guidance, first-time onboarding, and Help Assistant integration were implemented. | Resolved |
+| SI-011 | Sprint 2 user testing | What entry-management improvements did users request? | External feedback included requests to update and delete entries. | Retain/verify Edit Entry and add Delete Entry with confirmation. | Edit Entry was verified and Delete Entry was implemented and production-tested. | Resolved |
+| SI-012 | Sprint 2 review | Should the sidebar be changed after navigation feedback? | The team reviewed the current sidebar and found the navigation sufficiently clear. | Avoid unnecessary UI changes. | No sidebar redesign was introduced. | Resolved |
+| SI-013 | Sprint 2 deployment | How should the backend be deployed when Render cannot connect directly to the official Gitea repository? | **Pending:** the team will ask the lecturer for guidance on the appropriate Render deployment approach. | Interim decision: keep Gitea as the authoritative repository and use a GitHub mirror only as the deployment bridge to Render. | Approved/merged Gitea `main` is mirrored to GitHub `main`, which triggers Render deployment while preserving the official Gitea workflow. | Pending lecturer clarification |
 
-> **Documentation Note:** Stakeholder answers should be based on actual meeting records and should not be invented retrospectively.
+> **Documentation Note:** Stakeholder answers should be based on actual meeting records and should not be invented retrospectively. Where a lecturer/client answer has not yet been received, the register records the issue and the team's interim decision rather than attributing an unconfirmed answer.
 
 ---
 
@@ -877,6 +997,88 @@ Bugs would be labelled as `bug`, assigned to the relevant developer, and closed 
 
 The final project-management and bug-tracking workflow should be confirmed by the team and documented consistently across the project.
 
+### 08/09/2026 — First Sprint 2 Meeting and Sprint Retrospective
+
+The team held its first Sprint 2 meeting and a Sprint 1 retrospective. The purpose was to review the previous sprint, identify setbacks, and agree on how the team could improve its process and product during Sprint 2.
+
+**What was discussed:**
+
+- Development and integration difficulties experienced during Sprint 1.
+- Areas where coordination, testing, documentation, and integration could be improved.
+- The need to move the application beyond the Basic level and begin implementing Intermediate functionality.
+
+**Team decision and action:**
+
+- Team members were asked to prepare and contribute ideas/user stories that would help move the web application into the Intermediate phase.
+- Sprint 2 would place stronger emphasis on testing, integration, and completing selected Intermediate functionality without destabilising the Basic product.
+
+### 09/09/2026 — Intermediate User Stories Finalised and Assigned
+
+The team finalised the Sprint 2 Intermediate user stories and divided the work among team members.
+
+**What was discussed:**
+
+- Which Intermediate stories were feasible within Sprint 2.
+- How the work could be distributed fairly while reducing overlap and merge conflicts.
+
+**Team decision and action:**
+
+- The selected Intermediate stories were assigned across team members for implementation.
+- The resulting Sprint 2 work covered areas including tags, checklists, entry links/references, computed fields, due dates, Calendar view, Board view, and related testing/integration work.
+
+### 11/09/2026 — External User Testing Distributed
+
+The team moved from internal implementation to external user feedback collection.
+
+**What was discussed:**
+
+- The need for evidence from users outside the development team.
+- The importance of allowing external users to access the deployed frontend and provide structured feedback.
+
+**Team decision and action:**
+
+- The Google Form feedback link was shared for distribution to external users.
+- The deployed frontend link was also shared so that users could interact with the application before completing the form.
+- Feedback responses were collected for evaluation and prioritisation.
+
+### 14/09/2026 — User Feedback Finalised and High-Priority Changes Implemented
+
+The team reviewed the completed external-user feedback responses and identified the items with the highest practical priority.
+
+**What users reported:**
+
+- Some users needed clearer guidance when creating an entry.
+- Some users needed clearer first-time guidance when starting to use the application.
+- Users requested stronger entry-management functionality, including updating and deleting entries.
+- Navigation/sidebar comments were reviewed, but the existing sidebar was considered sufficiently clear and did not justify unnecessary redesign.
+
+**Team decision and action:**
+
+- High-priority feedback was implemented first.
+- Create Entry guidance was improved.
+- A lightweight first-time onboarding guide was added.
+- The Help Assistant was connected to the onboarding guide so that users could reopen it later.
+- Existing Edit Entry functionality was retained and verified.
+- Delete Entry functionality was added with a confirmation step and later production-tested.
+- The team deliberately avoided unnecessary sidebar changes.
+- Evidence was maintained to link feedback → evaluation → decision → implementation → testing/PR.
+
+### Sprint 2 — Deployment Workflow Decision
+
+The backend deployment owner reported a limitation when attempting to deploy directly from Gitea using Render.
+
+The team kept the official repository workflow unchanged:
+
+**Feature branch → Gitea Pull Request → Review/Approval → Gitea `main`**
+
+For production deployment, the approved Gitea `main` branch is mirrored to a GitHub deployment repository:
+
+**Gitea `main` → GitHub mirror `main` → Render**
+
+The frontend is deployed through Netlify.
+
+This preserves Gitea as the authoritative development/review source while providing a deployment path compatible with Render.
+
 ---
 
 # 13. Development Decisions Affecting Requirements
@@ -924,6 +1126,29 @@ Database connection information and authentication secrets are supplied through 
 
 Real credentials must never be included in documentation or committed to the repository.
 
+## 13.6 Decision D-006 – Gitea Remains Authoritative; GitHub Used as Deployment Mirror
+
+The team's official development repository remains Gitea.
+
+Because the backend deployment service could not be connected directly to the official Gitea repository in the team's deployment setup, a GitHub repository is used as a deployment mirror.
+
+**Workflow:**
+
+1. Development occurs on feature branches against Gitea.
+2. Pull Requests are reviewed and merged into Gitea `main`.
+3. The approved Gitea `main` is pulled locally.
+4. The same `main` commit is pushed to the GitHub deployment mirror.
+5. Render deploys the backend from the mirrored GitHub `main`.
+
+**Reason:**
+This avoids bypassing the team's agreed Gitea review process while still allowing the backend to be deployed through Render.
+
+## 13.7 Decision D-007 – Frontend and Backend Production Deployment
+
+The production frontend is deployed through Netlify and the production backend is deployed through Render.
+
+The frontend uses environment-based API configuration so that production builds communicate with the Render backend rather than a local development server.
+
 ---
 
 # 14. Current Implementation Status
@@ -957,6 +1182,37 @@ The completed authentication flow includes:
 8. Frontend communication with the backend on the configured backend port.
 
 Authentication should still be considered subject to formal project testing and stakeholder acceptance where required.
+
+## 14.2 Sprint 2 Intermediate Progress
+
+By the end of Sprint 2, the application had progressed beyond the Basic feature set and included selected Intermediate functionality.
+
+| Area | Status | Notes |
+|---|---|---|
+| Tags | Implemented | Entry tags supported and persisted. |
+| Checklists | Implemented | Checklist items supported on entries. |
+| Entry links/references | Implemented | Entry-to-entry linking and project references supported. |
+| Computed fields | Implemented | Computed-field support integrated. |
+| Due dates | Implemented | Entry due-date support integrated. |
+| Calendar view | Implemented/Tested | Entries can be reviewed through Calendar view. |
+| Board view | Implemented/Tested | Entries can be reviewed through Board view. |
+| Create Entry guidance | Implemented | Improved after external user feedback. |
+| First-time onboarding | Implemented/Tested | Dashboard onboarding with persistence and Help Assistant reopening. |
+| Edit Entry | Implemented/Verified | Existing edit flow retained and verified. |
+| Delete Entry | Implemented/Production-tested | Confirmation + frontend/API/backend delete flow verified in deployed application. |
+| Offline synchronisation | Backlog / not claimed complete | Remains subject to implementation/verification. |
+| Export/import | Backlog / not claimed complete | Remains subject to implementation/verification. |
+
+## 14.3 Production Deployment Status
+
+The application is deployed using separate production services:
+
+- **Frontend:** Netlify.
+- **Backend:** Render.
+- **Authoritative development repository:** Gitea.
+- **Backend deployment mirror:** GitHub.
+
+Production integration issues encountered during Sprint 2 are recorded in the Bug Tracking document.
 
 ---
 
@@ -1070,6 +1326,7 @@ The following items should be confirmed through stakeholder or team discussion b
 - Final project-management and backlog tool selection.
 - Final role of Lovable in the development process.
 - Specific outcome of the 17/08/2026 UI/UX and log-entry discussion.
+- Lecturer/client clarification, if required, on the long-term deployment approach when the official Gitea repository cannot be connected directly to Render.
 
 These items should be resolved through the stakeholder interaction process and then reflected in the appropriate requirements, user stories, or project documentation.
 
@@ -1101,6 +1358,11 @@ A requirement should be considered fully completed only when:
 | 0.4 | 24/08/2026 | Team | Requirements structure, stakeholder interaction records, feature organisation, traceability, and documentation structure revised. |
 | 0.5 | 22/08/2026 | Team | Authentication and repository architecture decisions documented. |
 | 0.6 | 24/08/2026 | Simphiwe | Stakeholder Interaction Register populated with dated entries from the 04/08 and 12/08 meetings; Section 4.2 updated with the full list of client suggestions by meeting; Team Process Log added; project-management and repository tooling documentation updated. |
+| 0.7 | 08/09/2026 | Team | First Sprint 2 meeting and Sprint 1 retrospective recorded; setbacks and process improvements discussed; team members asked to prepare contributions for moving the application into the Intermediate phase. |
+| 0.8 | 09/09/2026 | Team | Sprint 2 Intermediate user stories finalised and divided among team members for implementation. |
+| 0.9 | 11/09/2026 | Team | Google Form feedback link and deployed frontend link shared for distribution to external users; external user-testing evidence collection started. |
+| 1.0 | 14/09/2026 | Team | External user-feedback responses finalised and evaluated; high-priority feedback selected and implemented, including Create Entry guidance, first-time onboarding, and entry-management improvements. |
+| 1.1 | 15/09/2026 | Simphiwe / Team | Stakeholder interaction records expanded to include discussion → decision → action; pending lecturer clarification for Render/Gitea backend deployment documented; Intermediate implementation, user feedback integration, Edit/Delete Entry, onboarding/help guidance, and deployment workflow updated. |
 
 ---
 
@@ -1109,7 +1371,7 @@ A requirement should be considered fully completed only when:
 1. COMS3011A Project Brief – Digital Logbook.
 2. Digital Logbook Project 7 Feature Specification.
 3. Stakeholder/client meeting records (04/08/2026, 12/08/2026).
-4. Team sprint planning and retrospective records (14/08/2026, 17/08/2026, 19/08/2026).
+4. Team sprint planning, retrospective, user-story allocation, and user-testing records (14/08/2026, 17/08/2026, 19/08/2026, 08/09/2026, 09/09/2026, 11/09/2026, 14/09/2026).
 5. Product backlog and sprint backlog.
 6. API documentation.
 7. Database documentation.

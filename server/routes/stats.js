@@ -2,6 +2,13 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
+const {
+  createCustomStatisticService,
+  updateCustomStatisticService,
+  listCustomStatisticsService,
+  deleteCustomStatisticService,
+} = require("../services/customStatisticsService");
+
 function createHttpError(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -516,6 +523,131 @@ router.get("/projects/:projectId", async (req, res) => {
     });
   }
 });
+
+/*
+ * User-defined custom statistics.
+ *
+ * GET    /api/stats/projects/:projectId/custom
+ * POST   /api/stats/projects/:projectId/custom
+ * PUT    /api/stats/projects/:projectId/custom/:statId
+ * DELETE /api/stats/projects/:projectId/custom/:statId
+ */
+router.get("/projects/:projectId/custom", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: "Authentication required",
+      });
+    }
+
+    const statistics = await listCustomStatisticsService({
+      ownerId: userId,
+      projectId: req.params.projectId,
+    });
+
+    return res.json({ statistics });
+  } catch (err) {
+    console.error("Custom statistics error:", err);
+
+    return res.status(err.statusCode || 500).json({
+      error:
+        err.message ||
+        "Failed to load custom statistics",
+    });
+  }
+});
+
+router.post("/projects/:projectId/custom", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: "Authentication required",
+      });
+    }
+
+    const statistic = await createCustomStatisticService({
+      ownerId: userId,
+      projectId: req.params.projectId,
+      data: req.body,
+    });
+
+    return res.status(201).json(statistic);
+  } catch (err) {
+    console.error("Custom statistics error:", err);
+
+    return res.status(err.statusCode || 500).json({
+      error:
+        err.message ||
+        "Failed to create custom statistic",
+    });
+  }
+});
+
+router.put(
+  "/projects/:projectId/custom/:statId",
+  async (req, res) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({
+          error: "Authentication required",
+        });
+      }
+
+      const statistic = await updateCustomStatisticService({
+        ownerId: userId,
+        projectId: req.params.projectId,
+        statId: req.params.statId,
+        data: req.body,
+      });
+
+      return res.json(statistic);
+    } catch (err) {
+      console.error("Custom statistics error:", err);
+
+      return res.status(err.statusCode || 500).json({
+        error:
+          err.message ||
+          "Failed to update custom statistic",
+      });
+    }
+  },
+);
+
+router.delete(
+  "/projects/:projectId/custom/:statId",
+  async (req, res) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({
+          error: "Authentication required",
+        });
+      }
+
+      const deleted = await deleteCustomStatisticService({
+        ownerId: userId,
+        statId: req.params.statId,
+      });
+
+      return res.json(deleted);
+    } catch (err) {
+      console.error("Custom statistics error:", err);
+
+      return res.status(err.statusCode || 500).json({
+        error:
+          err.message ||
+          "Failed to delete custom statistic",
+      });
+    }
+  },
+);
 
 module.exports = router;
 

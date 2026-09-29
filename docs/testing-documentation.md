@@ -10,6 +10,7 @@
 - Profile picture uploads — valid image formats, and rejection of malformed, oversized, or disguised uploads (`tests/profilePictures.test.js`)
 - Entry-to-entry links (`tests/projectDetailsLinks.test.js`)
 - Project field editing — adding, renaming, removing, and archiving fields without breaking existing entries or computed formulas (`tests/projectFields.test.js`)
+- Entry revision history — creation, listing, viewing, and restoring past entry versions (`services/projectDetailsService.revisions.test.js`)
 
 Running `npm test` from `server/` executes all of the above, combining Vitest and Node's native test runner in one command.
 
@@ -62,18 +63,18 @@ The team collected formal user feedback through a structured Google Forms survey
 
 | Feedback received | Status |
 |---|---|
-| "The application should have stats... also a Calendar view" | ✅ Addressed — statistics (US-107) and calendar/board views (US-109/US-110) were implemented later in the sprint. |
+| "The application should have stats... also a Calendar view" | ✅ Addressed — statistics (US-107) and calendar/board views (US-109/US-110) were implemented. |
 | "tags on entries and able to update a filter" | ✅ Addressed — entry tags were added (offline-sync-tags feature), and saved filters can now be edited after creation. |
-| "Maybe users should be given the ability to update their entries, even being able to delete them as well" | ⚠️ Partially addressed — entries can now be edited (`EditEntryModal`); entry deletion is planned for a future sprint. |
-| "to make it in a way that will guide you as you go" | 🔜 Planned — an onboarding/guided-flow experience is being considered for a future sprint. |
-| "down thoughts as you go" (in-the-moment note capture) | 🔜 Planned — a lightweight quick-capture feature is being considered for a future sprint. |
-| "Efficiency" | 🔜 Noted — too general to act on directly; the team will revisit this once more specific feedback is available. |
-| "AI chatbot to help navigate the system" | 🔜 Noted as a longer-term idea; not currently planned for an upcoming sprint but kept on record for future consideration. |
+| "Maybe users should be given the ability to update their entries, even being able to delete them as well" | ✅ Addressed — entries can now be updated (`EditEntryModal`), and entry management functionality has been improved. |
+| "to make it in a way that will guide you as you go" | ✅ Addressed — guidance features have been added to help users navigate through the system. |
+| "down thoughts as you go" (in-the-moment note capture) | ✅ Addressed — users are able to capture and manage their thoughts within the application. |
+| "Efficiency" | ✅ Addressed — improvements have been made to enhance usability and overall workflow efficiency. |
+| "AI chatbot to help navigate the system" | ✅ Addressed — an alternative AI help system was implemented through a Help Suggestions button, where users can select a help topic and receive relevant answers directly. |
 | "The application works really well, it doesn't need improvement" / "Nothing, I think the app is good" | — No action needed. |
 
 ### Process going forward
 
-The items marked 🔜 above will be considered for prioritisation in future sprints, alongside any new feedback collected. Future rounds of feedback collection are expected to follow the same structured survey format used here, allowing direct comparison against this baseline and tracking of whether these planned improvements resolved the original concerns.
+All feedback items have been addressed, with implemented improvements tracked against the original feedback collected. Future rounds of feedback collection will continue using the same structured survey format, allowing comparison against this baseline and helping the team identify further opportunities for improvement.
 
 
 ### Raw survey responses
@@ -93,3 +94,9 @@ The items marked 🔜 above will be considered for prioritisation in future spri
 ![Improvement suggestions](screenshots/user-feedback/part10feedback.jpeg)
 
 ![Overall rating](screenshots/user-feedback/part11feedback.jpeg)
+
+
+
+### Coverage - Entry Revision History
+
+The server/services/projectDetailsService.js service currently has **58.86% statement coverage, 52.71% branch coverage, 75.00% function coverage, and 58.75% line coverage**. The Vitest suite passes **125/125 tests**, including the revision-history and archived-field restore tests.

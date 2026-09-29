@@ -8,7 +8,12 @@
     "start": "node server.js",
     "test": "vitest run && npm run test:node",
     "test:node": "node --test tests/*.test.js",
-    "migrate:entry-links": "node scripts/applyEntryLinksMigration.js"
+    "test:coverage": "vitest run --coverage && npm run test:node:coverage",
+    "test:node:coverage": "c8 --reporter=text --reporter=lcov --report-dir=coverage-node --exclude=tests/** --exclude=**/*_mine* node --test tests/*.test.js",
+    "migrate:entry-links": "node scripts/applyEntryLinksMigration.js",
+    "benchmark:custom-statistics": "node scripts/benchmarkCustomStatistics.js",
+    "migrate:custom-dashboard": "node scripts/applyCustomDashboardMigration.js",
+    "benchmark:dashboard": "node scripts/benchmarkDashboard.js"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +30,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.0",
+    "c8": "^12.0.0",
     "nodemon": "^3.1.14",
     "vitest": "^5.0.0"
   }

@@ -1,10 +1,11 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
-import { fetchDashboard } from "../../api/dashboardApi";
+import { fetchDashboard, saveDashboardLayout } from "../../api/dashboardApi";
 
 const EMPTY_DASHBOARD = {
   stats: {
@@ -21,6 +22,24 @@ const EMPTY_DASHBOARD = {
   },
   recentActivity: [],
 };
+
+const DEFAULT_WIDGET_LAYOUT = [
+  { id: "default-hours", statisticId: "loggedMinutes" },
+  { id: "default-active-projects", statisticId: "activeProjects" },
+  { id: "default-total-entries", statisticId: "totalEntries" },
+  { id: "default-this-week", statisticId: "thisWeekMinutes" },
+];
+
+const STATISTIC_OPTIONS = [
+  { id: "loggedMinutes", label: "Hours Logged", source: "stats", format: "hours", icon: "clock" },
+  { id: "activeProjects", label: "Active Projects", source: "stats", format: "number", icon: "folder" },
+  { id: "totalEntries", label: "Total Entries", source: "stats", format: "number", icon: "entry" },
+  { id: "thisWeekMinutes", label: "This Week", source: "stats", format: "hours", icon: "calendar" },
+  { id: "projectsCreated", label: "Projects Created", source: "overview", format: "number", icon: "folder" },
+  { id: "projectsArchived", label: "Projects Archived", source: "overview", format: "number", icon: "folder" },
+  { id: "entriesLogged", label: "Entries Logged", source: "overview", format: "number", icon: "entry" },
+  { id: "averageSessionMinutes", label: "Average Session", source: "overview", format: "duration", icon: "clock" },
+];
 
 const ONBOARDING_STORAGE_KEY =
   "digitalLogbookOnboardingComplete";
@@ -57,12 +76,42 @@ export default function Dashboard() {
     useState(true);
   const [error, setError] =
     useState("");
+  const [widgetLayout, setWidgetLayout] =
+    useState(DEFAULT_WIDGET_LAYOUT);
+  const [draftWidgetLayout, setDraftWidgetLayout] =
+    useState(DEFAULT_WIDGET_LAYOUT);
+  const [isCustomizing, setIsCustomizing] =
+    useState(false);
+  const [selectedStatisticId, setSelectedStatisticId] =
+    useState("loggedMinutes");
+  const [savingLayout, setSavingLayout] =
+    useState(false);
+  const [layoutError, setLayoutError] =
+    useState("");
   const [showOnboarding, setShowOnboarding] =
     useState(false);
   const [onboardingStep, setOnboardingStep] =
     useState(0);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const restartOnboarding = useCallback(() => {
+    setOnboardingStep(0);
+    setShowOnboarding(true);
+  }, []);
+
+  useEffect(() => {
+    if (location.state?.openOnboarding !== true) return;
+
+    restartOnboarding();
+    const remainingState = { ...location.state };
+    delete remainingState.openOnboarding;
+    navigate(
+      { pathname: location.pathname, search: location.search, hash: location.hash },
+      { replace: true, state: remainingState },
+    );
+  }, [location, navigate, restartOnboarding]);
 
   useEffect(() => {
     try {
@@ -111,6 +160,12 @@ export default function Dashboard() {
                 ? data.recentActivity
                 : [],
           });
+
+          const loadedLayout = Array.isArray(data?.layout)
+            ? data.layout
+            : DEFAULT_WIDGET_LAYOUT;
+          setWidgetLayout(loadedLayout);
+          setDraftWidgetLayout(loadedLayout);
         }
       } catch (requestError) {
         console.error(
@@ -155,11 +210,6 @@ export default function Dashboard() {
     setOnboardingStep(0);
   }
 
-  function restartOnboarding() {
-    setOnboardingStep(0);
-    setShowOnboarding(true);
-  }
-
   function nextOnboardingStep() {
     if (onboardingStep === ONBOARDING_STEPS.length - 1) {
       finishOnboarding();
@@ -173,6 +223,80 @@ export default function Dashboard() {
 
   function previousOnboardingStep() {
     setOnboardingStep((current) => Math.max(current - 1, 0));
+  }
+
+  function startCustomizing() {
+    setDraftWidgetLayout(widgetLayout.map((widget) => ({ ...widget })));
+    setLayoutError("");
+    setIsCustomizing(true);
+  }
+
+  function cancelCustomizing() {
+    setDraftWidgetLayout(widgetLayout.map((widget) => ({ ...widget })));
+    setLayoutError("");
+    setIsCustomizing(false);
+  }
+
+  function addWidget() {
+    if (draftWidgetLayout.length >= 12) {
+      setLayoutError("You can add up to 12 dashboard widgets.");
+      return;
+    }
+
+    const widget = {
+      id: `widget-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      statisticId: selectedStatisticId,
+    };
+
+    setDraftWidgetLayout((current) => [...current, widget]);
+    setLayoutError("");
+  }
+
+  function removeWidget(widgetId) {
+    setDraftWidgetLayout((current) =>
+      current.filter((widget) => widget.id !== widgetId),
+    );
+  }
+
+  function updateWidgetStatistic(widgetId, statisticId) {
+    setDraftWidgetLayout((current) =>
+      current.map((widget) =>
+        widget.id === widgetId ? { ...widget, statisticId } : widget,
+      ),
+    );
+  }
+
+  function moveWidget(widgetId, direction) {
+    setDraftWidgetLayout((current) => {
+      const index = current.findIndex((widget) => widget.id === widgetId);
+      const nextIndex = index + direction;
+
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const reordered = [...current];
+      const [widget] = reordered.splice(index, 1);
+      reordered.splice(nextIndex, 0, widget);
+      return reordered;
+    });
+  }
+
+  async function saveCustomDashboard() {
+    try {
+      setSavingLayout(true);
+      setLayoutError("");
+      const savedLayout = await saveDashboardLayout(draftWidgetLayout);
+      setWidgetLayout(savedLayout);
+      setDraftWidgetLayout(savedLayout);
+      setIsCustomizing(false);
+    } catch (saveError) {
+      setLayoutError(
+        saveError.message || "Failed to save dashboard layout.",
+      );
+    } finally {
+      setSavingLayout(false);
+    }
   }
 
   const { stats, overview, recentActivity } =
@@ -202,37 +326,47 @@ export default function Dashboard() {
             </h1>
           </div>
 
-          <button
-            className="btn btn-primary"
-            onClick={() =>
-              navigate("/projects")
-            }
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="page-header-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={isCustomizing ? cancelCustomizing : startCustomizing}
             >
-              <line
-                x1="12"
-                y1="5"
-                x2="12"
-                y2="19"
-              />
-              <line
-                x1="5"
-                y1="12"
-                x2="19"
-                y2="12"
-              />
-            </svg>
-            New Project
-          </button>
+              {isCustomizing ? "Cancel customization" : "Customize dashboard widgets"}
+            </button>
+
+            <button
+              className="btn btn-primary"
+              onClick={() =>
+                navigate("/projects")
+              }
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line
+                  x1="12"
+                  y1="5"
+                  x2="12"
+                  y2="19"
+                />
+                <line
+                  x1="5"
+                  y1="12"
+                  x2="19"
+                  y2="12"
+                />
+              </svg>
+              New Project
+            </button>
+          </div>
         </header>
 
         <div className="dashboard-content">
@@ -245,69 +379,83 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Stat cards */}
-          <section className="stat-grid">
-            <StatCard
-              label="Hours Logged"
-              value={
-                loading
-                  ? "—"
-                  : formatHours(
-                      stats.loggedMinutes,
-                    )
-              }
-              unit="hrs"
-              icon={<IconClock />}
-              empty={
-                !loading &&
-                stats.loggedMinutes === 0
-              }
-            />
+          {/* Custom dashboard widgets */}
+          <section className="custom-dashboard-section">
+            {isCustomizing && (
+              <div className="dashboard-customizer" aria-label="Dashboard customization controls">
+                <div>
+                  <h2 className="dashboard-customizer-title">Customize dashboard widgets</h2>
+                  <p className="dashboard-customizer-copy">
+                    Add, remove, change, and reorder the statistics shown on your dashboard.
+                  </p>
+                </div>
 
-            <StatCard
-              label="Active Projects"
-              value={
-                loading
-                  ? "—"
-                  : stats.activeProjects
-              }
-              icon={<IconFolder />}
-              empty={
-                !loading &&
-                stats.activeProjects === 0
-              }
-            />
+                <div className="dashboard-customizer-actions">
+                  <select
+                    aria-label="Statistic to add"
+                    className="dashboard-stat-select"
+                    value={selectedStatisticId}
+                    onChange={(event) => setSelectedStatisticId(event.target.value)}
+                  >
+                    {STATISTIC_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className="btn btn-secondary" onClick={addWidget}>
+                    Add Widget
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={saveCustomDashboard}
+                    disabled={savingLayout}
+                  >
+                    {savingLayout ? "Saving..." : "Save Layout"}
+                  </button>
+                </div>
+              </div>
+            )}
 
-            <StatCard
-              label="Total Entries"
-              value={
-                loading
-                  ? "—"
-                  : stats.totalEntries
-              }
-              icon={<IconEntry />}
-              empty={
-                !loading &&
-                stats.totalEntries === 0
-              }
-            />
+            {layoutError && (
+              <div className="dashboard-error" role="alert">
+                {layoutError}
+              </div>
+            )}
 
-            <StatCard
-              label="This Week"
-              value={
-                loading
-                  ? "—"
-                  : formatHours(
-                      stats.thisWeekMinutes,
-                    )
-              }
-              unit="hrs"
-              icon={<IconCalendar />}
-              empty={
-                !loading &&
-                stats.thisWeekMinutes === 0
-              }
-            />
+            {(isCustomizing ? draftWidgetLayout : widgetLayout).length === 0 ? (
+              <div className="dashboard-empty-layout">
+                <p className="empty-heading">Your dashboard is empty.</p>
+                <p className="empty-body">
+                  {isCustomizing
+                    ? "Choose a statistic above and add your first widget."
+                    : "Customize your dashboard to add the statistics you care about most."}
+                </p>
+                {!isCustomizing && (
+                  <button type="button" className="btn btn-primary" onClick={startCustomizing}>
+                    Add a Widget
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="stat-grid">
+                {(isCustomizing ? draftWidgetLayout : widgetLayout).map((widget, index, currentLayout) => (
+                  <DashboardStatWidget
+                    key={widget.id}
+                    widget={widget}
+                    dashboard={dashboard}
+                    loading={loading}
+                    customizing={isCustomizing}
+                    first={index === 0}
+                    last={index === currentLayout.length - 1}
+                    onMove={moveWidget}
+                    onRemove={removeWidget}
+                    onStatisticChange={updateWidgetStatistic}
+                  />
+                ))}
+              </div>
+            )}
           </section>
 
           <div className="dashboard-columns">
@@ -595,6 +743,13 @@ export default function Dashboard() {
           color: #1a2340;
           margin: 0;
         }
+        .page-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
 
         /* Buttons */
         .btn {
@@ -656,6 +811,101 @@ export default function Dashboard() {
           background: #fef2f2;
           color: #b91c1c;
           font-size: 13px;
+        }
+
+        .custom-dashboard-section {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .dashboard-customizer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          padding: 18px 20px;
+          border: 1px solid #cbd5e1;
+          border-radius: 12px;
+          background: #ffffff;
+        }
+        .dashboard-customizer-title {
+          margin: 0;
+          color: #1a2340;
+          font-size: 15px;
+          font-weight: 600;
+        }
+        .dashboard-customizer-copy {
+          margin: 5px 0 0;
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+        .dashboard-customizer-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .dashboard-stat-select,
+        .widget-stat-select {
+          min-height: 38px;
+          padding: 8px 10px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #334155;
+          font: inherit;
+          font-size: 13px;
+        }
+        .dashboard-empty-layout {
+          min-height: 180px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 28px;
+          border: 1px dashed #cbd5e1;
+          border-radius: 12px;
+          background: #ffffff;
+          text-align: center;
+        }
+        .stat-card.is-customizing {
+          gap: 14px;
+          border-color: #cbd5e1;
+        }
+        .widget-editor {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding-top: 12px;
+          border-top: 1px solid #f1f5f9;
+        }
+        .widget-editor-actions {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .widget-control-button {
+          padding: 6px 9px;
+          border: 1px solid #cbd5e1;
+          border-radius: 7px;
+          background: #ffffff;
+          color: #475569;
+          cursor: pointer;
+          font-size: 12px;
+        }
+        .widget-control-button:hover:not(:disabled) {
+          background: #f8fafc;
+        }
+        .widget-control-button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .widget-control-button.is-danger {
+          color: #b91c1c;
+          border-color: #fecaca;
         }
 
         /* Stat grid */
@@ -1024,6 +1274,13 @@ export default function Dashboard() {
           .dashboard-columns {
             grid-template-columns: 1fr;
           }
+          .dashboard-customizer {
+            align-items: stretch;
+            flex-direction: column;
+          }
+          .dashboard-customizer-actions {
+            justify-content: flex-start;
+          }
           .page-header, .dashboard-content {
             padding-left: 24px;
             padding-right: 24px;
@@ -1048,15 +1305,158 @@ export default function Dashboard() {
   );
 }
 
+function DashboardStatWidget({
+  widget,
+  dashboard,
+  loading,
+  customizing,
+  first,
+  last,
+  onMove,
+  onRemove,
+  onStatisticChange,
+}) {
+  const definition = STATISTIC_OPTIONS.find(
+    (option) => option.id === widget.statisticId,
+  );
+
+  if (!definition) {
+    return (
+      <div className={`stat-card ${customizing ? "is-customizing" : ""}`}>
+        <div className="stat-card-top">
+          <span className="stat-card-label">Unavailable statistic</span>
+          <div className="stat-card-icon"><IconEntry /></div>
+        </div>
+        <div className="stat-card-value">
+          <span className="stat-card-number">—</span>
+        </div>
+        <span className="stat-card-empty-note">This statistic is no longer available.</span>
+        {customizing && (
+          <WidgetEditor
+            widget={widget}
+            first={first}
+            last={last}
+            onMove={onMove}
+            onRemove={onRemove}
+            onStatisticChange={onStatisticChange}
+          />
+        )}
+      </div>
+    );
+  }
+
+  const rawValue = dashboard[definition.source]?.[definition.id] ?? 0;
+  const formatted = formatDashboardStatistic(rawValue, definition.format);
+
+  return (
+    <StatCard
+      label={definition.label}
+      value={loading ? "—" : formatted.value}
+      unit={loading ? undefined : formatted.unit}
+      icon={getStatisticIcon(definition.icon)}
+      empty={!loading && Number(rawValue) === 0}
+      customizing={customizing}
+      editor={customizing ? (
+        <WidgetEditor
+          widget={widget}
+          first={first}
+          last={last}
+          onMove={onMove}
+          onRemove={onRemove}
+          onStatisticChange={onStatisticChange}
+        />
+      ) : null}
+    />
+  );
+}
+
+function WidgetEditor({
+  widget,
+  first,
+  last,
+  onMove,
+  onRemove,
+  onStatisticChange,
+}) {
+  return (
+    <div className="widget-editor">
+      <select
+        aria-label="Widget statistic"
+        className="widget-stat-select"
+        value={widget.statisticId}
+        onChange={(event) => onStatisticChange(widget.id, event.target.value)}
+      >
+        {STATISTIC_OPTIONS.map((option) => (
+          <option key={option.id} value={option.id}>{option.label}</option>
+        ))}
+      </select>
+      <div className="widget-editor-actions">
+        <button
+          type="button"
+          className="widget-control-button"
+          onClick={() => onMove(widget.id, -1)}
+          disabled={first}
+          aria-label="Move widget left"
+        >
+          Move left
+        </button>
+        <button
+          type="button"
+          className="widget-control-button"
+          onClick={() => onMove(widget.id, 1)}
+          disabled={last}
+          aria-label="Move widget right"
+        >
+          Move right
+        </button>
+        <button
+          type="button"
+          className="widget-control-button is-danger"
+          onClick={() => onRemove(widget.id)}
+        >
+          Remove
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatDashboardStatistic(value, format) {
+  if (format === "hours") {
+    return { value: formatHours(value), unit: "hrs" };
+  }
+
+  if (format === "duration") {
+    return { value: formatDuration(value), unit: undefined };
+  }
+
+  return { value: Number(value) || 0, unit: undefined };
+}
+
+function getStatisticIcon(icon) {
+  switch (icon) {
+    case "clock":
+      return <IconClock />;
+    case "folder":
+      return <IconFolder />;
+    case "calendar":
+      return <IconCalendar />;
+    default:
+      return <IconEntry />;
+  }
+}
+
 function StatCard({
   label,
   value,
   unit,
   icon,
   empty,
+  customizing = false,
+  editor = null,
 }) {
   return (
-    <div className="stat-card">
+    <div className={`stat-card ${customizing ? "is-customizing" : ""}`}>
       <div className="stat-card-top">
         <span className="stat-card-label">
           {label}
@@ -1082,6 +1482,8 @@ function StatCard({
           Nothing logged yet
         </span>
       )}
+
+      {editor}
     </div>
   );
 }

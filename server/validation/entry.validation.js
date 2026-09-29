@@ -120,6 +120,9 @@ const createEntrySchema = z.object({
 });
 
 const updateEntrySchema = z.object({
+  // Omission preserves existing references; an explicit empty list clears them.
+  referenceProjectIds: z.array(z.string().uuid()).max(100).optional(),
+  referenceEntryIds: z.array(z.string().uuid()).max(100).optional(),
   name: z
     .string()
     .trim()
@@ -131,6 +134,20 @@ const updateEntrySchema = z.object({
     .int()
     .min(0, "Duration cannot be negative")
     .max(10080, "Duration is too large"),
+
+  tags: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(30),
+    )
+    .max(10, "Too many tags")
+    .transform((tags) => [
+      ...new Set(tags.map((tag) => tag.toLowerCase())),
+    ])
+    .optional(),
 
   dueAt: z
     .string()

@@ -50,7 +50,11 @@ export default function EntryDetailsModal({
   onClose,
   onEdit,
   onDelete,
+  onArchive,
+  onUnarchive,
+  onHistory,
   deleteSaving = false,
+  archiveSaving = false,
   onProjectReferenceClick,
   onChecklistToggle,
   checklistSaving = {},
@@ -72,6 +76,20 @@ export default function EntryDetailsModal({
       onDelete?.(entry);
     }
   }
+
+  function handleArchiveClick() {
+  const confirmed = window.confirm(
+    `Archive "${entry.name || "Logbook Entry"}"?`,
+  );
+
+  if (confirmed) {
+    onArchive?.(entry);
+  }
+}
+
+function handleUnarchiveClick() {
+  onUnarchive?.(entry);
+}
 
   return (
     <div
@@ -157,7 +175,7 @@ export default function EntryDetailsModal({
                       <input
                         type="checkbox"
                         checked={Boolean(item.completed)}
-                        disabled={saving || archived || deleteSaving}
+                        disabled={saving || archived || deleteSaving || Boolean(entry.archivedAt)}
                         onChange={(event) =>
                           onChecklistToggle?.(entry.id, item.id, event.target.checked)
                         }
@@ -229,13 +247,35 @@ export default function EntryDetailsModal({
         </div>
 
         <div className="modal-footer" style={{ justifyContent: "space-between" }}>
-          <div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            {!archived && !entry.archivedAt && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleArchiveClick}
+                disabled={deleteSaving || archiveSaving}
+              >
+                {archiveSaving ? "Archiving..." : "Archive entry"}
+              </button>
+            )}
+
+            {!archived && entry.archivedAt && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleUnarchiveClick}
+                disabled={deleteSaving || archiveSaving}
+              >
+                {archiveSaving ? "Unarchiving..." : "Unarchive entry"}
+              </button>
+            )}
+
             {!archived && (
               <button
                 type="button"
                 className="btn"
                 onClick={handleDeleteClick}
-                disabled={deleteSaving}
+                disabled={deleteSaving || archiveSaving}
                 style={{
                   background: "#b91c1c",
                   color: "#ffffff",
@@ -248,12 +288,15 @@ export default function EntryDetailsModal({
             )}
           </div>
 
-          <div style={{ display: "flex", gap: "8px" }}>
+                   <div style={{ display: "flex", gap: "8px" }}>
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={deleteSaving}>
               Close
             </button>
+            <button type="button" className="btn btn-secondary" onClick={() => onHistory?.(entry)} disabled={deleteSaving}>
+              History
+            </button>
             {!archived && (
-              <button type="button" className="btn btn-primary" onClick={onEdit} disabled={deleteSaving}>
+              <button type="button" className="btn btn-primary" onClick={onEdit} disabled={deleteSaving || Boolean(entry.archivedAt)}>
                 <Edit3 size={15} />
                 Edit entry
               </button>

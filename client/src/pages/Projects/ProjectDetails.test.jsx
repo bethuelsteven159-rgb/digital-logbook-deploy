@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -16,6 +17,10 @@ const apiMocks = vi.hoisted(() => ({
   updateEntryProjectReferences: vi.fn(),
   updateEntryReferences: vi.fn(),
   updateEntry: vi.fn(),
+  generateDueRecurringEntries: vi.fn(),
+  archiveProjectEntry: vi.fn(),
+  unarchiveProjectEntry: vi.fn(),
+  searchProjectEntries: vi.fn(),
 }));
 
 vi.mock('../../api/projectDetailsApi', () => ({
@@ -25,6 +30,9 @@ vi.mock('../../api/projectDetailsApi', () => ({
   createSavedFilter: apiMocks.createSavedFilter,
   applySavedFilter: apiMocks.applySavedFilter,
   deleteSavedFilter: apiMocks.deleteSavedFilter,
+  archiveProjectEntry: apiMocks.archiveProjectEntry,
+  unarchiveProjectEntry: apiMocks.unarchiveProjectEntry,
+  searchProjectEntries: apiMocks.searchProjectEntries,
 }));
 
 vi.mock('../../api/projectsApi', () => ({
@@ -41,6 +49,11 @@ vi.mock('../../api/entryFeaturesApi', () => ({
   updateEntry: apiMocks.updateEntry,
 }));
 
+vi.mock('../../api/recurringEntriesApi', () => ({
+  generateDueRecurringEntries:
+    apiMocks.generateDueRecurringEntries,
+}));
+
 vi.mock('../../components/Sidebar', () => ({
   default: () => (
     <div data-testid="sidebar">
@@ -54,7 +67,33 @@ vi.mock('../../components/EditProjectModal', () => ({
 }));
 
 vi.mock('./NewEntryModal', () => ({
-  default: () => null,
+  default: ({ onClose, onCreate }) => (
+    <div
+      role="dialog"
+      aria-label="New Entry test modal"
+    >
+      <button
+        type="button"
+        onClick={() =>
+          onCreate({
+            name: 'Offline entry',
+            durationMinutes: 45,
+            occurredAt: '2026-09-12T08:00:00Z',
+            values: [],
+          }).catch(() => {})
+        }
+      >
+        Create mocked entry
+      </button>
+
+      <button
+        type="button"
+        onClick={onClose}
+      >
+        Close new entry
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('./EntryDetailsModal', () => ({
@@ -63,6 +102,8 @@ vi.mock('./EntryDetailsModal', () => ({
     archived,
     onClose,
     onEdit,
+    onArchive,
+    onUnarchive,
   }) => (
     <div
       role="dialog"
@@ -86,6 +127,22 @@ vi.mock('./EntryDetailsModal', () => ({
         Edit entry
       </button>
 
+      {entry.archivedAt ? (
+        <button
+          type="button"
+          onClick={() => onUnarchive(entry)}
+        >
+          Unarchive entry
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onArchive(entry)}
+        >
+          Archive entry
+        </button>
+      )}
+
       <button
         type="button"
         onClick={onClose}
@@ -96,11 +153,26 @@ vi.mock('./EntryDetailsModal', () => ({
   ),
 }));
 
+vi.mock('./AutomationRulesModal', () => ({
+  default: ({ onClose }) => (
+    <div
+      role="dialog"
+      aria-label="Automation rules test modal"
+    >
+      <button type="button" onClick={onClose}>
+        Close automation
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('./EditEntryModal', () => ({
   default: ({
     onClose,
     onSave,
-  }) => (
+  }) => {
+    const [saveError, setSaveError] = useState('');
+    return (
     <div
       role="dialog"
       aria-label="Edit Entry test modal"
@@ -119,17 +191,47 @@ vi.mock('./EditEntryModal', () => ({
             newChecklistItems: [],
             referenceProjectIds: ['project-2'],
             referenceEntryIds: ['entry-2'],
-          })
+          }).catch((error) => setSaveError(error.message))
         }
       >
         Save mocked edit
+      </button>
+
+      {saveError && <p role="alert">{saveError}</p>}
+      <button
+        type="button"
+        onClick={onClose}
+      >
+        Close edit
+      </button>
+    </div>
+  );
+  },
+}));
+
+vi.mock('./RecurringEntriesModal', () => ({
+  default: ({
+    projectId,
+    onClose,
+    onChanged,
+  }) => (
+    <div
+      role="dialog"
+      aria-label="Recurring entries test modal"
+      data-project-id={projectId}
+    >
+      <button
+        type="button"
+        onClick={() => onChanged?.()}
+      >
+        Make recurring change
       </button>
 
       <button
         type="button"
         onClick={onClose}
       >
-        Close edit
+        Close recurring
       </button>
     </div>
   ),
@@ -149,6 +251,7 @@ const entry = {
   durationMinutes: 30,
   occurredAt: '2026-09-10T10:00:00Z',
   dueAt: '2026-09-12T12:00:00Z',
+  archivedAt: null,
   values: [
     {
       fieldId: 'field-1',
@@ -222,6 +325,11 @@ describe('ProjectDetails entry flow', () => {
         archivedAt: null,
       },
     ]);
+
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
 
     apiMocks.updateEntry.mockResolvedValue({});
     apiMocks.updateEntryProjectReferences.mockResolvedValue(
@@ -334,25 +442,35 @@ describe('ProjectDetails entry flow', () => {
           durationMinutes: 60,
           checklistItems: [],
           newChecklistItems: [],
+          referenceProjectIds: ['project-2'],
+          referenceEntryIds: ['entry-2'],
         }),
       ),
     );
 
-    expect(
-      apiMocks.updateEntryProjectReferences,
-    ).toHaveBeenCalledWith(
-      'project-1',
-      'entry-1',
-      ['project-2'],
-    );
+    expect(apiMocks.updateEntry).toHaveBeenCalledTimes(1);
+    expect(apiMocks.updateEntryProjectReferences).not.toHaveBeenCalled();
+    expect(apiMocks.updateEntryReferences).not.toHaveBeenCalled();
+    await waitFor(() => expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2));
+  });
 
-    expect(
-      apiMocks.updateEntryReferences,
-    ).toHaveBeenCalledWith(
-      'project-1',
-      'entry-1',
-      ['entry-2'],
-    );
+  it.each(['project references', 'entry references'])('keeps the persisted entry and editor available after atomic failure in %s', async (stage) => {
+    const user = userEvent.setup();
+    apiMocks.updateEntry.mockRejectedValueOnce(new Error(`${stage} could not be saved`));
+    renderPage();
+    await screen.findByText('First entry');
+    await user.click(screen.getByRole('button', { name: /Click entry to view full contents/i }));
+    await user.click(screen.getByRole('button', { name: /^Edit entry$/i }));
+    await user.click(screen.getByRole('button', { name: 'Save mocked edit' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(`${stage} could not be saved`);
+    expect(screen.getByText('First entry')).toBeInTheDocument();
+    expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(1);
+    expect(apiMocks.updateEntryProjectReferences).not.toHaveBeenCalled();
+    expect(apiMocks.updateEntryReferences).not.toHaveBeenCalled();
+    // The transaction failed without persisting changes; retry uses one request.
+    await user.click(screen.getByRole('button', { name: 'Save mocked edit' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Entry test modal' })).not.toBeInTheDocument());
+    expect(apiMocks.updateEntry).toHaveBeenCalledTimes(2);
   });
 
   it('keeps archived entries viewable but disables editing', async () => {
@@ -390,5 +508,646 @@ describe('ProjectDetails entry flow', () => {
         name: /^Edit entry$/i,
       }),
     ).toBeDisabled();
+  });
+
+  it('opens the automation rules modal from the header button', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('First entry'),
+      ).toBeInTheDocument(),
+    );
+
+    expect(
+      screen.queryByRole('dialog', {
+        name: 'Automation rules test modal',
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Automation' }),
+    );
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Automation rules test modal',
+      }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('ProjectDetails offline capture and sync', () => {
+  const offlinePayload = {
+    name: 'Offline entry',
+    durationMinutes: 45,
+    occurredAt: '2026-09-12T08:00:00Z',
+    values: [],
+  };
+
+  function readQueue() {
+    return JSON.parse(
+      localStorage.getItem('offlineEntryQueue') || '[]',
+    );
+  }
+
+  function setOnline(value) {
+    Object.defineProperty(window.navigator, 'onLine', {
+      value,
+      configurable: true,
+    });
+  }
+
+  function goOnline() {
+    setOnline(true);
+    window.dispatchEvent(new Event('online'));
+  }
+
+  function goOffline() {
+    setOnline(false);
+    window.dispatchEvent(new Event('offline'));
+  }
+
+  async function queueEntryWhileOffline(user) {
+    await user.click(
+      screen.getByRole('button', {
+        name: /Add New Entry/i,
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Create mocked entry',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(readQueue()).toHaveLength(1),
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    setOnline(true);
+
+    apiMocks.fetchSavedFilters.mockResolvedValue(
+      [],
+    );
+
+    apiMocks.fetchProjectDetails.mockResolvedValue(
+      detailsResponse(),
+    );
+
+    apiMocks.fetchProjects.mockResolvedValue([
+      project,
+    ]);
+
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    setOnline(true);
+  });
+
+  it('queues new entries locally while offline', async () => {
+    const user = userEvent.setup();
+
+    setOnline(false);
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    expect(
+      screen.getByText(
+        /new entries will be saved locally/i,
+      ),
+    ).toBeInTheDocument();
+
+    await queueEntryWhileOffline(user);
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).not.toHaveBeenCalled();
+
+    const [queued] = readQueue();
+
+    expect(queued.projectId).toBe('project-1');
+    expect(queued.payload).toEqual(offlinePayload);
+    expect(queued.status).toBe('pending');
+    expect(queued.lastError).toBeNull();
+    expect(queued.localId).toBeTruthy();
+  });
+
+  it('syncs a queued entry once when the connection returns', async () => {
+    const user = userEvent.setup();
+
+    apiMocks.createProjectEntry.mockResolvedValue({
+      id: 'entry-2',
+    });
+
+    setOnline(false);
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await queueEntryWhileOffline(user);
+
+    goOnline();
+
+    await waitFor(() =>
+      expect(
+        apiMocks.createProjectEntry,
+      ).toHaveBeenCalledTimes(1),
+    );
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenCalledWith('project-1', offlinePayload);
+
+    await waitFor(() =>
+      expect(readQueue()).toEqual([]),
+    );
+
+    expect(
+      apiMocks.fetchProjectDetails.mock.calls.length,
+    ).toBeGreaterThanOrEqual(2);
+
+    await goOffline();
+
+    await screen.findByText(
+      /new entries will be saved locally/i,
+    );
+
+    goOnline();
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          /new entries will be saved locally/i,
+        ),
+      ).not.toBeInTheDocument(),
+    );
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a failed sync queued so the entry is not lost', async () => {
+    const user = userEvent.setup();
+
+    apiMocks.createProjectEntry.mockRejectedValue(
+      new Error('Server unreachable'),
+    );
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await queueEntryWhileOffline(user);
+
+    goOffline();
+
+    await screen.findByText(
+      /new entries will be saved locally/i,
+    );
+
+    goOnline();
+
+    await waitFor(() => {
+      const [item] = readQueue();
+
+      expect(item.status).toBe('failed');
+      expect(item.lastError).toBe(
+        'Server unreachable',
+      );
+    });
+
+    expect(readQueue()[0].payload).toEqual(
+      offlinePayload,
+    );
+
+    expect(
+      screen.getByText(
+        /1 entry waiting to sync/i,
+      ),
+    ).toBeInTheDocument();
+
+    apiMocks.createProjectEntry.mockResolvedValue({
+      id: 'entry-2',
+    });
+
+    goOffline();
+
+    await screen.findByText(
+      /new entries will be saved locally/i,
+    );
+
+    goOnline();
+
+    await waitFor(() =>
+      expect(readQueue()).toEqual([]),
+    );
+
+    // Direct attempt + failed sync + successful retry.
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenCalledTimes(3);
+
+    expect(
+      apiMocks.createProjectEntry,
+    ).toHaveBeenLastCalledWith(
+      'project-1',
+      offlinePayload,
+    );
+  });
+
+  it('does not queue entries the server rejected', async () => {
+    const user = userEvent.setup();
+    const consoleError = console.error;
+
+    console.error = vi.fn();
+
+    const rejection = new Error(
+      'Entry name is required',
+    );
+
+    rejection.status = 400;
+
+    apiMocks.createProjectEntry.mockRejectedValue(
+      rejection,
+    );
+
+    try {
+      renderPage();
+
+      await screen.findByText('First entry');
+
+      await user.click(
+        screen.getByRole('button', {
+          name: /Add New Entry/i,
+        }),
+      );
+
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Create mocked entry',
+        }),
+      );
+
+      await waitFor(() =>
+        expect(
+          apiMocks.createProjectEntry,
+        ).toHaveBeenCalledTimes(1),
+      );
+
+      expect(readQueue()).toEqual([]);
+    } finally {
+      console.error = consoleError;
+    }
+  });
+});
+
+describe('ProjectDetails recurring entries', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    apiMocks.fetchSavedFilters.mockResolvedValue(
+      [],
+    );
+
+    apiMocks.fetchProjectDetails.mockResolvedValue(
+      detailsResponse(),
+    );
+
+    apiMocks.fetchProjects.mockResolvedValue([project]);
+
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
+  });
+
+  it('generates due recurring entries once and reports the count', async () => {
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 2,
+      generatedEntries: [
+        {
+          id: 'entry-8',
+          definitionId: 'def-1',
+          recurrenceDate: '2026-09-27',
+        },
+        {
+          id: 'entry-9',
+          definitionId: 'def-1',
+          recurrenceDate: '2026-09-28',
+        },
+      ],
+    });
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledWith('project-1');
+
+    expect(
+      screen.getByText(
+        '2 recurring entries were generated.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('does not regenerate when the modal opens and closes without changes', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /^Recurring$/,
+      }),
+    );
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Recurring entries test modal',
+      }),
+    ).toHaveAttribute(
+      'data-project-id',
+      'project-1',
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Close recurring',
+      }),
+    );
+
+    expect(
+      screen.queryByRole('dialog', {
+        name: 'Recurring entries test modal',
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      apiMocks.fetchProjectDetails,
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('regenerates exactly once after a recurring change and does not loop', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /^Recurring$/,
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Make recurring change',
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Close recurring',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        apiMocks.generateDueRecurringEntries,
+      ).toHaveBeenCalledTimes(2),
+    );
+
+    await waitFor(() =>
+      expect(
+        apiMocks.fetchProjectDetails,
+      ).toHaveBeenCalledTimes(2),
+    );
+
+    // A refresh loop would keep issuing generation and
+    // detail requests; both counts must stay exact.
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      apiMocks.fetchProjectDetails,
+    ).toHaveBeenCalledTimes(2);
+  });
+
+  it('hides the recurring button for archived projects but still generates due entries', async () => {
+    apiMocks.fetchProjectDetails.mockResolvedValue(
+      detailsResponse({
+        archivedAt: '2026-09-27T10:00:00Z',
+      }),
+    );
+
+    renderPage();
+
+    await screen.findByText('First entry');
+
+    expect(
+      screen.queryByRole('button', {
+        name: /^Recurring$/,
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      apiMocks.generateDueRecurringEntries,
+    ).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ProjectDetails entry archive', () => {
+  const archivedEntry = {
+    ...entry,
+    id: 'entry-2',
+    name: 'Old entry',
+    archivedAt: '2026-09-01T00:00:00Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    apiMocks.fetchSavedFilters.mockResolvedValue([]);
+    apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse());
+    apiMocks.fetchProjects.mockResolvedValue([project]);
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+      generatedEntries: [],
+    });
+    apiMocks.archiveProjectEntry.mockResolvedValue({});
+    apiMocks.unarchiveProjectEntry.mockResolvedValue({});
+    apiMocks.searchProjectEntries.mockResolvedValue([archivedEntry]);
+  });
+
+  async function openArchiveView(user) {
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'View archive' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Old entry')).toBeInTheDocument(),
+    );
+  }
+
+  it('archives an entry and removes it from the active list', async () => {
+    apiMocks.fetchProjectDetails
+      .mockResolvedValueOnce(detailsResponse())
+      .mockResolvedValueOnce({ ...detailsResponse(), entries: [] });
+
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Click entry to view full contents/i,
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Archive entry' }));
+
+    await waitFor(() =>
+      expect(apiMocks.archiveProjectEntry).toHaveBeenCalledWith(
+        'project-1',
+        'entry-1',
+      ),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText('First entry')).not.toBeInTheDocument(),
+    );
+    expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows archived entries in the archive view and hides active ones', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await openArchiveView(user);
+
+    expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
+      'project-1',
+      expect.objectContaining({ archived: true }),
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Archived entries' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('First entry')).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Back to active entries' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Old entry')).not.toBeInTheDocument();
+  });
+
+  it('searches within the archive', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await openArchiveView(user);
+
+    apiMocks.searchProjectEntries.mockClear();
+
+    await user.type(
+      screen.getByPlaceholderText('Search entries...'),
+      'old',
+    );
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+
+    await waitFor(() =>
+      expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
+        'project-1',
+        expect.objectContaining({ archived: true, query: 'old' }),
+      ),
+    );
+  });
+
+  it('does not search the archive from the main list', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+
+    await user.type(
+      screen.getByPlaceholderText('Search entries...'),
+      'first',
+    );
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+
+    await waitFor(() =>
+      expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
+        'project-1',
+        expect.objectContaining({ archived: false, query: 'first' }),
+      ),
+    );
+  });
+
+  it('unarchives an entry and removes it from the archive view', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await openArchiveView(user);
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Click entry to view full contents/i,
+      }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Unarchive entry' }),
+    );
+
+    await waitFor(() =>
+      expect(apiMocks.unarchiveProjectEntry).toHaveBeenCalledWith(
+        'project-1',
+        'entry-2',
+      ),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText('Old entry')).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText('No archived entries.')).toBeInTheDocument();
+    expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2);
   });
 });

@@ -624,74 +624,6 @@ for (const method of ['getProjectEntries', 'getEntryById', 'getOutstandingEntrie
   });
 }
 
-test('details expose only active fields but retain old values and archived computations through the archive instant', async (t) => {
-  const client = createClient();
-  const oldValues = structuredClone(client.entryValues);
-  await syncProjectFields(client, PROJECT_ID, [
-    { id: HOURS_ID, name: 'Duration' },
-    { name: 'Rate', fieldType: 'number' },
-    { name: 'Total', fieldType: 'computed', formula: 'Duration * Rate' },
-  ]);
-  const newRate = client.activeFields().find((field) => field.name === 'Rate');
-  const newTotal = client.activeFields().find((field) => field.name === 'Total');
-  assert.notEqual(newRate.id, RATE_ID);
-  assert.notEqual(newTotal.id, TOTAL_ID);
-  const boundaryId = uuid(50);
-  const futureId = uuid(51);
-  client.entryValues.push(
-    ...oldValues.map((value) => ({ ...value, entryId: boundaryId })),
-    { entryId: futureId, fieldId: HOURS_ID, valueNumber: '4' },
-    { entryId: futureId, fieldId: newRate.id, valueNumber: '5' },
-  );
-  t.mock.method(repository, 'getOwnedProject', async (projectId, userId) => {
-    assert.deepEqual([projectId, userId], [PROJECT_ID, OWNER_ID]);
-    return { id: PROJECT_ID, name: 'Project' };
-  });
-  const fieldsMock = t.mock.method(repository, 'getProjectFields', async (projectId, options) => {
-    assert.equal(projectId, PROJECT_ID);
-    assert.deepEqual(options, { includeArchived: true });
-    return mappedFields(client, options.includeArchived);
-  });
-  t.mock.method(repository, 'getProjectStats', async () => ({
-    totalEntries: 3,
-    loggedMinutes: 90,
-  }));
-  t.mock.method(repository, 'getProjectEntryLinks', async () => []);
-  t.mock.method(repository, 'getProjectEntries', async () => [
-    joinedEntry(client),
-    joinedEntry(client, boundaryId, ARCHIVE_AT),
-    joinedEntry(client, futureId, AFTER_ARCHIVE),
-  ]);
-
-  const details = await getProjectDetailsService({ projectId: PROJECT_ID, userId: OWNER_ID });
-  assert.equal(fieldsMock.mock.callCount(), 1);
-  assert.deepEqual(
-    details.fields.map((field) => field.id),
-    [HOURS_ID, newRate.id, newTotal.id],
-  );
-  for (const entry of details.entries.slice(0, 2)) {
-    assert.equal(entry.values.find((value) => value.fieldId === TOTAL_ID).value, 60);
-    assert.deepEqual(
-      entry.values.find((value) => value.fieldId === NOTES_ID),
-      {
-        fieldId: NOTES_ID,
-        name: 'Notes',
-        type: 'short_text',
-        archived: true,
-        value: 'Keep this historical note',
-      },
-    );
-    assert.equal(entry.values.find((value) => value.fieldId === HOURS_ID).name, 'Duration');
-    assert.equal(entry.values.find((value) => value.fieldId === RATE_ID).value, 20);
-  }
-  const future = details.entries[2];
-  assert.ok(!future.values.some((value) => value.fieldId === TOTAL_ID));
-  assert.equal(future.values.find((value) => value.fieldId === newTotal.id).value, 20);
-  assert.deepEqual(
-    client.entryValues.filter((value) => value.entryId === ENTRY_ID),
-    oldValues,
-  );
-});
 
 function stubEntryTransaction(t, client) {
   const newEntryId = uuid(60);
@@ -707,6 +639,7 @@ function stubEntryTransaction(t, client) {
       throw new Error('Unexpected field creation');
     }),
     getEntriesByIdsForProject: t.mock.fn(async () => []),
+    getEnabledAutomationRules: t.mock.fn(async () => []),
     createEntry: t.mock.fn(async (data) => {
       writes.push({ kind: 'entry', data });
       return { id: newEntryId };

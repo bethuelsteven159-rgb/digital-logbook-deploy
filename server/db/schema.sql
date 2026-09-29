@@ -7,13 +7,14 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(320) NOT NULL UNIQUE,
     avatar_url TEXT,
     bio TEXT,
+    dashboard_layout JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETECASCADE,
     name VARCHAR(120) NOT NULL,
     description TEXT,
     archived_at TIMESTAMPTZ,
@@ -58,9 +59,9 @@ CREATE TABLE IF NOT EXISTS entry_field_values (
     CONSTRAINT uq_entry_field_value UNIQUE (entry_id, field_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_projects_owner ON projects (owner_id);
+CREATE INDEX IF NOT EXISTS idx_projects_owner ON projects(owner_id);
 CREATE INDEX IF NOT EXISTS idx_fields_project ON project_fields (project_id);
-CREATE INDEX IF NOT EXISTS idx_entries_project ON entries (project_id);
+CREATE INDEX IF NOT EXISTS idx_entries_project ON entries(project_id);
 CREATE INDEX IF NOT EXISTS idx_values_entry ON entry_field_values (entry_id);
 CREATE INDEX IF NOT EXISTS idx_values_field ON entry_field_values (field_id);
 
@@ -102,9 +103,26 @@ CREATE INDEX IF NOT EXISTS idx_entry_project_references_project
     ON entry_project_references(referenced_project_id);
 
 
+-- =========================================================
+-- ENTRY REVISION HISTORY
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS entry_revisions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entry_id UUID NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    changed_by_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    snapshot JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_entry_revisions_entry
+    ON entry_revisions(entry_id, created_at DESC);
+
+
 CREATE TABLE IF NOT EXISTS saved_filters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETECASCADE,
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     criteria JSONB NOT NULL,
@@ -114,3 +132,24 @@ CREATE TABLE IF NOT EXISTS saved_filters (
 
 CREATE INDEX IF NOT EXISTS idx_saved_filters_owner ON saved_filters (owner_id);
 CREATE INDEX IF NOT EXISTS idx_saved_filters_project ON saved_filters (project_id);
+
+
+-- =========================================================
+-- CUSTOM STATISTICS (user-defined expressions)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS custom_statistics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    expression TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_statistics_owner
+    ON custom_statistics (owner_id);
+
+CREATE INDEX IF NOT EXISTS idx_custom_statistics_project
+    ON custom_statistics (project_id);
