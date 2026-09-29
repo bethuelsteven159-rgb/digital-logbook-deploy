@@ -35,15 +35,22 @@ http://localhost:8443/digital_logbook/
 See the [full onboarding guide](https://musical-croissant-1e96ff.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
 
 ## Team — Code Cells
+| Section                                      | Owner          |
+| --------------------------------------------- | -------------- |
+| Project Methodology & Sprint Tracking        | Tumi           |
+| Git Workflow & Development Standards         | Bethuel        |
+| System Architecture, Backend & API           | Inga           |
+| Frontend Architecture, UI/UX & Accessibility | Morare         |
+| Requirements & User Stories                  | Simphiwe       |
+| Tech Stack & Developer Onboarding            | Sino           |
+| Database Documentation                       | Inga           |
+| Roadmap                                      | Tumi           |
+| Bug Tracking                                 | Simphiwe       |
+| Third-Party Code Documentation               | Sino           |
+| Testing Documentation                        | Sino           |
+| API Reference                                | Simphiwe       |
+| API Documentation                            | Morare         |
+| External API Integration                     | Morare & Sino  |
+| Codecov Setup                                | Bethuel        |
+| Performance Benchmark — Custom Statistics    | Bethuel        |
 
-| Section                                      | Owner    |
-| --------------------------------------------- | -------- |
-| Project Methodology & Sprint Tracking        | Tumi     |
-| Git Workflow & Development Standards         | Bethuel  |
-| System Architecture, Backend & API           | Inga     |
-| Frontend Architecture, UI/UX & Accessibility | Morare   |
-| Requirements & User Stories                  | Simphiwe |
-| Tech Stack & Developer Onboarding            | Sino     |
-| Third-Party Code Documentation               | Sino     |
-| Testing Documentation                        | Sino     |
-| API Documentation                            | Simphiwe |
