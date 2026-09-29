@@ -501,6 +501,16 @@ Below are examples of stakeholder feedback gathered this way, how the team evalu
 
 **Evaluation & integration:** Rather than treating the Sprint 1 scope as final, the team tracked this as an evolving requirement and expanded the backlog for Sprint 2 to match, as shown in the User Story Assignment table (Section 8.2).
 
+### 9.11 Sprint 3 Stakeholder Review — Client Feedback
+
+**Context:** During Sprint 3, the team arranged an online meeting with the client, Jan Moloto, to review the current state of the Digital Logbook. The meeting was coordinated through the team's WhatsApp group and then held over Microsoft Teams with the team members and the client present.
+
+**Stakeholder feedback:** The team demonstrated the work completed during Sprint 3 and discussed the current state of the application with the client. The client's feedback was positive overall: the implemented functionality was working as expected. The main area identified for improvement was the user interface and navigation, with the client recommending that the system should be more intuitive and easier for users to navigate.
+
+**Evaluation & integration:** The team accepted the usability feedback as an area requiring further improvement. Although the underlying functionality was working, the review highlighted that successful implementation also depends on users being able to discover and move between features easily. The feedback was therefore recorded as a UI/UX improvement to guide the team's final refinement of the application.
+
+![Sprint 3 Stakeholder Review with Client Jan Moloto](./screenshots/sprint3-stakeholder-review-arrangement.jpeg)
+![Sprint 3 Stakeholder Review with Client Jan Moloto](./screenshots/sprint3-sprint-review.png)
 ## 10. Why This Approach Suits Our Project
 
 
