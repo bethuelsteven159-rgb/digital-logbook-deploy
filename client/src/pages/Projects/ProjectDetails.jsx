@@ -21,6 +21,7 @@ import AutomationRulesModal from "./AutomationRulesModal";
 import CalendarView from "./CalendarView";
 import BoardView from "./BoardView";
 import RecurringEntriesModal from "./RecurringEntriesModal";
+import AiProjectInsight from "./AiProjectInsight";
 
 import {
   createProjectEntry,
@@ -1141,6 +1142,10 @@ async function handleShowIncomplete() {
               icon={<IconInfo />}
             />
           </div>
+
+          <AiProjectInsight
+            projectId={id}
+          />
 
           {/* Project references */}
           <section className="references-section">
