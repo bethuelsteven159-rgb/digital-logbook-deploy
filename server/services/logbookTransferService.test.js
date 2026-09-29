@@ -289,3 +289,25 @@ describe("export/import round trip", () => {
     expect(() => validateImportPayload(exported)).not.toThrow();
   });
 });
+
+describe("importLogbookService archivedAt handling", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("carries archivedAt on imported entries through to the repository write", async () => {
+    const tx = { insertImportedLogbook: vi.fn().mockResolvedValue({ imported: true }) };
+    repository.withTransaction.mockImplementation((callback) => callback(tx));
+
+    const payload = buildValidImportPayload();
+    payload.projects[0].entries[0].archivedAt = "2026-02-01T00:00:00.000Z";
+
+    await importLogbookService({ userId: "user-1", payload });
+
+    const [, normalized] = tx.insertImportedLogbook.mock.calls[0];
+    expect(normalized.entries[0].archivedAt).toBeTruthy();
+    expect(new Date(normalized.entries[0].archivedAt).toISOString()).toBe(
+      "2026-02-01T00:00:00.000Z",
+    );
+  });
+});
