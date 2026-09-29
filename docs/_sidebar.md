@@ -13,3 +13,4 @@
 - [Third-Party Code Documentation](third-party-code.md)
 - [Testing Documentation](testing-documentation.md)
 - [Performance Benchmark — Custom Statistics](performance.md)
+- [External API Integration](external-api/README.md)
