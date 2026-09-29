@@ -2,6 +2,8 @@ const express = require("express");
 
 const {
   getProjectDetails,
+  getAiProjectProgress,
+  getAiProjectSpeech,
   searchProjectEntries,
   createProjectEntry,
   getOutstandingEntries,
@@ -18,13 +20,25 @@ const {
   getEntryRevisions,
   getEntryRevision,
   restoreEntryRevision,
-} = require("../controllers/projectDetailsController");
+} = require(
+  "../controllers/projectDetailsController",
+);
 
 const router = express.Router();
 
 router.get(
   "/:projectId",
   getProjectDetails,
+);
+
+router.post(
+  "/:projectId/ai-progress",
+  getAiProjectProgress,
+);
+
+router.post(
+  "/:projectId/ai-progress/speech",
+  getAiProjectSpeech,
 );
 
 router.get(
@@ -67,12 +81,6 @@ router.delete(
   deleteEntry,
 );
 
-/*
- * Checklist item updates
- *
- * Used by the Entry Details modal when the user
- * checks or unchecks a checklist item.
- */
 router.patch(
   "/:projectId/entries/:entryId/checklist/:itemId",
   updateChecklistItem,
