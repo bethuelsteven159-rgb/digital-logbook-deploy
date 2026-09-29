@@ -115,6 +115,7 @@ function mapEntryRow(row) {
     tags: row.tags || [],
     dueAt: row.due_at,
     completedAt: row.completed_at,
+    archivedAt: row.archived_at,
     createdAt: row.entry_created_at,
     updatedAt: row.entry_updated_at,
   };
@@ -372,6 +373,7 @@ function createRepository(queryable) {
                 e.tags,
                 e.due_at,
                 e.completed_at,
+                e.archived_at,
                 e.created_at AS entry_created_at,
                 e.updated_at AS entry_updated_at,
                 v.id AS value_id,
@@ -388,7 +390,8 @@ function createRepository(queryable) {
            ON v.entry_id = e.id
          LEFT JOIN project_fields f
            ON f.id = v.field_id
-         WHERE e.project_id = $1
+            WHERE e.project_id = $1
+           AND e.archived_at IS NULL
          ORDER BY e.occurred_at DESC,
                   e.created_at DESC,
                   v.created_at ASC`,
@@ -413,9 +416,13 @@ function createRepository(queryable) {
         completed,
         customFields = [],
         sort = "newest",
+        archived = false,
       } = filters;
 
-      const conditions = ["e.project_id = $1"];
+  const conditions = [
+    "e.project_id = $1",
+    archived ? "e.archived_at IS NOT NULL" : "e.archived_at IS NULL",
+  ];
       const params = [projectId];
 
       const addParam = (value) => {
@@ -490,7 +497,7 @@ function createRepository(queryable) {
       const result = await queryable.query(
         `SELECT e.id AS entry_id, e.project_id, e.created_by_id,
                 e.name AS entry_name, e.duration_minutes, e.occurred_at,
-                e.tags, e.due_at, e.completed_at,
+                e.tags, e.due_at, e.completed_at, e.archived_at,
                 e.created_at AS entry_created_at, e.updated_at AS entry_updated_at,
                 v.id AS value_id, v.field_id, v.value_text, v.value_number,
                 v.value_date, v.created_at AS value_created_at,
@@ -637,6 +644,7 @@ function createRepository(queryable) {
                 e.tags,
                 e.due_at,
                 e.completed_at,
+                e.archived_at,
                 e.created_at AS entry_created_at,
                 e.updated_at AS entry_updated_at,
                 v.id AS value_id,
@@ -654,6 +662,7 @@ function createRepository(queryable) {
          LEFT JOIN project_fields f
            ON f.id = v.field_id
          WHERE e.project_id = $1
+            AND e.archived_at IS NULL
            AND e.due_at IS NOT NULL
            AND e.due_at < NOW()
            AND e.completed_at IS NULL
@@ -693,6 +702,7 @@ function createRepository(queryable) {
             e.occurred_at,
             e.due_at,
             e.completed_at,
+            e.archived_at,
             e.created_at AS entry_created_at,
             e.updated_at AS entry_updated_at,
             v.id AS value_id,
@@ -1146,6 +1156,7 @@ function createRepository(queryable) {
                 e.tags,
                 e.due_at,
                 e.completed_at,
+                e.archived_at,
                 e.created_at AS entry_created_at,
                 e.updated_at AS entry_updated_at,
                 v.id AS value_id,
@@ -1235,6 +1246,35 @@ function createRepository(queryable) {
 
       return result.rows[0] || null;
     },
+
+  async archiveEntry(entryId, projectId) {
+  const result = await queryable.query(
+    `UPDATE entries
+     SET archived_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $1
+       AND project_id = $2
+       AND archived_at IS NULL
+     RETURNING id, project_id, archived_at`,
+    [entryId, projectId],
+  );
+
+  return result.rows[0] || null;
+},
+async unarchiveEntry(entryId, projectId) {
+  const result = await queryable.query(
+    `UPDATE entries
+     SET archived_at = NULL,
+         updated_at = NOW()
+     WHERE id = $1
+       AND project_id = $2
+       AND archived_at IS NOT NULL
+     RETURNING id, project_id, archived_at`,
+    [entryId, projectId],
+  );
+
+  return result.rows[0] || null;
+},
 
     async deleteEntry(entryId, projectId) {
       const result = await queryable.query(

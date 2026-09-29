@@ -594,7 +594,7 @@ for (const method of ['getProjectEntries', 'getEntryById', 'getOutstandingEntrie
       const sql = text.replace(/\s+/g, ' ').trim();
       if (sql.includes('FROM entries')) {
         assert.match(sql, /LEFT JOIN project_fields f ON f.id = v.field_id/);
-        assert.doesNotMatch(sql, /(?:f\.)?archived_at IS NULL/);
+        assert.doesNotMatch(sql, /\bf\.archived_at IS NULL/);
         assert.deepEqual(parameters, [method === 'getEntryById' ? ENTRY_ID : PROJECT_ID]);
       }
       return {
