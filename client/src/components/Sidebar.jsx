@@ -71,7 +71,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 0 18px 28px;
+          padding: 0 18px 26px;
           overflow: hidden;
         }
         .sidebar-logo-mark {
@@ -80,10 +80,10 @@ export default function Sidebar({ collapsed, onToggle }) {
           align-items: center;
         }
         .sidebar-brand-name {
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          color: rgba(255,255,255,0.9);
+          font-family: 'DM Serif Display', Georgia, serif;
+          font-size: 16px;
+          font-weight: 400;
+          color: rgba(255,255,255,0.92);
           white-space: nowrap;
           letter-spacing: 0.01em;
         }
@@ -91,7 +91,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         /* Toggle */
         .sidebar-toggle {
           position: absolute;
-          top: 28px;
+          top: 26px;
           right: -12px;
           width: 24px;
           height: 24px;
@@ -112,7 +112,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           color: rgba(255,255,255,0.95);
         }
         .sidebar-toggle:focus-visible {
-          outline: 2px solid #4f63d2;
+          outline: 2px solid #8f9fef;
           outline-offset: 2px;
         }
 
@@ -125,30 +125,51 @@ export default function Sidebar({ collapsed, onToggle }) {
           padding: 0 10px;
         }
         .sidebar-nav-item {
+          position: relative;
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 10px 12px;
+          padding: 9px 12px;
           border-radius: 8px;
           text-decoration: none;
           color: rgba(255,255,255,0.55);
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 500;
+          letter-spacing: 0.01em;
           transition: background 0.15s ease, color 0.15s ease;
           white-space: nowrap;
           overflow: hidden;
         }
+        .sidebar--collapsed .sidebar-nav-item {
+          justify-content: center;
+          padding: 9px 0;
+        }
         .sidebar-nav-item:hover {
           background: rgba(255,255,255,0.07);
-          color: rgba(255,255,255,0.85);
+          color: rgba(255,255,255,0.88);
+        }
+        .sidebar-nav-item:focus-visible {
+          outline: 2px solid #8f9fef;
+          outline-offset: 2px;
         }
         .sidebar-nav-item--active {
           background: rgba(79, 99, 210, 0.25);
-          color: #7b8fe8;
+          color: #93a4f0;
+        }
+        .sidebar-nav-item--active::before {
+          content: '';
+          position: absolute;
+          left: -10px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 3px;
+          height: 18px;
+          border-radius: 0 3px 3px 0;
+          background: #7b8fe8;
         }
         .sidebar-nav-item--active:hover {
           background: rgba(79, 99, 210, 0.32);
-          color: #8f9fef;
+          color: #a3b2f3;
         }
         .sidebar-nav-icon {
           flex-shrink: 0;
@@ -166,24 +187,29 @@ export default function Sidebar({ collapsed, onToggle }) {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin: 8px 10px 0;
-          padding: 10px 12px;
-          border-radius: 8px;
+          margin: 10px 10px 0;
+          padding: 12px;
           background: transparent;
           border: none;
+          border-top: 1px solid rgba(255,255,255,0.08);
+          border-radius: 0 0 8px 8px;
           cursor: pointer;
           color: rgba(255,255,255,0.6);
           text-align: left;
           transition: background 0.15s ease, color 0.15s ease;
           overflow: hidden;
         }
+        .sidebar--collapsed .sidebar-profile {
+          justify-content: center;
+          border-top: 1px solid rgba(255,255,255,0.08);
+        }
         .sidebar-profile:hover {
           background: rgba(255,255,255,0.07);
           color: rgba(255,255,255,0.85);
         }
         .sidebar-profile:focus-visible {
-          outline: 2px solid #4f63d2;
-          outline-offset: 2px;
+          outline: 2px solid #8f9fef;
+          outline-offset: -2px;
         }
         .sidebar-avatar {
           width: 32px;
@@ -214,7 +240,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         .sidebar-profile-sub {
           font-family: 'Inter', sans-serif;
           font-size: 11px;
-          color: rgba(255,255,255,0.35);
+          color: rgba(255,255,255,0.38);
           white-space: nowrap;
         }
       `}</style>

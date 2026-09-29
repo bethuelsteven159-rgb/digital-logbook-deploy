@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { groupEntriesByDate } from "./entryViews";
 
 export default function CalendarView({ entries, formatLoggedTime }) {
@@ -21,12 +22,32 @@ export default function CalendarView({ entries, formatLoggedTime }) {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
 
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const todayDay = isCurrentMonth ? today.getDate() : null;
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  function isOverdueDay(day, dayEntries) {
+    if (!day) return false;
+    const cellDate = new Date(year, month, day);
+    if (cellDate >= todayStart) return false;
+    return dayEntries.some(
+      (entry) => entry.dueAt && !entry.completedAt && new Date(entry.dueAt) < todayStart,
+    );
+  }
+
   return (
     <div className="calendar-view">
       <div className="calendar-toolbar">
-        <button type="button" className="view-btn" onClick={() => setMonthDate(new Date(year, month - 1, 1))}>Previous</button>
-        <strong>{monthLabel}</strong>
-        <button type="button" className="view-btn" onClick={() => setMonthDate(new Date(year, month + 1, 1))}>Next</button>
+        <button type="button" className="btn btn-ghost btn-small" onClick={() => setMonthDate(new Date(year, month - 1, 1))}>
+          <ChevronLeft size={14} aria-hidden="true" />
+          Previous
+        </button>
+        <strong className="calendar-month-label">{monthLabel}</strong>
+        <button type="button" className="btn btn-ghost btn-small" onClick={() => setMonthDate(new Date(year, month + 1, 1))}>
+          Next
+          <ChevronRight size={14} aria-hidden="true" />
+        </button>
       </div>
       <div className="calendar-grid calendar-weekdays">
         {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day) => <div key={day}>{day}</div>)}
@@ -34,8 +55,14 @@ export default function CalendarView({ entries, formatLoggedTime }) {
       <div className="calendar-grid">
         {cells.map((day, index) => {
           const dayEntries = day ? grouped[keyForDay(day)] || [] : [];
+          const cellClasses = [
+            "calendar-cell",
+            day ? "" : "calendar-cell-empty",
+            day === todayDay ? "calendar-cell-today" : "",
+            isOverdueDay(day, dayEntries) ? "calendar-cell-overdue" : "",
+          ].filter(Boolean).join(" ");
           return (
-            <div className={`calendar-cell ${day ? '' : 'calendar-cell-empty'}`} key={`${day || 'blank'}-${index}`}>
+            <div className={cellClasses} key={`${day || 'blank'}-${index}`}>
               {day && <div className="calendar-day-number">{day}</div>}
               {dayEntries.map((entry) => (
                 <div className="calendar-entry" key={entry.id} title={entry.name}>
