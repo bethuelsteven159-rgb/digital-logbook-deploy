@@ -45,6 +45,7 @@ function serializeEntry(entry) {
     occurredAt: entry.occurredAt,
     dueAt: entry.dueAt,
     completedAt: entry.completedAt,
+    archivedAt: entry.archivedAt || null,
     createdAt: entry.createdAt,
 
     tags: entry.tags || [],
