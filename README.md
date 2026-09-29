@@ -32,7 +32,8 @@ npm run dev
 This starts the client, server, and backend together in one terminal. Then open:
 http://localhost:8443/digital_logbook/
 
-[**loquacious-douhua-3df0b1.netlify.app**](https://loquacious-douhua-3df0b1.netlify.app/) See the [full onboarding guide](https://loquacious-douhua-3df0b1.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
+[****jolly-nougat-0ddd56.netlify.app****](https://jolly-nougat-0ddd56.netlify.app/) See the [full onboarding guide](https://jolly-nougat-0ddd56.netlify.app/#/onboarding) for environment variable setup, database configuration, and troubleshooting.
+
 
 
 ## Team — Code Cells
