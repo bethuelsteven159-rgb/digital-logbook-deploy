@@ -137,6 +137,8 @@ export default function ProjectDetails() {
   const [activeFilterId, setActiveFilterId] = useState(null);
   const [filteredEntries, setFilteredEntries] = useState(null);
   const [entryStatusView, setEntryStatusView] = useState(null);
+  const [entrySearchQuery, setEntrySearchQuery] = useState("");
+  const [entrySearchField, setEntrySearchField] = useState("all");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFromDate, setSearchFromDate] = useState("");
@@ -932,7 +934,7 @@ async function handleShowIncomplete() {
         ? details.entries
         : [];
 
-  const displayEntries = [
+  const baseDisplayEntries = [
     ...pendingEntries.map((item) => ({
       id: item.localId,
       name: item.payload.name,
@@ -945,6 +947,56 @@ async function handleShowIncomplete() {
     })),
     ...entries,
   ];
+
+  const normalizedEntrySearch = entrySearchQuery.trim().toLowerCase();
+
+  function entryMatchesSearch(entry) {
+    if (!normalizedEntrySearch) return true;
+
+    const name = String(entry.name ?? "").toLowerCase();
+    const tags = Array.isArray(entry.tags)
+      ? entry.tags.map((tag) => String(tag ?? "").toLowerCase())
+      : [];
+    const values = Array.isArray(entry.values) ? entry.values : [];
+
+    if (entrySearchField === "name") {
+      return name.includes(normalizedEntrySearch);
+    }
+
+    if (entrySearchField === "tags") {
+      return tags.some((tag) => tag.includes(normalizedEntrySearch));
+    }
+
+    if (entrySearchField.startsWith("custom:")) {
+      const fieldId = entrySearchField.slice("custom:".length);
+      return values.some(
+        (value) =>
+          String(value?.fieldId ?? "") === fieldId &&
+          String(value?.value ?? "").toLowerCase().includes(normalizedEntrySearch),
+      );
+    }
+
+    return [
+      name,
+      ...tags,
+      ...values.flatMap((value) => [
+        String(value?.name ?? "").toLowerCase(),
+        String(value?.value ?? "").toLowerCase(),
+      ]),
+    ].some((part) => part.includes(normalizedEntrySearch));
+  }
+
+  const displayEntries = normalizedEntrySearch
+    ? baseDisplayEntries.filter(entryMatchesSearch)
+    : baseDisplayEntries;
+
+  const entrySearchCountText = normalizedEntrySearch
+    ? `${displayEntries.length} of ${baseDisplayEntries.length} ${
+        baseDisplayEntries.length === 1 ? "entry" : "entries"
+      }`
+    : `${baseDisplayEntries.length} ${
+        baseDisplayEntries.length === 1 ? "entry" : "entries"
+      }`;
 
   const usedFieldIds = new Set(
     entries.flatMap((entry) =>
@@ -1213,7 +1265,60 @@ async function handleShowIncomplete() {
               )}
             </div>
 
-                         <div className="saved-filters-bar">
+            <div className="entry-search-wrap">
+              <select
+                className="entry-search-field"
+                aria-label="Search field"
+                value={entrySearchField}
+                onChange={(event) => setEntrySearchField(event.target.value)}
+              >
+                <option value="all">All fields</option>
+                <option value="name">Entry name</option>
+                <option value="tags">Tags</option>
+                {fields
+                  .filter((field) => field.fieldType !== "computed")
+                  .map((field) => (
+                    <option key={field.id} value={`custom:${field.id}`}>
+                      {field.name}
+                    </option>
+                  ))}
+              </select>
+
+              <div className="entry-simple-search">
+                <span className="entry-simple-search-icon">⌕</span>
+                <input
+                  type="search"
+                  aria-label="Search entries"
+                  placeholder={
+                    entrySearchField === "all"
+                      ? "Search entries by name, tag, or custom field value..."
+                      : "Search selected field..."
+                  }
+                  value={entrySearchQuery}
+                  onChange={(event) => setEntrySearchQuery(event.target.value)}
+                />
+                {entrySearchQuery && (
+                  <button
+                    type="button"
+                    className="entry-simple-search-clear"
+                    onClick={() => setEntrySearchQuery("")}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="entry-search-status" aria-live="polite">
+              <span>{entrySearchCountText}</span>
+              {normalizedEntrySearch && displayEntries.length === 0 && (
+                <span>
+                  No entries match &quot;{entrySearchQuery.trim()}&quot;.
+                </span>
+              )}
+            </div>
+
+            <div className="saved-filters-bar">
   <select
     className="form-select"
     value={activeFilterId || ""}
@@ -1451,43 +1556,57 @@ async function handleShowIncomplete() {
                   <IconEntryLarge />
                 </div>
 
-                <p className="empty-heading">
-                  {searchActive ? "No entries match your search." : "No entries yet."}
-                </p>
-
-                <p className="empty-body">
-                  {searchActive
-                    ? "Try changing or clearing one or more search filters."
-                    : "Add your first entry to start building a record for this project. Each entry captures a piece of your work."}
-                </p>
-
-                {searchActive && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleClearStructuredSearch}
-                  >
-                    Clear search
-                  </button>
-                )}
-
-                {!searchActive && !project.archivedAt && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() =>
-                      setShowEntryModal(true)
-                    }
-                  >
-                    <IconPlus />
-                    Add New Entry
-                  </button>
+                {normalizedEntrySearch ? (
+                  <>
+                    <p className="empty-heading">No matching entries</p>
+                    <p className="empty-body">
+                      No entries match &quot;{entrySearchQuery.trim()}&quot;. Try another search term or clear the search.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setEntrySearchQuery("")}
+                    >
+                      Clear search
+                    </button>
+                  </>
+                ) : searchActive ? (
+                  <>
+                    <p className="empty-heading">No entries match your search.</p>
+                    <p className="empty-body">
+                      Try changing or clearing one or more search filters.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleClearStructuredSearch}
+                    >
+                      Clear search
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="empty-heading">No entries yet.</p>
+                    <p className="empty-body">
+                      Add your first entry to start building a record for this project. Each entry captures a piece of your work.
+                    </p>
+                    {!project.archivedAt && (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => setShowEntryModal(true)}
+                      >
+                        <IconPlus />
+                        Add New Entry
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             ) : entryView === "calendar" ? (
-              <CalendarView entries={entries} formatLoggedTime={formatLoggedTime} />
+              <CalendarView entries={displayEntries} formatLoggedTime={formatLoggedTime} />
             ) : entryView === "board" ? (
-              <BoardView entries={entries} fields={fields} formatLoggedTime={formatLoggedTime} />
+              <BoardView entries={displayEntries} fields={fields} formatLoggedTime={formatLoggedTime} />
             ) : (
               <div className="entries-list">
                 {displayEntries.map((entry) => {
@@ -1912,6 +2031,90 @@ function ProjectStat({
 function ProjectDetailsStyles() {
   return (
     <style>{`
+        .entry-search-wrap {
+          display: grid;
+          grid-template-columns: 190px minmax(0, 1fr);
+          gap: 10px;
+          margin: 14px 0 8px;
+        }
+
+        .entry-search-field {
+          min-height: 44px;
+          padding: 0 12px;
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          border-radius: 8px;
+          background: #ffffff;
+          color: #1e293b;
+          font: inherit;
+          outline: none;
+        }
+
+        .entry-search-field:focus,
+        .entry-simple-search:focus-within {
+          border-color: #4f63d2;
+          box-shadow: 0 0 0 3px rgba(79, 99, 210, 0.1);
+        }
+
+        .entry-simple-search {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 0 14px;
+          min-height: 44px;
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          border-radius: 8px;
+          background: #ffffff;
+        }
+
+        .entry-simple-search-icon {
+          color: #94a3b8;
+          font-size: 20px;
+          line-height: 1;
+        }
+
+        .entry-simple-search input {
+          flex: 1;
+          min-width: 0;
+          border: 0;
+          outline: 0;
+          background: transparent;
+          color: #1e293b;
+          font: inherit;
+        }
+
+        .entry-simple-search input::placeholder {
+          color: #94a3b8;
+        }
+
+        .entry-simple-search-clear {
+          border: 0;
+          background: transparent;
+          color: #4f63d2;
+          font: inherit;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .entry-search-status {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          margin: 0 2px 10px;
+          color: #94a3b8;
+          font-size: 12px;
+        }
+
+        @media (max-width: 720px) {
+          .entry-search-wrap {
+            grid-template-columns: 1fr;
+          }
+
+          .entry-search-status {
+            flex-direction: column;
+            gap: 4px;
+          }
+        }
+
       .app-shell {
         display: flex;
         min-height: 100vh;

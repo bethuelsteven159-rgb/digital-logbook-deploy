@@ -3,6 +3,7 @@ const express = require("express");
 const {
   getProjectDetails,
   searchProjectEntries,
+  searchOwnedEntries,
   createProjectEntry,
   getOutstandingEntries,
   completeProjectEntry,
@@ -21,6 +22,11 @@ const {
 } = require("../controllers/projectDetailsController");
 
 const router = express.Router();
+
+router.get(
+  "/entries/search",
+  searchOwnedEntries,
+);
 
 router.get(
   "/:projectId",
