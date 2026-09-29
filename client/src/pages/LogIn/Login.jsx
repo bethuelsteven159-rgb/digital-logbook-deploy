@@ -14,6 +14,50 @@ export default function Login() {
   return (
     <div className="login-root">
       <div className="login-left">
+        <div className="login-deco" aria-hidden="true">
+          <span
+            className="login-deco-item login-deco-sway"
+            style={{ top: "17%", right: "9%", "--r": "-8deg" }}
+          >
+            <IconNotebook />
+          </span>
+
+          <span
+            className="login-deco-item login-deco-float"
+            style={{ top: "33%", right: "24%", "--r": "34deg", animationDelay: "1.2s" }}
+          >
+            <IconPencil />
+          </span>
+
+          <span
+            className="login-deco-item login-deco-drift"
+            style={{ top: "50%", right: "7%", "--r": "12deg", animationDelay: "0.6s" }}
+          >
+            <IconPaperclip />
+          </span>
+
+          <span
+            className="login-deco-item login-deco-float"
+            style={{ bottom: "24%", right: "15%", "--r": "-22deg", animationDelay: "2s" }}
+          >
+            <IconRuler />
+          </span>
+
+          <span
+            className="login-deco-item login-deco-sway"
+            style={{ bottom: "11%", right: "38%", "--r": "5deg", animationDelay: "1.6s" }}
+          >
+            <IconEraser />
+          </span>
+
+          <span
+            className="login-deco-item login-deco-drift"
+            style={{ bottom: "36%", left: "5%", "--r": "7deg", animationDelay: "2.6s" }}
+          >
+            <IconStickyNote />
+          </span>
+        </div>
+
         <div className="login-left-inner">
           <div className="login-brand">
             <div className="login-logo-mark">
@@ -201,12 +245,24 @@ export default function Login() {
         .login-left {
           width: 420px;
           flex-shrink: 0;
-          background: #1a2340;
+          background: linear-gradient(165deg, #1e2a4d 0%, #1a2340 46%, #141b33 100%);
           display: flex;
           flex-direction: column;
           padding: 48px 48px 36px;
           position: relative;
           overflow: hidden;
+        }
+
+        .login-left::before {
+          content: '';
+          position: absolute;
+          top: -180px;
+          right: -160px;
+          width: 460px;
+          height: 460px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(123, 143, 232, 0.16) 0%, rgba(123, 143, 232, 0) 68%);
+          pointer-events: none;
         }
 
         .login-left-inner {
@@ -216,6 +272,47 @@ export default function Login() {
           gap: 48px;
           position: relative;
           z-index: 1;
+        }
+
+        .login-deco {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .login-deco-item {
+          position: absolute;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255, 255, 255, 0.13);
+          transform: rotate(var(--r, 0deg));
+          will-change: transform;
+        }
+
+        .login-deco-item svg {
+          display: block;
+        }
+
+        .login-deco-float { animation: loginFloat 9s ease-in-out infinite; }
+        .login-deco-drift { animation: loginDrift 12s ease-in-out infinite; }
+        .login-deco-sway { animation: loginSway 10s ease-in-out infinite; }
+
+        @keyframes loginFloat {
+          0%, 100% { transform: rotate(var(--r, 0deg)) translateY(0); }
+          50% { transform: rotate(var(--r, 0deg)) translateY(-9px); }
+        }
+
+        @keyframes loginDrift {
+          0%, 100% { transform: rotate(var(--r, 0deg)) translate(0, 0); }
+          33% { transform: rotate(var(--r, 0deg)) translate(5px, -6px); }
+          66% { transform: rotate(var(--r, 0deg)) translate(-4px, 4px); }
+        }
+
+        @keyframes loginSway {
+          0%, 100% { transform: rotate(calc(var(--r, 0deg) - 2.5deg)); }
+          50% { transform: rotate(calc(var(--r, 0deg) + 2.5deg)); }
         }
 
         .login-brand {
@@ -282,12 +379,15 @@ export default function Login() {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #4f63d2;
+          background: #7b8fe8;
+          box-shadow: 0 0 0 3px rgba(123, 143, 232, 0.16);
         }
 
         .login-left-footer {
           font-size: 12px;
           color: rgba(255,255,255,0.28);
+          position: relative;
+          z-index: 1;
         }
 
         .login-right {
@@ -296,6 +396,20 @@ export default function Login() {
           align-items: center;
           justify-content: center;
           padding: 48px 24px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .login-right::before {
+          content: '';
+          position: absolute;
+          bottom: -220px;
+          left: -140px;
+          width: 520px;
+          height: 520px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(79, 99, 210, 0.06) 0%, rgba(79, 99, 210, 0) 70%);
+          pointer-events: none;
         }
 
         .login-card {
@@ -304,10 +418,12 @@ export default function Login() {
           background: #ffffff;
           border-radius: 16px;
           padding: 44px 40px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid #e9edf5;
           box-shadow:
-            0 4px 24px rgba(0,0,0,0.06),
-            0 1px 4px rgba(0,0,0,0.04);
+            0 1px 2px rgba(16, 24, 40, 0.04),
+            0 12px 40px rgba(16, 24, 40, 0.08);
+          position: relative;
+          z-index: 1;
         }
 
         .login-card-header {
@@ -331,10 +447,10 @@ export default function Login() {
 
         .login-mode-switch {
           display: flex;
-          gap: 4px;
-          background: #f1f5f9;
-          border-radius: 8px;
-          padding: 4px;
+          gap: 3px;
+          background: #eef1f6;
+          border-radius: 10px;
+          padding: 3px;
           margin-bottom: 24px;
         }
 
@@ -343,17 +459,23 @@ export default function Login() {
           border: none;
           background: transparent;
           padding: 9px;
-          border-radius: 6px;
+          border-radius: 8px;
           font-size: 14px;
           font-weight: 500;
           color: #64748b;
           cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .login-mode-switch button.mode-active {
           background: #ffffff;
           color: #1a2340;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+          box-shadow: 0 1px 3px rgba(16, 24, 40, 0.1);
+        }
+
+        .login-mode-switch button:focus-visible {
+          outline: 2px solid #4f63d2;
+          outline-offset: 2px;
         }
 
         .login-divider-label {
@@ -372,7 +494,7 @@ export default function Login() {
           content: '';
           flex: 1;
           height: 1px;
-          background: #e2e8f0;
+          background: #e9edf5;
         }
 
         .login-google-btn-wrap {
@@ -388,13 +510,20 @@ export default function Login() {
           gap: 12px;
           padding: 13px 20px;
           background: #ffffff;
-          border: 1.5px solid #d1d5db;
+          border: 1.5px solid #d8dee9;
           border-radius: 10px;
           font-family: 'Inter', sans-serif;
           font-size: 15px;
           font-weight: 500;
           color: #1e293b;
           cursor: pointer;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        }
+
+        .login-google-btn:hover {
+          border-color: #b7c2d8;
+          background: #fbfcfe;
+          box-shadow: 0 2px 8px rgba(16, 24, 40, 0.07);
         }
 
         .login-google-btn-real {
@@ -432,6 +561,11 @@ export default function Login() {
         .login-terms a {
           color: #64748b;
           text-decoration: underline;
+          transition: color 0.15s ease;
+        }
+
+        .login-terms a:hover {
+          color: #4f63d2;
         }
 
         @media (max-width: 768px) {
@@ -442,6 +576,10 @@ export default function Login() {
           .login-left {
             width: 100%;
             padding: 36px 28px 28px;
+          }
+
+          .login-deco {
+            display: none;
           }
 
           .login-tagline {
@@ -459,6 +597,18 @@ export default function Login() {
 
           .login-card {
             padding: 32px 24px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .login-deco-item {
+            animation: none;
+          }
+
+          .login-mode-switch button,
+          .login-google-btn,
+          .login-terms a {
+            transition: none;
           }
         }
       `}</style>
@@ -485,6 +635,64 @@ function GoogleIcon() {
         d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z"
         fill="#EA4335"
       />
+    </svg>
+  );
+}
+
+function IconPencil() {
+  return (
+    <svg width="54" height="54" viewBox="0 0 54 54" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 44l2.6-8.4L38.2 9.9a3.4 3.4 0 0 1 4.8 0l1.1 1.1a3.4 3.4 0 0 1 0 4.8L18.4 42.4 10 44z" />
+      <path d="M33.5 14.6l5.9 5.9" />
+      <path d="M10 44l4.2-1.4" opacity="0.6" />
+    </svg>
+  );
+}
+
+function IconNotebook() {
+  return (
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="10" y="6" width="32" height="40" rx="3.5" />
+      <path d="M17 6v40" opacity="0.7" />
+      <path d="M23 16h12M23 24h12M23 32h8" opacity="0.7" />
+      <path d="M6 13h6M6 26h6M6 39h6" opacity="0.9" />
+    </svg>
+  );
+}
+
+function IconRuler() {
+  return (
+    <svg width="96" height="34" viewBox="0 0 96 34" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="9" width="90" height="16" rx="3" />
+      <path d="M15 9v7M25 9v5M35 9v7M45 9v5M55 9v7M65 9v5M75 9v7" opacity="0.8" />
+    </svg>
+  );
+}
+
+function IconPaperclip() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.5 10.5l-8.6 8.6a3.2 3.2 0 0 0 4.5 4.5l8.6-8.6a6.2 6.2 0 0 0-8.8-8.8l-8.6 8.6a9.2 9.2 0 0 0 13 13l8.3-8.3" />
+    </svg>
+  );
+}
+
+function IconEraser() {
+  return (
+    <svg width="46" height="46" viewBox="0 0 46 46" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 34l-8.6-8.6a2.5 2.5 0 0 1 0-3.5L24.3 6a2.5 2.5 0 0 1 3.5 0l8.6 8.6a2.5 2.5 0 0 1 0 3.5L25 29.5" />
+      <path d="M12 29.5L25 29.5" opacity="0.7" />
+      <path d="M10 39h26" opacity="0.9" />
+    </svg>
+  );
+}
+
+function IconStickyNote() {
+  return (
+    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 8h24l6 7v24a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z" />
+      <path d="M34 8v7h7" />
+      <path d="M17 22h16M17 29h16M17 36h9" opacity="0.7" />
     </svg>
   );
 }
