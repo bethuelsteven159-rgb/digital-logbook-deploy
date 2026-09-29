@@ -259,6 +259,26 @@ export async function searchProjectEntries(
   );
 }
 
+export async function searchOwnedEntries(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.projectId) params.set("projectId", filters.projectId);
+  if (filters.query?.trim()) params.set("q", filters.query.trim());
+  if (filters.fromDate) params.set("fromDate", filters.fromDate);
+  if (filters.toDate) params.set("toDate", filters.toDate);
+  if (filters.minDuration !== undefined && filters.minDuration !== null && filters.minDuration !== "") params.set("minDuration", filters.minDuration);
+  if (filters.maxDuration !== undefined && filters.maxDuration !== null && filters.maxDuration !== "") params.set("maxDuration", filters.maxDuration);
+  if (typeof filters.completed === "boolean") params.set("completed", String(filters.completed));
+  if (filters.sort) params.set("sort", filters.sort);
+
+  const customFields = Array.isArray(filters.customFields)
+    ? filters.customFields.filter((filter) => filter?.fieldId && String(filter.value ?? "").trim())
+    : [];
+  if (customFields.length) params.set("customFields", JSON.stringify(customFields));
+
+  const query = params.toString();
+  return request(`/api/projects/entries/search${query ? `?${query}` : ""}`);
+}
+
 export async function createProjectEntry(
   projectId,
   payload,

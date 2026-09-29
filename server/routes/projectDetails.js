@@ -5,6 +5,7 @@ const {
   getAiProjectProgress,
   getAiProjectSpeech,
   searchProjectEntries,
+  searchOwnedEntries,
   createProjectEntry,
   getOutstandingEntries,
   completeProjectEntry,
@@ -25,6 +26,11 @@ const {
 );
 
 const router = express.Router();
+
+router.get(
+  "/entries/search",
+  searchOwnedEntries,
+);
 
 router.get(
   "/:projectId",
