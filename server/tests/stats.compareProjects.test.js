@@ -208,10 +208,7 @@ test("compare-projects 404s when the second project is not owned by the user", a
   );
 });
 
-test("compare-projects without a logged-in user finds no projects and runs no summary query", async () => {
-  // NOTE: this route has no explicit 401 check (unlike /dashboard); with no
-  // user, the ownership lookup fails and it answers 404. If a 401 is added
-  // later, update this test.
+test("compare-projects rejects unauthenticated requests with 401 and runs no queries", async () => {
   const seen = [];
   const mock = compareDb({
     owned: { p1: "user-1", p2: "user-1" },
@@ -221,12 +218,13 @@ test("compare-projects without a logged-in user finds no projects and runs no su
 
   await withDb(mock, () =>
     withServer(null, async (base) => {
-      const { status } = await get(`${base}/compare-projects?projectId=p1&otherProjectId=p2`);
-      assert.equal(status, 404);
+      const { status, body } = await get(`${base}/compare-projects?projectId=p1&otherProjectId=p2`);
+      assert.equal(status, 401);
+      assert.equal(body.error, "Authentication required");
     }),
   );
 
-  assert.equal(seen.filter((q) => q.sql.includes("FROM entries")).length, 0);
+  assert.equal(seen.length, 0);
 });
 
 test("compare-projects returns 500 with the error message when the query fails", async () => {

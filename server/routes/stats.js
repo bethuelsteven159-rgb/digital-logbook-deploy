@@ -336,6 +336,11 @@ async function getProjectSummary(projectId) {
 router.get("/compare-projects", async (req, res) => {
   try {
     const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
     const { projectId, otherProjectId } = req.query;
 
     if (!projectId || !otherProjectId) {
