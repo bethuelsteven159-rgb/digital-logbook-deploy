@@ -1,0 +1,29 @@
+Rename this file to a numbered .sql migration when you are ready to apply a change.
+
+Example filename:
+002_add_entry_tags.sql
+
+Rules for this migration path:
+- Forward-only.
+- Do not DROP schemas or tables.
+- Do not TRUNCATE.
+- Do not DROP columns.
+- Prefer additive, backwards-compatible changes.
+- Use IF NOT EXISTS where PostgreSQL supports it.
+- Never edit a migration after it has been applied; create a new one.
+
+Example:
+
+BEGIN;
+
+ALTER TABLE entries
+  ADD COLUMN IF NOT EXISTS example_column TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_entries_example_column
+  ON entries(example_column);
+
+COMMIT;
+
+Note:
+The migration runner already wraps each migration file in a transaction, so BEGIN/COMMIT
+inside the file is optional. Usually omit them and let the runner own the transaction.
