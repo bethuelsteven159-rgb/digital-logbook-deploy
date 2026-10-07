@@ -1,3 +1,4 @@
+import NotificationsPanel from "./NotificationsPanel";
 import {
   useCallback,
   useEffect,
@@ -634,6 +635,8 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        <NotificationsPanel />
       </main>
 
       {showOnboarding && (

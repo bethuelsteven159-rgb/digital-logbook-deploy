@@ -29,11 +29,11 @@ before(async () => {
     res.status(200).json({ success: true, userId: req.user.id || req.user.sub });
   });
   mockedRoutes.set('projects', projectRouter);
-  const remindersRouter = express.Router();
-  remindersRouter.get('/', (req, res) => {
+  const notificationsRouter = express.Router();
+  notificationsRouter.get('/', (req, res) => {
     res.status(200).json({ mounted: true, userId: req.user.id || req.user.sub });
   });
-  mockedRoutes.set('reminders', remindersRouter);
+  mockedRoutes.set('notifications', notificationsRouter);
 
   const routeNames = [
     'authRoutes',
@@ -47,7 +47,7 @@ before(async () => {
     'external',
     'logbookTransfer',
     'dashboard',
-    'reminders',
+    'notifications',
   ];
 
   const cachedRoutes = routeNames.map((name) => {
@@ -136,13 +136,13 @@ test('global error handler preserves an explicit status code and message', async
   }
 });
 
-test('GET /api/reminders is mounted and requires authentication', async () => {
-  const res = await fetch(`${baseUrl}/api/reminders`);
+test('GET /api/notifications is mounted and requires authentication', async () => {
+  const res = await fetch(`${baseUrl}/api/notifications`);
   assert.equal(res.status, 401);
 });
 
-test('GET /api/reminders is reachable with a valid token', async () => {
-  const res = await fetch(`${baseUrl}/api/reminders`, {
+test('GET /api/notifications is reachable with a valid token', async () => {
+  const res = await fetch(`${baseUrl}/api/notifications`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   assert.equal(res.status, 200);
