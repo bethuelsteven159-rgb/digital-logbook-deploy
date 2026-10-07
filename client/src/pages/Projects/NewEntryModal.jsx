@@ -724,7 +724,7 @@ export default function NewEntryModal({
                         {entry.projectName && (
                           <small>
                             {" "}
-                            Â· {entry.projectName}
+                            · {entry.projectName}
                           </small>
                         )}
                       </span>
