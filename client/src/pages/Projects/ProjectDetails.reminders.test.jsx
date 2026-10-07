@@ -148,7 +148,7 @@ describe('ProjectDetails reminders (US-A07 happy path)', () => {
       expect(apiMocks.markEntryComplete).toHaveBeenCalledWith('project-1', 'entry-overdue');
     });
 
-    expect(await screen.findByText('Completed')).toBeInTheDocument();
+    expect((await screen.findAllByText('Completed')).length).toBeGreaterThan(0);
     expect(screen.queryByText(/^Overdue . was due/)).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Mark as complete' })).toHaveLength(1);
   });
@@ -165,14 +165,16 @@ describe('ProjectDetails reminders (US-A07 happy path)', () => {
 
     expect((await screen.findAllByText('Future report')).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole('button', { name: 'Show overdue only' }));
+    await user.click(screen.getByRole('button', { name: 'Overdue' }));
 
-    expect(await screen.findByRole('button', { name: 'Showing overdue only' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Overdue', pressed: true }),
+    ).toBeInTheDocument();
     expect(apiMocks.fetchOutstandingEntries).toHaveBeenCalledWith('project-1');
     expect(screen.queryAllByText('Future report')).toHaveLength(0);
     expect(screen.getAllByText('Overdue report').length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole('button', { name: 'Showing overdue only' }));
+    await user.click(screen.getByRole('button', { name: 'Overdue' }));
 
     expect((await screen.findAllByText('Future report')).length).toBeGreaterThan(0);
   });

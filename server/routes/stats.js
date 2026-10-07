@@ -15,6 +15,15 @@ function createHttpError(statusCode, message) {
   return error;
 }
 
+function isValidTimezone(timezone) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function getOwnedProject(projectId, userId) {
   const result = await db.query(
     `
@@ -221,6 +230,28 @@ async function getCompareStatistics(
     [projectId, firstField.id, secondField.id],
   );
 
+  // Per-entry pairs (capped) so the client can draw a scatter plot.
+  const pointsResult = await db.query(
+    `
+      SELECT
+        first_value.value_number::float AS x,
+        second_value.value_number::float AS y
+      FROM entries e
+      INNER JOIN entry_field_values first_value
+        ON first_value.entry_id = e.id
+       AND first_value.field_id = $2
+      INNER JOIN entry_field_values second_value
+        ON second_value.entry_id = e.id
+       AND second_value.field_id = $3
+      WHERE e.project_id = $1
+        AND first_value.value_number IS NOT NULL
+        AND second_value.value_number IS NOT NULL
+      ORDER BY e.occurred_at ASC
+      LIMIT 200
+    `,
+    [projectId, firstField.id, secondField.id],
+  );
+
   const row = result.rows[0];
 
   return {
@@ -246,6 +277,10 @@ async function getCompareStatistics(
       total: Number(row.second_total),
       average: Number(row.second_average),
     },
+    // Filter guards against mocks/rows that carry no x/y at all.
+    points: pointsResult.rows
+      .filter((point) => point.x != null && point.y != null)
+      .map((point) => ({ x: Number(point.x), y: Number(point.y) })),
   };
 }
 
@@ -649,9 +684,134 @@ router.delete(
   },
 );
 
+/*
+ * Activity overview for the Stats charts.
+ *
+ * GET /api/stats/activity?days=30&timezone=Africa/Johannesburg
+ */
+const DEFAULT_TIMEZONE = "Africa/Johannesburg";
+
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const DAILY_ACTIVITY_SQL = `
+  SELECT
+    (occurred_at AT TIME ZONE $2)::date::text AS day,
+    COALESCE(SUM(duration_minutes), 0)::int AS minutes,
+    COUNT(*)::int AS entries
+  FROM entries
+  WHERE created_by_id = $1
+    AND archived_at IS NULL
+    AND occurred_at >= now() - make_interval(days => $3::int)
+  GROUP BY day
+  ORDER BY day
+`;
+
+const WEEKDAY_ACTIVITY_SQL = `
+  SELECT
+    EXTRACT(DOW FROM occurred_at AT TIME ZONE $2)::int AS weekday,
+    COALESCE(SUM(duration_minutes), 0)::int AS minutes,
+    COUNT(*)::int AS entries
+  FROM entries
+  WHERE created_by_id = $1
+    AND archived_at IS NULL
+  GROUP BY weekday
+`;
+
+const PROJECT_ACTIVITY_SQL = `
+  SELECT
+    p.id,
+    p.name,
+    COALESCE(SUM(e.duration_minutes), 0)::int AS minutes,
+    COUNT(e.id)::int AS entries
+  FROM projects p
+  LEFT JOIN entries e
+    ON e.project_id = p.id
+   AND e.archived_at IS NULL
+  WHERE p.owner_id = $1
+    AND p.archived_at IS NULL
+  GROUP BY p.id, p.name
+  ORDER BY minutes DESC, p.name ASC
+`;
+
+router.get("/activity", async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const timezone =
+      typeof req.query.timezone === "string" && req.query.timezone
+        ? req.query.timezone
+        : DEFAULT_TIMEZONE;
+
+    if (!isValidTimezone(timezone)) {
+      return res.status(400).json({ error: "Invalid timezone" });
+    }
+
+    const parsedDays = Number.parseInt(req.query.days, 10);
+    const days = Number.isFinite(parsedDays)
+      ? Math.min(Math.max(parsedDays, 1), 365)
+      : 30;
+
+    const [dailyResult, weekdayResult, projectResult] = await Promise.all([
+      db.query(DAILY_ACTIVITY_SQL, [userId, timezone, days]),
+      db.query(WEEKDAY_ACTIVITY_SQL, [userId, timezone]),
+      db.query(PROJECT_ACTIVITY_SQL, [userId]),
+    ]);
+
+    const daily = dailyResult.rows.map((row) => ({
+      date: row.day,
+      minutes: Number(row.minutes),
+      entries: Number(row.entries),
+    }));
+
+    const weekdays = WEEKDAY_LABELS.map((label, index) => {
+      const row = weekdayResult.rows.find(
+        (candidate) => Number(candidate.weekday) === index,
+      );
+
+      return {
+        weekday: index,
+        label,
+        minutes: row ? Number(row.minutes) : 0,
+        entries: row ? Number(row.entries) : 0,
+      };
+    });
+
+    const projects = projectResult.rows.map((row) => ({
+      projectId: row.id,
+      name: row.name,
+      minutes: Number(row.minutes),
+      entries: Number(row.entries),
+    }));
+
+    return res.json({
+      range: { days, timezone },
+      daily,
+      weekdays,
+      projects,
+      totals: {
+        minutes: daily.reduce((sum, day) => sum + day.minutes, 0),
+        entries: daily.reduce((sum, day) => sum + day.entries, 0),
+      },
+    });
+  } catch (err) {
+    console.error("Activity statistics error:", err);
+
+    return res.status(500).json({
+      error: "Failed to calculate activity statistics",
+    });
+  }
+});
+
 module.exports = router;
 
 module.exports.getTotalStatistics = getTotalStatistics;
 module.exports.getGroupStatistics = getGroupStatistics;
 module.exports.getCompareStatistics = getCompareStatistics;
 module.exports.getPlotStatistics = getPlotStatistics;
+module.exports.DAILY_ACTIVITY_SQL = DAILY_ACTIVITY_SQL;
+module.exports.WEEKDAY_ACTIVITY_SQL = WEEKDAY_ACTIVITY_SQL;
+module.exports.PROJECT_ACTIVITY_SQL = PROJECT_ACTIVITY_SQL;

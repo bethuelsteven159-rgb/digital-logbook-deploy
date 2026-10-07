@@ -371,7 +371,9 @@ async function main() {
   } catch (error) {
     try {
       await query(client, "ROLLBACK;");
-    } catch (_) {}
+    } catch (_) {
+      // best-effort rollback; the original failure is reported below
+    }
 
     console.error("\nDATABASE INSPECTION FAILED:");
     console.error(error);

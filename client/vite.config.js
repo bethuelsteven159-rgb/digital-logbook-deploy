@@ -23,11 +23,19 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './test/setup.js',
     css: false,
+    // Coverage instrumentation roughly doubles DOM-heavy test runtimes;
+    // the heaviest flows need more than the 5s default.
+    testTimeout: 15000,
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
       'src/pages/Projects/entryViews.test.js',
       'src/pages/Profile/profilePicture.test.js',
     ],
+    coverage: {
+      // 'lcov' writes coverage/lcov.info, which the CI workflow
+      // uploads to Codecov alongside coverage-node/lcov.info (c8).
+      reporter: ['text', 'html', 'clover', 'json', 'lcov'],
+    },
   },
 });

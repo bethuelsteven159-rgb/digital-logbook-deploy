@@ -1696,7 +1696,6 @@ async function searchProjectEntriesService({ projectId, userId, filters = {} }) 
       : "newest",
     customFields: Array.isArray(filters.customFields) ? filters.customFields : [],
     archived: filters.archived === true || filters.archived === "true",
-    archived: filters.archived === true || filters.archived === "true",
   };
 
   if (normalized.minDuration !== null && (!Number.isFinite(normalized.minDuration) || normalized.minDuration < 0)) {

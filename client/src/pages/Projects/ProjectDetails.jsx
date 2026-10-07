@@ -1465,7 +1465,7 @@ async function handleUnarchiveEntry(entry) {
                   id="entry-search-query"
                   className="form-input structured-search-main-input"
                   type="search"
-                  aria-label="Search entries"
+                  aria-label="Search entries with filters"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search entries..."

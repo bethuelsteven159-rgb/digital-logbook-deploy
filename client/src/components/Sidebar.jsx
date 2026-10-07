@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
+import NotificationsBell from './NotificationsBell.jsx';
 
 const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: IconDashboard },
@@ -40,6 +41,9 @@ export default function Sidebar({ collapsed, onToggle }) {
             {!collapsed && <span className="sidebar-nav-label">{label}</span>}
           </NavLink>))}
       </nav>
+
+      {/* Notifications */}
+      <NotificationsBell collapsed={collapsed} />
 
       {/* Profile */}
       <button className="sidebar-profile" onClick={() => navigate("/profile")} title={collapsed ? "Profile" : undefined} aria-label="Go to profile">
