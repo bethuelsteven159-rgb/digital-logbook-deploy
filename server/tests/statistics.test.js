@@ -138,6 +138,8 @@ test("compare statistics compares two numeric fields", async () => {
         total: 45,
         average: 15,
       },
+      // the shared mock returns no x/y rows, so no scatter points survive
+      points: [],
     });
   } finally {
     db.query = originalQuery;
