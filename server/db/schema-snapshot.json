@@ -1,0 +1,2094 @@
+{
+  "generatedAt": "2026-09-29T12:24:04.603Z",
+  "target": {
+    "host": "ep-broad-lab-b5cbtyl7-pooler.c-7.us-east-2.aws.neon.tech",
+    "database": "neondb",
+    "user": "neondb_owner"
+  },
+  "tables": [
+    {
+      "table_name": "automation_rules"
+    },
+    {
+      "table_name": "custom_statistics"
+    },
+    {
+      "table_name": "entries"
+    },
+    {
+      "table_name": "entry_checklist_items"
+    },
+    {
+      "table_name": "entry_entry_references"
+    },
+    {
+      "table_name": "entry_field_values"
+    },
+    {
+      "table_name": "entry_links"
+    },
+    {
+      "table_name": "entry_project_references"
+    },
+    {
+      "table_name": "entry_revisions"
+    },
+    {
+      "table_name": "playing_with_neon"
+    },
+    {
+      "table_name": "project_fields"
+    },
+    {
+      "table_name": "project_project_references"
+    },
+    {
+      "table_name": "projects"
+    },
+    {
+      "table_name": "saved_filters"
+    },
+    {
+      "table_name": "users"
+    }
+  ],
+  "columns": [
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 2,
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 3,
+      "column_name": "owner_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 4,
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 5,
+      "column_name": "condition_field_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 6,
+      "column_name": "condition_operator",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 7,
+      "column_name": "condition_value",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 8,
+      "column_name": "action_type",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 9,
+      "column_name": "action_value",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 10,
+      "column_name": "enabled",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 11,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "automation_rules",
+      "ordinal_position": 12,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "custom_statistics",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "custom_statistics",
+      "ordinal_position": 2,
+      "column_name": "owner_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "custom_statistics",
+      "ordinal_position": 3,
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "custom_statistics",
+      "ordinal_position": 4,
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "custom_statistics",
+      "ordinal_position": 5,
+      "column_name": "expression",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "custom_statistics",
+      "ordinal_position": 6,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "custom_statistics",
+      "ordinal_position": 7,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 2,
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 3,
+      "column_name": "created_by_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 4,
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 5,
+      "column_name": "duration_minutes",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 6,
+      "column_name": "occurred_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 7,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 8,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 9,
+      "column_name": "due_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 10,
+      "column_name": "completed_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 11,
+      "column_name": "tags",
+      "data_type": "ARRAY",
+      "udt_name": "_text",
+      "is_nullable": "NO",
+      "column_default": "'{}'::text[]"
+    },
+    {
+      "table_name": "entries",
+      "ordinal_position": 12,
+      "column_name": "archived_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "ordinal_position": 2,
+      "column_name": "entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "ordinal_position": 3,
+      "column_name": "text",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "ordinal_position": 4,
+      "column_name": "completed",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "ordinal_position": 5,
+      "column_name": "position",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "ordinal_position": 6,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "ordinal_position": 7,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "ordinal_position": 2,
+      "column_name": "entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_entry_references",
+      "ordinal_position": 3,
+      "column_name": "referenced_entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_entry_references",
+      "ordinal_position": 4,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entry_field_values",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "entry_field_values",
+      "ordinal_position": 2,
+      "column_name": "entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_field_values",
+      "ordinal_position": 3,
+      "column_name": "field_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_field_values",
+      "ordinal_position": 4,
+      "column_name": "value_text",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_field_values",
+      "ordinal_position": 5,
+      "column_name": "value_number",
+      "data_type": "numeric",
+      "udt_name": "numeric",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_field_values",
+      "ordinal_position": 6,
+      "column_name": "value_date",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_field_values",
+      "ordinal_position": 7,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entry_links",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "entry_links",
+      "ordinal_position": 2,
+      "column_name": "source_entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_links",
+      "ordinal_position": 3,
+      "column_name": "target_entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_links",
+      "ordinal_position": 4,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entry_project_references",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "entry_project_references",
+      "ordinal_position": 2,
+      "column_name": "entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_project_references",
+      "ordinal_position": 3,
+      "column_name": "referenced_project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_project_references",
+      "ordinal_position": 4,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "entry_revisions",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "entry_revisions",
+      "ordinal_position": 2,
+      "column_name": "entry_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_revisions",
+      "ordinal_position": 3,
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_revisions",
+      "ordinal_position": 4,
+      "column_name": "changed_by_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_revisions",
+      "ordinal_position": 5,
+      "column_name": "snapshot",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "entry_revisions",
+      "ordinal_position": 6,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "playing_with_neon",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "nextval('playing_with_neon_id_seq'::regclass)"
+    },
+    {
+      "table_name": "playing_with_neon",
+      "ordinal_position": 2,
+      "column_name": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "playing_with_neon",
+      "ordinal_position": 3,
+      "column_name": "value",
+      "data_type": "real",
+      "udt_name": "float4",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 2,
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 3,
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 4,
+      "column_name": "field_type",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 5,
+      "column_name": "position",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 6,
+      "column_name": "required",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 7,
+      "column_name": "archived_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 8,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 9,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "project_fields",
+      "ordinal_position": 10,
+      "column_name": "formula",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "project_project_references",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "project_project_references",
+      "ordinal_position": 2,
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "project_project_references",
+      "ordinal_position": 3,
+      "column_name": "referenced_project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "project_project_references",
+      "ordinal_position": 4,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 2,
+      "column_name": "owner_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 3,
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 4,
+      "column_name": "description",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 5,
+      "column_name": "archived_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 6,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 7,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 8,
+      "column_name": "start_date",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "projects",
+      "ordinal_position": 9,
+      "column_name": "end_date",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "saved_filters",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "saved_filters",
+      "ordinal_position": 2,
+      "column_name": "owner_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "saved_filters",
+      "ordinal_position": 3,
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "saved_filters",
+      "ordinal_position": 4,
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "saved_filters",
+      "ordinal_position": 5,
+      "column_name": "criteria",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "saved_filters",
+      "ordinal_position": 6,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "saved_filters",
+      "ordinal_position": 7,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 1,
+      "column_name": "id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 2,
+      "column_name": "google_id",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 3,
+      "column_name": "name",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 4,
+      "column_name": "email",
+      "data_type": "character varying",
+      "udt_name": "varchar",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 5,
+      "column_name": "avatar_url",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 6,
+      "column_name": "bio",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 7,
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 8,
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "ordinal_position": 9,
+      "column_name": "dashboard_layout",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_action_type_check",
+      "constraint_type": "c",
+      "definition": "CHECK (action_type::text = 'add_tag'::text)"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_action_type_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL action_type"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_action_value_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL action_value"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_condition_field_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (condition_field_id) REFERENCES project_fields(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_condition_field_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL condition_field_id"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_condition_operator_check",
+      "constraint_type": "c",
+      "definition": "CHECK (condition_operator::text = ANY (ARRAY['equals'::character varying, 'not_equals'::character varying, 'contains'::character varying, 'greater_than'::character varying, 'less_than'::character varying]::text[]))"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_condition_operator_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL condition_operator"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_enabled_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL enabled"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_owner_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_owner_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL owner_id"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL project_id"
+    },
+    {
+      "table_name": "automation_rules",
+      "constraint_name": "automation_rules_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_expression_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL expression"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_owner_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_owner_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL owner_id"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL project_id"
+    },
+    {
+      "table_name": "custom_statistics",
+      "constraint_name": "custom_statistics_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_created_by_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_created_by_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_by_id"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_duration_minutes_check",
+      "constraint_type": "c",
+      "definition": "CHECK (duration_minutes >= 0 AND duration_minutes <= 10080)"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_duration_minutes_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL duration_minutes"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_occurred_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL occurred_at"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL project_id"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_tags_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL tags"
+    },
+    {
+      "table_name": "entries",
+      "constraint_name": "entries_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_completed_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL completed"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL entry_id"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_position_check",
+      "constraint_type": "c",
+      "definition": "CHECK (\"position\" >= 0)"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_position_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL \"position\""
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_text_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL text"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "constraint_name": "entry_checklist_items_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "chk_entry_entry_reference_not_self",
+      "constraint_type": "c",
+      "definition": "CHECK (entry_id <> referenced_entry_id)"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "entry_entry_references_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "entry_entry_references_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "entry_entry_references_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL entry_id"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "entry_entry_references_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "entry_entry_references_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "entry_entry_references_referenced_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (referenced_entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "entry_entry_references_referenced_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL referenced_entry_id"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "constraint_name": "uq_entry_entry_reference",
+      "constraint_type": "u",
+      "definition": "UNIQUE (entry_id, referenced_entry_id)"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "entry_field_values_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "entry_field_values_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "entry_field_values_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL entry_id"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "entry_field_values_field_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (field_id) REFERENCES project_fields(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "entry_field_values_field_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL field_id"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "entry_field_values_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "entry_field_values_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "entry_field_values",
+      "constraint_name": "uq_entry_field_value",
+      "constraint_type": "u",
+      "definition": "UNIQUE (entry_id, field_id)"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "chk_entry_link_not_self",
+      "constraint_type": "c",
+      "definition": "CHECK (source_entry_id <> target_entry_id)"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "entry_links_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "entry_links_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "entry_links_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "entry_links_source_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (source_entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "entry_links_source_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL source_entry_id"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "entry_links_target_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (target_entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_links",
+      "constraint_name": "entry_links_target_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL target_entry_id"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "entry_project_references_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "entry_project_references_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "entry_project_references_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL entry_id"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "entry_project_references_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "entry_project_references_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "entry_project_references_referenced_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (referenced_project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "entry_project_references_referenced_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL referenced_project_id"
+    },
+    {
+      "table_name": "entry_project_references",
+      "constraint_name": "uq_entry_project_reference",
+      "constraint_type": "u",
+      "definition": "UNIQUE (entry_id, referenced_project_id)"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_changed_by_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (changed_by_id) REFERENCES users(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_changed_by_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL changed_by_id"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_entry_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_entry_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL entry_id"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL project_id"
+    },
+    {
+      "table_name": "entry_revisions",
+      "constraint_name": "entry_revisions_snapshot_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL snapshot"
+    },
+    {
+      "table_name": "playing_with_neon",
+      "constraint_name": "playing_with_neon_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "playing_with_neon",
+      "constraint_name": "playing_with_neon_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "playing_with_neon",
+      "constraint_name": "playing_with_neon_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_field_type_check",
+      "constraint_type": "c",
+      "definition": "CHECK (field_type::text = ANY (ARRAY['short_text'::character varying::text, 'long_text'::character varying::text, 'number'::character varying::text, 'date'::character varying::text, 'computed'::character varying::text]))"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_field_type_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL field_type"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_position_check",
+      "constraint_type": "c",
+      "definition": "CHECK (\"position\" >= 0)"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_position_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL \"position\""
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL project_id"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_required_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL required"
+    },
+    {
+      "table_name": "project_fields",
+      "constraint_name": "project_fields_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "chk_project_project_reference_not_self",
+      "constraint_type": "c",
+      "definition": "CHECK (project_id <> referenced_project_id)"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "project_project_references_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "project_project_references_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "project_project_references_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "project_project_references_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "project_project_references_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL project_id"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "project_project_references_referenced_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (referenced_project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "project_project_references_referenced_project_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL referenced_project_id"
+    },
+    {
+      "table_name": "project_project_references",
+      "constraint_name": "uq_project_project_reference",
+      "constraint_type": "u",
+      "definition": "UNIQUE (project_id, referenced_project_id)"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_date_range_check",
+      "constraint_type": "c",
+      "definition": "CHECK (start_date IS NULL OR end_date IS NULL OR end_date >= start_date)"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_owner_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_owner_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL owner_id"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "projects",
+      "constraint_name": "projects_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_criteria_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL criteria"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_owner_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_owner_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL owner_id"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_project_id_fkey",
+      "constraint_type": "f",
+      "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "saved_filters",
+      "constraint_name": "saved_filters_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_created_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_email_key",
+      "constraint_type": "u",
+      "definition": "UNIQUE (email)"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_email_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL email"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_google_id_key",
+      "constraint_type": "u",
+      "definition": "UNIQUE (google_id)"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_google_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL google_id"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_id_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_name_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_pkey",
+      "constraint_type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "users",
+      "constraint_name": "users_updated_at_not_null",
+      "constraint_type": "n",
+      "definition": "NOT NULL updated_at"
+    }
+  ],
+  "indexes": [
+    {
+      "table_name": "automation_rules",
+      "index_name": "automation_rules_pkey",
+      "definition": "CREATE UNIQUE INDEX automation_rules_pkey ON public.automation_rules USING btree (id)"
+    },
+    {
+      "table_name": "automation_rules",
+      "index_name": "idx_automation_rules_project",
+      "definition": "CREATE INDEX idx_automation_rules_project ON public.automation_rules USING btree (project_id)"
+    },
+    {
+      "table_name": "custom_statistics",
+      "index_name": "custom_statistics_pkey",
+      "definition": "CREATE UNIQUE INDEX custom_statistics_pkey ON public.custom_statistics USING btree (id)"
+    },
+    {
+      "table_name": "custom_statistics",
+      "index_name": "idx_custom_statistics_owner",
+      "definition": "CREATE INDEX idx_custom_statistics_owner ON public.custom_statistics USING btree (owner_id)"
+    },
+    {
+      "table_name": "custom_statistics",
+      "index_name": "idx_custom_statistics_project",
+      "definition": "CREATE INDEX idx_custom_statistics_project ON public.custom_statistics USING btree (project_id)"
+    },
+    {
+      "table_name": "entries",
+      "index_name": "entries_pkey",
+      "definition": "CREATE UNIQUE INDEX entries_pkey ON public.entries USING btree (id)"
+    },
+    {
+      "table_name": "entries",
+      "index_name": "idx_entries_active_project_occurred",
+      "definition": "CREATE INDEX idx_entries_active_project_occurred ON public.entries USING btree (project_id, occurred_at DESC) WHERE (archived_at IS NULL)"
+    },
+    {
+      "table_name": "entries",
+      "index_name": "idx_entries_active_totals",
+      "definition": "CREATE INDEX idx_entries_active_totals ON public.entries USING btree (project_id) INCLUDE (duration_minutes) WHERE (archived_at IS NULL)"
+    },
+    {
+      "table_name": "entries",
+      "index_name": "idx_entries_archived_project",
+      "definition": "CREATE INDEX idx_entries_archived_project ON public.entries USING btree (project_id, archived_at DESC) WHERE (archived_at IS NOT NULL)"
+    },
+    {
+      "table_name": "entries",
+      "index_name": "idx_entries_project",
+      "definition": "CREATE INDEX idx_entries_project ON public.entries USING btree (project_id)"
+    },
+    {
+      "table_name": "entries",
+      "index_name": "idx_entries_tags",
+      "definition": "CREATE INDEX idx_entries_tags ON public.entries USING gin (tags)"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "index_name": "entry_checklist_items_pkey",
+      "definition": "CREATE UNIQUE INDEX entry_checklist_items_pkey ON public.entry_checklist_items USING btree (id)"
+    },
+    {
+      "table_name": "entry_checklist_items",
+      "index_name": "idx_entry_checklist_items_entry",
+      "definition": "CREATE INDEX idx_entry_checklist_items_entry ON public.entry_checklist_items USING btree (entry_id, \"position\")"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "index_name": "entry_entry_references_pkey",
+      "definition": "CREATE UNIQUE INDEX entry_entry_references_pkey ON public.entry_entry_references USING btree (id)"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "index_name": "idx_entry_entry_references_entry",
+      "definition": "CREATE INDEX idx_entry_entry_references_entry ON public.entry_entry_references USING btree (entry_id)"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "index_name": "idx_entry_entry_references_referenced",
+      "definition": "CREATE INDEX idx_entry_entry_references_referenced ON public.entry_entry_references USING btree (referenced_entry_id)"
+    },
+    {
+      "table_name": "entry_entry_references",
+      "index_name": "uq_entry_entry_reference",
+      "definition": "CREATE UNIQUE INDEX uq_entry_entry_reference ON public.entry_entry_references USING btree (entry_id, referenced_entry_id)"
+    },
+    {
+      "table_name": "entry_field_values",
+      "index_name": "entry_field_values_pkey",
+      "definition": "CREATE UNIQUE INDEX entry_field_values_pkey ON public.entry_field_values USING btree (id)"
+    },
+    {
+      "table_name": "entry_field_values",
+      "index_name": "idx_values_entry",
+      "definition": "CREATE INDEX idx_values_entry ON public.entry_field_values USING btree (entry_id)"
+    },
+    {
+      "table_name": "entry_field_values",
+      "index_name": "idx_values_field",
+      "definition": "CREATE INDEX idx_values_field ON public.entry_field_values USING btree (field_id)"
+    },
+    {
+      "table_name": "entry_field_values",
+      "index_name": "uq_entry_field_value",
+      "definition": "CREATE UNIQUE INDEX uq_entry_field_value ON public.entry_field_values USING btree (entry_id, field_id)"
+    },
+    {
+      "table_name": "entry_links",
+      "index_name": "entry_links_pkey",
+      "definition": "CREATE UNIQUE INDEX entry_links_pkey ON public.entry_links USING btree (id)"
+    },
+    {
+      "table_name": "entry_links",
+      "index_name": "idx_entry_links_source",
+      "definition": "CREATE INDEX idx_entry_links_source ON public.entry_links USING btree (source_entry_id)"
+    },
+    {
+      "table_name": "entry_links",
+      "index_name": "idx_entry_links_target",
+      "definition": "CREATE INDEX idx_entry_links_target ON public.entry_links USING btree (target_entry_id)"
+    },
+    {
+      "table_name": "entry_links",
+      "index_name": "uq_entry_links_pair",
+      "definition": "CREATE UNIQUE INDEX uq_entry_links_pair ON public.entry_links USING btree (LEAST(source_entry_id, target_entry_id), GREATEST(source_entry_id, target_entry_id))"
+    },
+    {
+      "table_name": "entry_project_references",
+      "index_name": "entry_project_references_pkey",
+      "definition": "CREATE UNIQUE INDEX entry_project_references_pkey ON public.entry_project_references USING btree (id)"
+    },
+    {
+      "table_name": "entry_project_references",
+      "index_name": "idx_entry_project_references_entry",
+      "definition": "CREATE INDEX idx_entry_project_references_entry ON public.entry_project_references USING btree (entry_id)"
+    },
+    {
+      "table_name": "entry_project_references",
+      "index_name": "idx_entry_project_references_project",
+      "definition": "CREATE INDEX idx_entry_project_references_project ON public.entry_project_references USING btree (referenced_project_id)"
+    },
+    {
+      "table_name": "entry_project_references",
+      "index_name": "uq_entry_project_reference",
+      "definition": "CREATE UNIQUE INDEX uq_entry_project_reference ON public.entry_project_references USING btree (entry_id, referenced_project_id)"
+    },
+    {
+      "table_name": "entry_revisions",
+      "index_name": "entry_revisions_pkey",
+      "definition": "CREATE UNIQUE INDEX entry_revisions_pkey ON public.entry_revisions USING btree (id)"
+    },
+    {
+      "table_name": "entry_revisions",
+      "index_name": "idx_entry_revisions_entry",
+      "definition": "CREATE INDEX idx_entry_revisions_entry ON public.entry_revisions USING btree (entry_id, created_at DESC)"
+    },
+    {
+      "table_name": "playing_with_neon",
+      "index_name": "playing_with_neon_pkey",
+      "definition": "CREATE UNIQUE INDEX playing_with_neon_pkey ON public.playing_with_neon USING btree (id)"
+    },
+    {
+      "table_name": "project_fields",
+      "index_name": "idx_fields_project",
+      "definition": "CREATE INDEX idx_fields_project ON public.project_fields USING btree (project_id)"
+    },
+    {
+      "table_name": "project_fields",
+      "index_name": "project_fields_pkey",
+      "definition": "CREATE UNIQUE INDEX project_fields_pkey ON public.project_fields USING btree (id)"
+    },
+    {
+      "table_name": "project_project_references",
+      "index_name": "idx_project_project_references_project",
+      "definition": "CREATE INDEX idx_project_project_references_project ON public.project_project_references USING btree (project_id)"
+    },
+    {
+      "table_name": "project_project_references",
+      "index_name": "idx_project_project_references_referenced",
+      "definition": "CREATE INDEX idx_project_project_references_referenced ON public.project_project_references USING btree (referenced_project_id)"
+    },
+    {
+      "table_name": "project_project_references",
+      "index_name": "project_project_references_pkey",
+      "definition": "CREATE UNIQUE INDEX project_project_references_pkey ON public.project_project_references USING btree (id)"
+    },
+    {
+      "table_name": "project_project_references",
+      "index_name": "uq_project_project_reference",
+      "definition": "CREATE UNIQUE INDEX uq_project_project_reference ON public.project_project_references USING btree (project_id, referenced_project_id)"
+    },
+    {
+      "table_name": "projects",
+      "index_name": "idx_projects_owner",
+      "definition": "CREATE INDEX idx_projects_owner ON public.projects USING btree (owner_id)"
+    },
+    {
+      "table_name": "projects",
+      "index_name": "projects_pkey",
+      "definition": "CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)"
+    },
+    {
+      "table_name": "saved_filters",
+      "index_name": "idx_saved_filters_owner",
+      "definition": "CREATE INDEX idx_saved_filters_owner ON public.saved_filters USING btree (owner_id)"
+    },
+    {
+      "table_name": "saved_filters",
+      "index_name": "idx_saved_filters_project",
+      "definition": "CREATE INDEX idx_saved_filters_project ON public.saved_filters USING btree (project_id)"
+    },
+    {
+      "table_name": "saved_filters",
+      "index_name": "saved_filters_pkey",
+      "definition": "CREATE UNIQUE INDEX saved_filters_pkey ON public.saved_filters USING btree (id)"
+    },
+    {
+      "table_name": "users",
+      "index_name": "users_email_key",
+      "definition": "CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email)"
+    },
+    {
+      "table_name": "users",
+      "index_name": "users_google_id_key",
+      "definition": "CREATE UNIQUE INDEX users_google_id_key ON public.users USING btree (google_id)"
+    },
+    {
+      "table_name": "users",
+      "index_name": "users_pkey",
+      "definition": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+    }
+  ]
+}

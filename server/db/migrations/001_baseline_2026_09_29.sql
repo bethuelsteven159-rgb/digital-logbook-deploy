@@ -1,0 +1,12 @@
+-- 001_baseline_2026_09_29.sql
+--
+-- Baseline migration for the existing Neon production schema.
+-- This migration intentionally performs NO schema changes.
+--
+-- The live database schema was inspected on 2026-09-29 and is treated as
+-- the starting point for all future forward-only migrations.
+--
+-- Do not add CREATE/DROP/ALTER statements to this file after it has been applied.
+-- Future changes must go in 002_..., 003_..., etc.
+--
+-- Intentionally empty.

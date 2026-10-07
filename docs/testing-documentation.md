@@ -14,9 +14,9 @@
 
 Running `npm test` from `server/` executes all of the above, combining Vitest and Node's native test runner in one command.
 
-![Server Vitest suite passing — 40/40 tests](screenshots/server-vitest-passing.png)
+![Server Vitest suite passing — 40/40 tests](screenshots/server1.png)
 
-![Server Node test runner passing — 107/107 tests](screenshots/server-node-test-passing.png)
+![Server Node test runner passing — 107/107 tests](screenshots/server2.png)
 
 **Frontend (`client/`)**
 
@@ -31,9 +31,9 @@ Running `npm test` from `server/` executes all of the above, combining Vitest an
 
 Running `npm test` from `client/` executes all of the above.
 
-![Client Vitest suite passing](screenshots/client-vitest-passing.png)
+![Client Vitest suite passing](screenshots/client1.png)
 
-![Client Node test runner passing — 23/23 tests](screenshots/client-node-test-passing.png)
+![Client Node test runner passing — 23/23 tests](screenshots/client2.png)
 
 As of this document, the combined test suite across both `client/` and `server/` totals 20 test files and passes with several hundred individual tests and zero failures.
 
@@ -95,8 +95,3 @@ All feedback items have been addressed, with implemented improvements tracked ag
 
 ![Overall rating](screenshots/user-feedback/part11feedback.jpeg)
 
-
-
-### Coverage - Entry Revision History
-
-The server/services/projectDetailsService.js service currently has **58.86% statement coverage, 52.71% branch coverage, 75.00% function coverage, and 58.75% line coverage**. The Vitest suite passes **125/125 tests**, including the revision-history and archived-field restore tests.
