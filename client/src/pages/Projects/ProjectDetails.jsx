@@ -1222,11 +1222,11 @@ async function handleUnarchiveEntry(entry) {
                     key={reference.id}
                     onClick={() =>
                       navigate(
-                        `/projects/${reference.referencedProjectId}`,
+                        `/projects/${reference.projectId}`,
                       )
                     }
                   >
-                    {reference.referencedProjectName}
+                    {reference.projectName}
                   </button>
                 ))}
               </div>
@@ -1957,7 +1957,7 @@ async function handleUnarchiveEntry(entry) {
           options={projects.filter((candidate) => candidate.id !== project.id)}
           selectedIds={
             Array.isArray(details.references)
-              ? details.references.map((reference) => reference.referencedProjectId)
+              ? details.references.map((reference) => reference.projectId)
               : []
           }
           getOptionId={(option) => option.id}
