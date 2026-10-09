@@ -6,6 +6,7 @@ import NotificationsBell from './NotificationsBell.jsx';
 const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: IconDashboard },
     { to: "/projects", label: "Projects", icon: IconProjects },
+    { to: "/constellation", label: "Constellation", icon: IconProjects },
     { to: "/search", label: "Search", icon: IconSearch },
     { to: "/stats", label: "Stats", icon: IconStats },
     { to: "/settings", label: "Settings", icon: IconSettings },
