@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   updateEntryProjectReferences: vi.fn(),
   updateEntryReferences: vi.fn(),
   updateEntry: vi.fn(),
+  updateProjectReferences: vi.fn(),
   generateDueRecurringEntries: vi.fn(),
   archiveProjectEntry: vi.fn(),
   unarchiveProjectEntry: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock('../../api/projectsApi', () => ({
 }));
 
 vi.mock('../../api/entryFeaturesApi', () => ({
+  updateProjectReferences: apiMocks.updateProjectReferences,
   updateEntryProjectReferences:
     apiMocks.updateEntryProjectReferences,
   updateEntryReferences:
@@ -304,6 +306,89 @@ function renderPage() {
     </MemoryRouter>,
   );
 }
+
+describe('ProjectDetails project-reference contract', () => {
+  const reference = {
+    id: 'relationship-1',
+    projectId: 'project-2',
+    projectName: 'Second project',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    apiMocks.fetchSavedFilters.mockResolvedValue([]);
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({ generatedCount: 0 });
+    apiMocks.fetchProjectDetails.mockResolvedValue({
+      ...detailsResponse(),
+      references: [reference],
+    });
+    apiMocks.fetchProjects.mockResolvedValue([
+      project,
+      { id: 'project-2', name: 'Second project' },
+      { id: 'project-3', name: 'Third project' },
+    ]);
+    apiMocks.updateProjectReferences.mockResolvedValue([]);
+  });
+
+  it('displays the public projectName and navigates using projectId', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Second project' }));
+    await waitFor(() => expect(apiMocks.fetchProjectDetails).toHaveBeenCalledWith('project-2'));
+    expect(apiMocks.fetchProjectDetails).not.toHaveBeenCalledWith('relationship-1');
+    expect(apiMocks.fetchProjectDetails).not.toHaveBeenCalledWith('undefined');
+  });
+
+  it.each(['preserve', 'add', 'replace', 'clear'])(
+    'preselects public project IDs and submits the %s selection',
+    async (operation) => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('button', { name: 'Manage references' }));
+      const second = screen.getByRole('checkbox', { name: 'Second project' });
+      const third = screen.getByRole('checkbox', { name: 'Third project' });
+      expect(second).toBeChecked();
+      expect(third).not.toBeChecked();
+      if (operation === 'replace' || operation === 'clear') await user.click(second);
+      if (operation === 'replace' || operation === 'add') await user.click(third);
+      const expected = {
+        preserve: ['project-2'],
+        add: ['project-2', 'project-3'],
+        replace: ['project-3'],
+        clear: [],
+      }[operation];
+      apiMocks.fetchProjectDetails.mockResolvedValue({
+        ...detailsResponse(),
+        references: expected.map((projectId) => ({
+          id: `relationship-${projectId}`,
+          projectId,
+          projectName: projectId === 'project-2' ? 'Second project' : 'Third project',
+        })),
+      });
+      await user.click(screen.getByRole('button', { name: 'Save references' }));
+      await waitFor(() => expect(apiMocks.updateProjectReferences).toHaveBeenCalledExactlyOnceWith('project-1', expected));
+      await waitFor(() => expect(screen.queryByRole('checkbox')).not.toBeInTheDocument());
+      expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2);
+      for (const projectId of expected) {
+        expect(screen.getByRole('button', { name: projectId === 'project-2' ? 'Second project' : 'Third project' })).toBeInTheDocument();
+      }
+      expect(apiMocks.updateEntryReferences).not.toHaveBeenCalled();
+      expect(apiMocks.updateEntryProjectReferences).not.toHaveBeenCalled();
+    },
+  );
+
+  it('creates a reference from an empty reference list', async () => {
+    apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse());
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Manage references' }));
+    const second = screen.getByRole('checkbox', { name: 'Second project' });
+    expect(second).not.toBeChecked();
+    await user.click(second);
+    await user.click(screen.getByRole('button', { name: 'Save references' }));
+    await waitFor(() => expect(apiMocks.updateProjectReferences).toHaveBeenCalledExactlyOnceWith('project-1', ['project-2']));
+  });
+});
 
 describe('ProjectDetails entry flow', () => {
   beforeEach(() => {
