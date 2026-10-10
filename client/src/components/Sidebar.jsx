@@ -44,7 +44,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             <span className="sidebar-nav-icon">
               <Icon />
             </span>
-            {!collapsed && <span className="sidebar-nav-label">{label}</span>}
+            <span className="sidebar-nav-label">{label}</span>
           </NavLink>))}
       </nav>
 
@@ -72,6 +72,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         .sidebar {
           width: 240px;
           min-height: 100vh;
+          align-self: stretch;
           background: #1a2340;
           display: flex;
           flex-direction: column;
@@ -136,7 +137,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
         /* Nav */
         .sidebar-nav {
-          flex: 1;
+          flex: 0 0 auto;
           display: flex;
           flex-direction: column;
           gap: 2px;
@@ -196,6 +197,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           width: 20px;
           height: 20px;
         }
+        .sidebar--collapsed .sidebar-nav-label { display: none; }
         .sidebar-nav-label {
           font-family: 'Inter', sans-serif;
         }

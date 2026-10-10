@@ -80,6 +80,7 @@ This organisation supports the project's requirement for an organised file struc
 | Login | `/login` | Entry point where the user signs in with Google. |
 | Dashboard | `/dashboard` | Main landing page providing an overview of projects, logged hours, entries and recent activity. |
 | Projects | `/projects` | Lists the user's projects and provides search, filtering, active/archived views and project creation. |
+| Search | `/search` | Searches existing logbook entries using the available filters and results view. |
 | Project Details | `/projects/:id` | Displays a selected project's details, statistics and logbook entries, and provides project/entry actions. |
 | Profile | `/profile` | Displays and allows editing of user profile information. |
 | Stats | `/stats` | Provides a summary of projects, entries, logged time and activity. |
@@ -113,9 +114,10 @@ The sidebar contains:
 
 - Dashboard
 - Projects
+- Search
 - Stats
 - Settings
-- Profile, positioned at the bottom of the sidebar
+- Notifications, Profile and Sign out immediately after the primary links
 
 The sidebar can also be collapsed to reduce the amount of screen space occupied by navigation while retaining icon-based access to the same destinations. Active navigation items are visually distinguished from inactive items.
 
@@ -290,7 +292,7 @@ The Settings screen provides the application settings area. The current implemen
 
 The UI was developed through an iterative process that moved from **basic designs**, to **Figma designs**, and finally to the **implemented application**.
 
-The design material for this process is stored in the `docs/pdf/` folder of the repository. This folder contains the project's UI/UX design evidence, including the basic designs and the final Figma-based desktop and mobile designs.
+Earlier design material for this process is stored in the `docs/ui-ux_pdfs/` folder of the repository. This folder contains the project's UI/UX design evidence, including the basic designs and the final Figma-based desktop and mobile designs.
 
 ### Design-to-Implementation Flow
 
@@ -350,7 +352,7 @@ The frontend uses a consistent set of reusable interaction patterns:
 
 ## Responsive Design Approach
 
-The interface was designed for both desktop and mobile use. The design evidence for the desktop and mobile versions is included in the `docs/pdf/` folder.
+The interface was designed for both desktop and mobile use. Earlier desktop and mobile design evidence is available in `docs/ui-ux_pdfs/`; those artefacts predate the final Sprint 4 styling.
 
 The Login page uses a responsive breakpoint at `768px`. Below this width, the two-column layout collapses into a single-column layout, the branding panel becomes full-width, and secondary content such as the feature list and footer is hidden to keep the mobile experience focused on authentication.
 
@@ -407,3 +409,58 @@ The final Figma-based designs and other UI/UX design material are stored in `doc
 The frontend UI/UX is structured around a clear user journey: authenticate, reach the dashboard, manage projects, open a project, record work through logbook entries, and review progress through statistics. Persistent navigation provides access to the main areas while project-specific actions remain within the project context.
 
 The design process progressed from basic designs to Figma designs and then to implementation. The repository structure separates pages, reusable components, shared state and API communication, making the UI easier to maintain and extend. Responsive layouts, meaningful empty states, clear interaction patterns and accessibility considerations are incorporated into the implemented interface.
+
+
+## Sprint 4 — Final UI/UX design record (Navigator’s Log v8)
+
+**Ownership:** Morare — frontend architecture, UI/UX, navigation, responsive presentation and accessibility. This section documents design work only; it does not change or assert ownership of the team's architecture, backend, deployment, test strategy, methodology, or other documentation areas.
+
+**Design objective:** Make Digital Logbook a polished, sponsor/client-presentable productivity tool with a distinctive but restrained modern ship’s-logbook identity. The nautical references are visual cues, not new application features. The design retains all existing page purposes, user stories, data and API-backed functionality.
+
+### Final visual identity
+
+| Design element | Light mode | Dark mode |
+| --- | --- | --- |
+| Primary atmosphere | Warm chart paper and quiet neutral surfaces | Midnight navy and deep slate surfaces |
+| Headings and information | Nautical ink with clear hierarchy | Soft light text with high legibility |
+| Interactive accents | Sea teal for actions and selected states | Brighter sea-glass teal for equivalent states |
+| Secondary accents | Muted brass, used sparingly for emphasis | Warm brass-gold with sufficient contrast |
+| Panels and cards | Subtle borders, refined spacing and restrained chart-inspired details | Matching panels and borders without harsh glare |
+
+The interface uses consistent spacing, predictable controls, restrained decorative detail and legible text. Chart-like lines and compass/logbook motifs are presentation details only: they do not imply extra statistics or fabricated progress. The themes use the existing preference mechanism and `data-theme` styling approach.
+
+### Existing pages and their visual treatment
+
+- **Login:** Retains the existing Google sign-in interaction and responsive login composition.
+- **Dashboard:** A compact introductory/workspace area, genuine weekly-activity summary, existing customisable statistics widgets, recent activity and existing navigation/actions. The dashboard editor continues to support the same widget configuration and persistence; its instructions and visual grouping are refined.
+- **Projects:** The same active/archived project list, creation/editing actions, search and filters, with differentiated project-card accents, cleaner information hierarchy and calmer surfaces.
+- **Project Details and logbook entries:** Project information, entry capture/detail/edit workflows, custom fields, checklist and cross-record references remain in their existing context. The New Entry **Reference other projects** and **Reference other entries** selections are presented vertically, one item per line, for easier scanning.
+- **Search:** Preserves the `/search` route and its existing search/results behaviour while aligning inputs, filters, text and surfaces with both themes.
+- **Statistics:** Existing measurements and visualisations retain their source data, with improved grouping, spacing and typography.
+- **Profile:** The existing profile view and edit controls have matching light- and dark-mode styling, including input, status and panel states.
+- **Settings:** Existing preferences and import/export controls remain. The unused **Data & Reset / reset coming soon** UI section was removed; this does not remove import or export functionality.
+- **Notifications and existing integrations:** Notifications, AI Project Coach, learning-video integration and other API-backed controls keep their current placement and behaviour. They are not replaced by decorative elements.
+
+### Navigation and page scrolling
+
+The shared sidebar contains **Dashboard, Projects, Search, Stats and Settings**, followed directly by **Notifications, Profile and Sign out** rather than pinning Profile at the bottom. The sidebar is designed to remain visible while the main document scrolls, whether expanded or collapsed. When the available screen height is too short for its contents, navigation may scroll internally to preserve access to controls. The existing routes, destinations and toggle interaction are unchanged.
+
+### Responsive presentation
+
+Sprint 4 introduced a **desktop-inspired compact mobile layout**, using a narrow left navigation rail rather than shrinking the entire desktop page. Page spacing and card arrangements adapt at narrow widths while maintaining readable text and usable controls. The desktop view is not intentionally altered by mobile-only breakpoint rules. The earlier top-navigation mobile design was superseded by this compact approach.
+
+**Verification status:** Desktop application flow and functionality were reported working in the latest user review. Full real-device mobile testing is **deferred until deployment**, particularly authenticated sign-in, smaller-screen overflow, keyboard interaction and modal usability. The earlier tunnel/OAuth configuration difficulty is a test-environment limitation, not evidence that the mobile design has passed or failed.
+
+### Accessibility and design quality requirements
+
+- Maintain readable contrast and consistent visual semantics in both themes.
+- Preserve labelled controls, keyboard focus visibility, empty/error/loading messages and familiar page-level workflows.
+- Avoid arbitrary page-wide zoom, illegibly small touch targets, excessive animation or purely decorative information that competes with real content.
+- Respect reduced-motion preferences where supported, and verify that long project names, lists and modals do not hide actions.
+- Retain the current frontend-to-API behaviour; the design does not require new endpoints or persistent data structures.
+
+### Pre-merge review and follow-up
+
+The final version is a **Sprint 4 design candidate** pending repository checks. Before approving the Gitea pull request: run the project build and appropriate existing tests; perform a short smoke test of login, dashboard widgets/customisation, project/entry flows, Search, Statistics, Profile, Settings, import/export, notifications and API-backed tools; review light/dark states; and check that no unrelated code was altered. Obtain the team's code review and merge through its normal feature-branch/PR process. Perform a separate mobile acceptance pass once the deployed app is available.
+
+This UI/UX page is the only documentation file updated as part of the Sprint 4 finalisation; other team-owned documentation sections remain unchanged.
