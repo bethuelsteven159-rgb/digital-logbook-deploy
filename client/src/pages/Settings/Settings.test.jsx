@@ -81,7 +81,7 @@ describe('Settings', () => {
     global.URL.revokeObjectURL = vi.fn();
   });
 
-  it('shows application preferences, data management, and reset sections', () => {
+  it('shows application preferences and data management without the removed reset section', () => {
     render(<Settings />);
 
     expect(
@@ -103,14 +103,12 @@ describe('Settings', () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole('heading', {
+      screen.queryByRole('heading', {
         name: 'Data & reset',
       }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
 
-    expect(
-      screen.getByText('Available soon'),
-    ).toBeInTheDocument();
+    expect(screen.queryByText('Available soon')).not.toBeInTheDocument();
   });
 
   it('saves theme and ordering preference changes', async () => {

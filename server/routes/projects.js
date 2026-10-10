@@ -73,6 +73,8 @@ function mapProject(row) {
     archivedAt: row.archived_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ownerId: row.owner_id ?? null,
+    isShared: Boolean(row.is_shared),
     totalEntries: Number(row.total_entries) || 0,
     loggedMinutes: Number(row.logged_minutes) || 0,
     lastActivity: row.last_activity || null,
@@ -94,7 +96,15 @@ async function getOwnedProjectRow(client, projectId, userId) {
         updated_at
       FROM projects
       WHERE id = $1
-        AND owner_id = $2
+        AND (
+          owner_id = $2
+          OR EXISTS (
+            SELECT 1
+            FROM project_collaborators pc
+            WHERE pc.project_id = projects.id
+              AND pc.user_id = $2
+          )
+        )
       LIMIT 1
       FOR UPDATE
     `,
@@ -126,6 +136,7 @@ router.get("/", async (req, res, next) => {
       `
         SELECT
           p.id,
+          p.owner_id,
           p.name,
           p.description,
           p.start_date,
@@ -133,13 +144,22 @@ router.get("/", async (req, res, next) => {
           p.archived_at,
           p.created_at,
           p.updated_at,
+          (p.owner_id <> $1) AS is_shared,
           COUNT(e.id)::int AS total_entries,
           COALESCE(SUM(e.duration_minutes), 0)::int AS logged_minutes,
           MAX(e.occurred_at) AS last_activity
         FROM projects p
         LEFT JOIN entries e
           ON e.project_id = p.id
-        WHERE p.owner_id = $1
+        WHERE (
+            p.owner_id = $1
+            OR EXISTS (
+              SELECT 1
+              FROM project_collaborators pc
+              WHERE pc.project_id = p.id
+                AND pc.user_id = $1
+            )
+          )
           ${archivedClause}
         GROUP BY p.id
         ORDER BY
@@ -209,6 +229,8 @@ router.post("/", async (req, res, next) => {
       success: true,
       data: mapProject({
         ...result.rows[0],
+        owner_id: userId,
+        is_shared: false,
         total_entries: 0,
         logged_minutes: 0,
         last_activity: null,
@@ -270,7 +292,15 @@ router.patch("/:projectId", async (req, res, next) => {
             end_date = $6,
             updated_at = NOW()
         WHERE id = $1
-          AND owner_id = $2
+          AND (
+            owner_id = $2
+            OR EXISTS (
+              SELECT 1
+              FROM project_collaborators pc
+              WHERE pc.project_id = projects.id
+                AND pc.user_id = $2
+            )
+          )
       `,
       [
         req.params.projectId,
@@ -302,6 +332,7 @@ router.patch("/:projectId", async (req, res, next) => {
       success: true,
       data: mapProject({
         ...updated,
+        is_shared: updated.owner_id !== userId,
         total_entries: 0,
         logged_minutes: 0,
         last_activity: null,
@@ -338,16 +369,26 @@ router.patch("/:projectId/archive", async (req, res, next) => {
             END,
             updated_at = NOW()
         WHERE id = $1
-          AND owner_id = $2
+          AND (
+            owner_id = $2
+            OR EXISTS (
+              SELECT 1
+              FROM project_collaborators pc
+              WHERE pc.project_id = projects.id
+                AND pc.user_id = $2
+            )
+          )
         RETURNING
           id,
+          owner_id,
           name,
           description,
           start_date,
           end_date,
           archived_at,
           created_at,
-          updated_at
+          updated_at,
+          (owner_id <> $2) AS is_shared
       `,
       [req.params.projectId, userId, archived],
     );
