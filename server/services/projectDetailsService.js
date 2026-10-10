@@ -1581,6 +1581,7 @@ async function archiveEntryService({
   return {
     id: archived.id,
     projectId: archived.project_id,
+    name: archived.name ?? null,
     archivedAt: archived.archived_at,
   };
 }
@@ -1620,6 +1621,7 @@ async function unarchiveEntryService({
   return {
     id: unarchived.id,
     projectId: unarchived.project_id,
+    name: unarchived.name ?? null,
     archivedAt: unarchived.archived_at,
   };
 }
@@ -1644,6 +1646,7 @@ async function deleteEntryService({ projectId, entryId, userId }) {
 
   return {
     id: entryId,
+    name: deleted.name ?? null,
     deleted: true,
   };
 }

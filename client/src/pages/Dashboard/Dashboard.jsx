@@ -333,7 +333,7 @@ export default function Dashboard() {
               className="btn btn-secondary"
               onClick={isCustomizing ? cancelCustomizing : startCustomizing}
             >
-              {isCustomizing ? "Cancel customization" : "Customize dashboard widgets"}
+              {isCustomizing ? "Done editing" : "Personalize dashboard"}
             </button>
 
             <button
@@ -370,7 +370,24 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className="dashboard-content">
+        <div className="dashboard-content sprint4-dashboard">
+          <section className="sprint4-welcome" aria-label="Your logbook at a glance">
+            <div className="sprint4-welcome-main">
+              <span className="sprint4-kicker">YOUR LOGBOOK</span>
+              <h2>Good to have you back.</h2>
+              <p>Your projects, entries and progress — all in one place. Continue where you left off.</p>
+              <div className="sprint4-welcome-actions">
+                <button type="button" className="sprint4-action-primary" onClick={() => navigate("/projects")}>View projects <span aria-hidden="true">↗</span></button>
+                <button type="button" className="sprint4-action-quiet" onClick={() => navigate("/stats")}>View statistics <span aria-hidden="true">→</span></button>
+              </div>
+            </div>
+            <div className="sprint4-welcome-snapshot" aria-label="This week's logged time">
+              <span>THIS WEEK</span>
+              <strong>{loading ? "—" : formatDuration(stats.thisWeekMinutes)}</strong>
+              <small>logged across your work</small>
+              <div className="sprint4-snapshot-bars" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/></div>
+            </div>
+          </section>
           {error && (
             <div
               className="dashboard-error"
@@ -380,14 +397,18 @@ export default function Dashboard() {
             </div>
           )}
 
+          <div className="sprint4-section-heading">
+            <div><span className="sprint4-section-eyebrow">PERSONALIZED OVERVIEW</span><h2>Your overview</h2><p>Live figures from your logbook — arrange them however you work best.</p></div>
+          </div>
           {/* Custom dashboard widgets */}
           <section className="custom-dashboard-section">
             {isCustomizing && (
               <div className="dashboard-customizer" aria-label="Dashboard customization controls">
                 <div>
-                  <h2 className="dashboard-customizer-title">Customize dashboard widgets</h2>
+                  <span className="sprint4-editor-tag">YOUR DASHBOARD</span>
+                  <h2 className="dashboard-customizer-title">Choose what matters to you</h2>
                   <p className="dashboard-customizer-copy">
-                    Add, remove, change, and reorder the statistics shown on your dashboard.
+                    Choose a metric, select Add Widget, then move cards into your preferred order. Save when you're happy with your layout.
                   </p>
                 </div>
 
@@ -459,12 +480,15 @@ export default function Dashboard() {
             )}
           </section>
 
+          <div className="sprint4-section-heading sprint4-section-heading--lower">
+            <div><span className="sprint4-section-eyebrow">YOUR ACTIVITY</span><h2>Recent work & next steps</h2><p>Your latest activity and the next useful step, together.</p></div>
+          </div>
           <div className="dashboard-columns">
             {/* Recent Activity */}
             <section className="dash-card dash-activity">
               <div className="dash-card-header">
                 <h2 className="dash-card-title">
-                  Recent Activity
+                  Recent activity
                 </h2>
               </div>
 
@@ -533,7 +557,7 @@ export default function Dashboard() {
               <section className="dash-card dash-get-started">
                 <div className="dash-card-header">
                   <h2 className="dash-card-title">
-                    Get Started
+                    Your next step
                   </h2>
                 </div>
 
@@ -579,7 +603,7 @@ export default function Dashboard() {
               <section className="dash-card">
                 <div className="dash-card-header">
                   <h2 className="dash-card-title">
-                    Overview
+                    More from your logbook
                   </h2>
 
                   <button

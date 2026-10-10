@@ -553,7 +553,10 @@ describe("deleteEntryService", () => {
       id: "entry-1",
     });
 
-    repository.deleteEntry = vi.fn().mockResolvedValue(true);
+    repository.deleteEntry = vi.fn().mockResolvedValue({
+      id: "entry-1",
+      name: "Lab notes",
+    });
 
     const result = await deleteEntryService({
       projectId: "project-1",
@@ -568,6 +571,7 @@ describe("deleteEntryService", () => {
 
     expect(result).toEqual({
       id: "entry-1",
+      name: "Lab notes",
       deleted: true,
     });
   });

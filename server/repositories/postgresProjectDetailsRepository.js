@@ -1305,7 +1305,7 @@ function createRepository(queryable) {
      WHERE id = $1
        AND project_id = $2
        AND archived_at IS NULL
-     RETURNING id, project_id, archived_at`,
+     RETURNING id, project_id, name, archived_at`,
     [entryId, projectId],
   );
 
@@ -1319,7 +1319,7 @@ async unarchiveEntry(entryId, projectId) {
      WHERE id = $1
        AND project_id = $2
        AND archived_at IS NOT NULL
-     RETURNING id, project_id, archived_at`,
+     RETURNING id, project_id, name, archived_at`,
     [entryId, projectId],
   );
 
@@ -1331,11 +1331,13 @@ async unarchiveEntry(entryId, projectId) {
         `DELETE FROM entries
          WHERE id = $1
            AND project_id = $2
-         RETURNING id`,
+         RETURNING id, name`,
         [entryId, projectId],
       );
 
-      return result.rowCount > 0;
+      if (!(result.rowCount > 0)) return null;
+
+      return result.rows[0] || { id: entryId };
     },
 
     async getEntryFieldValues(entryId) {

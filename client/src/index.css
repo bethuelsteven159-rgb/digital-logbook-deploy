@@ -1635,3 +1635,570 @@ html[data-theme="dark"] input[type="month"]:focus {
   box-shadow: 0 0 0 3px rgba(135, 151, 242, 0.16);
   outline: none;
 }
+
+/* Sprint 4: navigation stays together; compact layouts preserve every destination. */
+.sidebar.sidebar .sidebar-nav { flex: 0 0 auto; }
+.sidebar.sidebar .sidebar-profile { flex-shrink: 0; }
+.sidebar.sidebar .sidebar-signout { flex-shrink: 0; }
+
+@media (max-width: 760px) {
+  /* Only authenticated page shells contain the shared sidebar. */
+  .app-shell:has(> .sidebar),
+  .settings-shell:has(> .sidebar),
+  .profile-shell:has(> .sidebar),
+  .stats-shell:has(> .sidebar),
+  .search-page-shell:has(> .sidebar) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+  }
+  .sidebar.sidebar, .sidebar.sidebar.sidebar--collapsed {
+    width: 100%;
+    min-height: 0;
+    padding: 12px 10px;
+    height: auto;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .sidebar.sidebar .sidebar-brand { padding: 0 8px 2px; }
+  .sidebar.sidebar .sidebar-brand-name { font-size: 15px; }
+  .sidebar.sidebar .sidebar-toggle { display: none; }
+  .sidebar.sidebar .sidebar-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+    padding: 0;
+  }
+  .sidebar.sidebar .sidebar-nav-item,
+  .sidebar.sidebar.sidebar--collapsed .sidebar-nav-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 2px;
+    min-width: 0;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+  .sidebar.sidebar .sidebar-nav-label,
+  .sidebar.sidebar.sidebar--collapsed .sidebar-nav-label { display: inline; font-size: 10px; }
+  .sidebar.sidebar .sidebar-nav-icon { justify-content: center; }
+  .sidebar.sidebar .sidebar-profile {
+    padding: 7px 9px;
+    border-top: 0;
+    margin: 0;
+    border-radius: 8px;
+  }
+  .sidebar.sidebar .sidebar-signout { margin: 0; padding: 8px 9px; }
+  .sidebar.sidebar .sidebar-profile,
+  .sidebar.sidebar .sidebar-signout { min-height: 40px; }
+  .app-shell > main, .settings-shell > main, .stats-shell > main,
+  .profile-shell > main, .search-page-shell > main {
+    width: 100%; min-width: 0; flex: 1 1 auto;
+  }
+  .app-shell .page-header { flex-wrap: wrap; gap: 12px; }
+  .app-shell .page-header-actions { flex-wrap: wrap; }
+  .app-shell .dashboard-content, .app-shell .app-main,
+  .settings-shell .settings-main, .stats-shell .stats-main,
+  .profile-shell .profile-main { min-width: 0; }
+  .app-shell img, .settings-shell img, .stats-shell img,
+  .profile-shell img { max-width: 100%; }
+}
+
+/* Search was still using light-only surface and text colours. */
+html[data-theme="dark"] .search-page-shell,
+html[data-theme="dark"] .search-page-main { background: var(--bg); color: var(--text); }
+html[data-theme="dark"] .search-page-header h1,
+html[data-theme="dark"] .result-card h3,
+html[data-theme="dark"] .project-result-card strong,
+html[data-theme="dark"] .search-empty h2,
+html[data-theme="dark"] .results-heading h2 { color: var(--text-strong); }
+html[data-theme="dark"] .search-page-header p,
+html[data-theme="dark"] .result-card p,
+html[data-theme="dark"] .project-result-card span,
+html[data-theme="dark"] .search-empty,
+html[data-theme="dark"] .advanced-filters label,
+html[data-theme="dark"] .tag-row span { color: var(--text-muted); }
+html[data-theme="dark"] .search-panel,
+html[data-theme="dark"] .result-card,
+html[data-theme="dark"] .project-result-card {
+  background: var(--surface); border-color: var(--border); color: var(--text);
+}
+html[data-theme="dark"] .search-text-input,
+html[data-theme="dark"] .search-select,
+html[data-theme="dark"] .advanced-filters input,
+html[data-theme="dark"] .advanced-filters select,
+html[data-theme="dark"] .custom-filter-row input,
+html[data-theme="dark"] .custom-filter-row select,
+html[data-theme="dark"] .custom-filter-heading button {
+  background: var(--surface-inset); color: var(--text); border-color: var(--border);
+}
+html[data-theme="dark"] .value-preview span,
+html[data-theme="dark"] .custom-filter-row button {
+  background: var(--surface-subtle); color: var(--text-muted);
+}
+html[data-theme="dark"] .search-error {
+  background: var(--danger-soft); color: var(--danger-text); border-color: var(--danger-border);
+}
+
+/* Sprint 4: keep New Entry reference choices legible, one per row. */
+.sprint4-reference-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 9px;
+  width: 100%;
+  max-height: 190px;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+.sprint4-reference-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.sprint4-reference-option input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin: 4px 0 0;
+  accent-color: #4f63d2;
+}
+.sprint4-reference-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sprint4-reference-option small {
+  color: inherit;
+  opacity: .72;
+}
+
+/* Sprint 4 — desktop-inspired mobile presentation.
+   This section affects phone-sized viewports ONLY. Desktop and tablet
+   layouts above 760px retain their existing styles and behaviours. */
+@media screen and (max-width: 760px) {
+  /* A slim vertical rail mirrors the desktop layout without wasting the
+     viewport height on mobile's former multi-row navigation bar. */
+  .app-shell:has(> .sidebar),
+  .settings-shell:has(> .sidebar),
+  .profile-shell:has(> .sidebar),
+  .stats-shell:has(> .sidebar),
+  .search-page-shell:has(> .sidebar) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+  }
+  .sidebar.sidebar,
+  .sidebar.sidebar.sidebar--collapsed {
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding: 16px 5px 12px !important;
+    gap: 6px !important;
+    flex: 0 0 62px !important;
+    align-self: stretch;
+    overflow: visible;
+  }
+  .sidebar.sidebar .sidebar-brand {
+    justify-content: center;
+    padding: 0 0 16px !important;
+  }
+  .sidebar.sidebar .sidebar-brand-name,
+  .sidebar.sidebar .sidebar-nav-label,
+  .sidebar.sidebar.sidebar--collapsed .sidebar-nav-label,
+  .sidebar.sidebar .sidebar-profile-text,
+  .sidebar.sidebar .sidebar-signout-label { display: none !important; }
+  .sidebar.sidebar .sidebar-nav {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    padding: 0 !important;
+  }
+  .sidebar.sidebar .sidebar-nav-item,
+  .sidebar.sidebar.sidebar--collapsed .sidebar-nav-item {
+    width: 50px !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    padding: 11px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-radius: 9px !important;
+  }
+  .sidebar.sidebar .sidebar-nav-icon { justify-content: center; }
+  .sidebar.sidebar .sidebar-profile,
+  .sidebar.sidebar .sidebar-signout {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 50px !important;
+    min-height: 46px !important;
+    padding: 8px !important;
+    margin: 0 !important;
+  }
+  .sidebar.sidebar .sidebar-toggle { display: none !important; }
+  .app-shell > main, .settings-shell > main, .stats-shell > main,
+  .profile-shell > main, .search-page-shell > main {
+    width: calc(100% - 62px) !important;
+    min-width: 0 !important;
+    max-width: none;
+    flex: 1 1 0% !important;
+    overflow-x: clip;
+  }
+
+  /* Better proportions: compact desktop hierarchy, but normal readable
+     fonts and sensible tap targets (no transform/zoom on the application). */
+  .app-shell .page-header,
+  .profile-shell .profile-header,
+  .stats-shell .stats-header,
+  .settings-shell .settings-header {
+    padding: 22px 17px 0 !important;
+    gap: 10px !important;
+  }
+  .app-shell .dashboard-content,
+  .app-shell .projects-content,
+  .profile-shell .profile-content,
+  .stats-shell .stats-content,
+  .settings-shell .settings-content {
+    padding: 17px 17px 30px !important;
+    gap: 15px;
+  }
+  .search-page-shell .search-page-main { padding: 22px 17px 32px !important; }
+  .app-shell .page-header-title,
+  .profile-shell .profile-title,
+  .settings-shell .settings-title,
+  .stats-shell .stats-title { font-size: clamp(23px, 6vw, 29px) !important; }
+  .app-shell .page-header-actions { gap: 7px; }
+  .app-shell .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 9px !important; }
+  .app-shell .stat-card { min-width: 0; padding: 13px !important; }
+  .app-shell .dashboard-columns { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+  .app-shell .projects-toolbar { gap: 9px !important; }
+  .app-shell .search-box { min-width: 0 !important; }
+  .app-shell .project-grid,
+  .app-shell .projects-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .search-page-shell .project-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .search-page-shell .search-panel { padding: 13px !important; }
+  .search-page-shell .search-primary-row { grid-template-columns: minmax(0, 1fr) !important; }
+  .search-page-shell .advanced-filters { grid-template-columns: minmax(0, 1fr) !important; }
+  .app-shell button, .settings-shell button, .profile-shell button,
+  .stats-shell button, .search-page-shell button { touch-action: manipulation; }
+}
+
+/* Very narrow devices: avoid forcing two cards into unreadable columns. */
+@media screen and (max-width: 370px) {
+  .sidebar.sidebar, .sidebar.sidebar.sidebar--collapsed {
+    width: 54px !important; min-width: 54px !important;
+    max-width: 54px !important; flex-basis: 54px !important;
+  }
+  .sidebar.sidebar .sidebar-nav-item,
+  .sidebar.sidebar.sidebar--collapsed .sidebar-nav-item,
+  .sidebar.sidebar .sidebar-profile,
+  .sidebar.sidebar .sidebar-signout { width: 44px !important; }
+  .app-shell > main, .settings-shell > main, .stats-shell > main,
+  .profile-shell > main, .search-page-shell > main { width: calc(100% - 54px) !important; }
+  .app-shell .project-grid, .app-shell .projects-grid,
+  .search-page-shell .project-result-grid { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+
+/* Sprint 4: visual storytelling and hierarchy. Pure presentation; shared theme tokens. */
+.sprint4-dashboard .sprint4-welcome {display:grid;grid-template-columns:minmax(0,1fr) minmax(195px,30%);gap:22px;padding:30px 32px;align-items:center;border-radius:22px;position:relative;overflow:hidden;background:linear-gradient(115deg,#192c61 0%,#2f3f8f 65%,#4d52a6 100%);color:#fff;box-shadow:0 17px 34px rgba(30,48,99,.16)}
+.sprint4-dashboard .sprint4-welcome:before {content:"";position:absolute;inset:-130px -70px auto auto;width:360px;height:360px;border:1px solid rgba(255,255,255,.16);border-radius:50%;box-shadow:0 0 0 50px rgba(255,255,255,.025),0 0 0 105px rgba(255,255,255,.018);pointer-events:none}
+.sprint4-dashboard .sprint4-welcome-main,.sprint4-dashboard .sprint4-welcome-snapshot{position:relative;z-index:1}
+.sprint4-dashboard .sprint4-kicker,.sprint4-dashboard .sprint4-section-eyebrow,.sprint4-dashboard .sprint4-editor-tag{font-size:10px;font-weight:800;letter-spacing:.14em}
+.sprint4-dashboard .sprint4-kicker {color:#c4d6ff}
+.sprint4-dashboard .sprint4-welcome h2{font-family:var(--font-display,Georgia,serif);font-weight:400;font-size:clamp(28px,3vw,39px);line-height:1.15;color:#fff;margin:12px 0 8px}
+.sprint4-dashboard .sprint4-welcome p{max-width:520px;color:#dce5ff;line-height:1.7;margin:0 0 19px;font-size:14px}
+.sprint4-dashboard .sprint4-welcome-actions{display:flex;gap:10px;flex-wrap:wrap}
+.sprint4-dashboard .sprint4-action-primary,.sprint4-dashboard .sprint4-action-quiet {cursor:pointer;border-radius:10px;padding:11px 15px;font-weight:700;display:inline-flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,.35);transition:transform .18s,background .18s}
+.sprint4-dashboard .sprint4-action-primary{background:#fff;color:#223b8a;border-color:white}
+.sprint4-dashboard .sprint4-action-quiet{background:rgba(255,255,255,.1);color:white}
+.sprint4-dashboard .sprint4-action-primary:hover,.sprint4-dashboard .sprint4-action-quiet:hover{transform:translateY(-2px)}
+.sprint4-dashboard .sprint4-welcome-snapshot{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);border-radius:16px;padding:20px;backdrop-filter:blur(5px);display:flex;flex-direction:column;gap:7px}
+.sprint4-dashboard .sprint4-welcome-snapshot>span{color:#d6e0ff;font-size:11px;letter-spacing:.12em;font-weight:800}
+.sprint4-dashboard .sprint4-welcome-snapshot>strong{font-size:clamp(24px,2.7vw,37px);font-family:var(--font-display,Georgia,serif);color:#fff;line-height:1.2;overflow-wrap:anywhere}
+.sprint4-dashboard .sprint4-welcome-snapshot>small{font-size:12px;color:#d6e0ff}
+.sprint4-dashboard .sprint4-snapshot-bars{display:flex;align-items:end;height:38px;gap:6px;margin-top:8px}
+.sprint4-dashboard .sprint4-snapshot-bars i{height:30%;width:100%;background:rgba(255,255,255,.3);border-radius:5px 5px 0 0}
+.sprint4-dashboard .sprint4-snapshot-bars i:nth-child(2),.sprint4-dashboard .sprint4-snapshot-bars i:nth-child(5){height:67%;background:#abc9ff}
+.sprint4-dashboard .sprint4-snapshot-bars i:nth-child(3),.sprint4-dashboard .sprint4-snapshot-bars i:nth-child(7){height:90%;background:#fff}
+.sprint4-dashboard .sprint4-section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-top:4px}
+.sprint4-dashboard .sprint4-section-eyebrow,.sprint4-dashboard .sprint4-editor-tag{color:#6b7fd7}
+.sprint4-dashboard .sprint4-section-heading h2{font-family:var(--font-display,Georgia,serif);font-size:25px;color:var(--text-strong,#17233e);font-weight:400;margin:5px 0}
+.sprint4-dashboard .sprint4-section-heading p{font-size:13px;color:var(--text-muted,#738095);margin:0;line-height:1.5}
+.sprint4-dashboard .sprint4-section-heading--lower{margin-top:8px}
+.sprint4-dashboard .stat-card{position:relative;overflow:hidden;border-radius:17px;transition:transform .2s,box-shadow .2s,border-color .2s}
+.sprint4-dashboard .stat-card:before{content:"";position:absolute;left:0;top:0;height:4px;width:100%;background:linear-gradient(90deg,#6579de,#b3bdfa)}
+.sprint4-dashboard .stat-card:nth-child(3n+2):before{background:linear-gradient(90deg,#399cb8,#a8e4e2)}
+.sprint4-dashboard .stat-card:nth-child(3n):before{background:linear-gradient(90deg,#a17ade,#e4b8f0)}
+.sprint4-dashboard .stat-card:hover{transform:translateY(-3px);box-shadow:0 13px 29px rgba(28,47,97,.12)}
+.sprint4-dashboard .dashboard-customizer{border-radius:17px;border:1px solid #bac6ee;background:linear-gradient(120deg,rgba(104,127,219,.12),rgba(160,182,245,.055));padding:19px;gap:20px}
+.sprint4-dashboard .dash-card{border-radius:17px;overflow:hidden;transition:box-shadow .18s}
+.sprint4-dashboard .dash-get-started{background:linear-gradient(145deg,rgba(91,111,212,.09),transparent 80%),var(--surface,#fff)}
+.sprint4-dashboard .activity-row{transition:background .15s}
+.sprint4-dashboard .activity-row:hover{background:rgba(102,124,205,.07)}
+html[data-theme="dark"] .sprint4-dashboard .sprint4-section-heading h2{color:var(--text-strong,#f5f7ff)}
+html[data-theme="dark"] .sprint4-dashboard .sprint4-section-eyebrow{color:#a4b2ff}
+html[data-theme="dark"] .sprint4-dashboard .dashboard-customizer{border-color:#485788;background:linear-gradient(120deg,rgba(104,127,219,.16),rgba(22,32,60,.22))}
+html[data-theme="dark"] .sprint4-dashboard .dash-get-started{background:linear-gradient(145deg,rgba(91,111,212,.16),transparent 80%),var(--surface,#172038)}
+/* Project and statistics cards: stronger grouping without touching interactions or data. */
+.app-shell .project-card{position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .2s}
+.app-shell .project-card:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#687cdb,#a5acec)}
+.app-shell .project-card:nth-child(3n+2):before{background:linear-gradient(90deg,#4babb2,#a7dfdd)}
+.app-shell .project-card:nth-child(3n):before{background:linear-gradient(90deg,#9c7add,#d0b7f5)}
+.app-shell .project-card:hover{transform:translateY(-3px);box-shadow:0 15px 28px rgba(26,40,80,.13)}
+.app-shell .project-card-stat strong{color:var(--text-strong,#192643)}
+.app-shell .stats-summary-card{position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.app-shell .stats-summary-card:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#687cdb,#bbc4f5)}
+.app-shell .stats-summary-card:hover{transform:translateY(-2px);box-shadow:0 11px 23px rgba(26,40,80,.1)}
+html[data-theme="dark"] .app-shell .project-card-stat strong{color:var(--text-strong,#f4f6ff)}
+@media(max-width:850px){.sprint4-dashboard .sprint4-welcome{grid-template-columns:1fr;padding:24px;gap:14px}.sprint4-dashboard .sprint4-welcome-snapshot{padding:14px}.sprint4-dashboard .sprint4-snapshot-bars{display:none}}
+@media(max-width:480px){.sprint4-dashboard .sprint4-welcome{padding:18px;border-radius:14px}.sprint4-dashboard .sprint4-welcome h2{font-size:27px}.sprint4-dashboard .sprint4-section-heading h2{font-size:21px}.sprint4-dashboard .sprint4-welcome-actions{flex-direction:column}.sprint4-dashboard .sprint4-welcome-actions button{justify-content:space-between}}
+@media(prefers-reduced-motion:reduce){.sprint4-dashboard .stat-card,.app-shell .project-card,.app-shell .stats-summary-card,.sprint4-dashboard .sprint4-action-primary,.sprint4-dashboard .sprint4-action-quiet{transition:none!important;transform:none!important}}
+
+
+/* ===============================================================
+   Sprint 4 v6 — editorial workspace treatment and stable navigation
+   All selectors are presentation-only. App actions/data stay intact.
+   =============================================================== */
+
+
+
+/* =========================================================
+   SPRINT 4 — STUDIO WORKSPACE SYSTEM
+   Visual redesign only; existing interactions/data are untouched.
+   ========================================================= */
+:root {
+ --bg:#f5f7f5; --surface:#fffefd; --surface-subtle:#edf2ef; --surface-inset:#f1f5f2;
+ --surface-hover:#eaf1ed; --border:#dce5df; --border-strong:#b9cbc1;
+ --text:#344440; --text-strong:#172f2c; --text-muted:#647973; --text-faint:#80958f;
+ --accent:#167d75; --accent-hover:#11675f; --accent-soft:#e3f4ed; --accent-text:#116f67;
+ --accent-border:#a8d8cb; --ring:rgba(22,125,117,.22);
+ --radius-lg:16px;--radius-xl:22px;
+ --shadow-sm:0 2px 6px rgba(18,50,46,.035);
+ --shadow-md:0 12px 32px rgba(18,50,46,.075);
+}
+html[data-theme='dark'] {
+ --bg:#111b1b; --surface:#1b2928; --surface-subtle:#223431; --surface-inset:#152320;
+ --surface-hover:#2a403c; --border:#354b47; --border-strong:#59716a;
+ --text:#d9e5df; --text-strong:#f3faf5; --text-muted:#b0c3b9; --text-faint:#91aba0;
+ --accent:#67c8b1; --accent-hover:#85d9c5; --accent-soft:#23433b; --accent-text:#91dfcc;
+ --accent-border:#397e6c;--ring:rgba(103,200,177,.3);
+}
+html,body,#root{min-height:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell){align-items:flex-start!important;min-height:100dvh;background:var(--bg)!important;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell)>.sidebar{
+ position:sticky!important;top:0!important;height:100dvh!important;max-height:100dvh!important;
+ align-self:flex-start!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin;z-index:30;
+}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell)>main{min-width:0;}
+/* The global navigation is designed as a stable tool rail, not a page card. */
+.sidebar.sidebar{background:#132e2b!important;border-right:1px solid #295049!important;color:#e4f4ed!important;}
+.sidebar.sidebar :is(.sidebar-link,.sidebar-nav a){border-radius:12px;}
+.sidebar.sidebar :is(.sidebar-link:hover,.sidebar-nav a:hover){background:rgba(218,248,232,.09)!important;}
+.sidebar.sidebar :is(.sidebar-link.active,.sidebar-nav a.active,.sidebar-link--active){background:#27584e!important;color:#effff9!important;}
+/* Grounded typography: smaller but clearer differences in weight and rhythm. */
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(h1,h2,h3){letter-spacing:-.025em;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.page-header-title,.stats-title,.profile-title,.settings-title){font-size:clamp(29px,2.4vw,39px)!important;line-height:1.16;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.page-header-eyebrow,.sprint4-section-eyebrow){color:var(--accent-text)!important;letter-spacing:.11em;font-size:11px;font-weight:750;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(button,input,select,textarea){transition:border-color .18s,background-color .18s,box-shadow .18s,transform .18s;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(button,a,input,select,textarea):focus-visible{outline:3px solid var(--accent-border);outline-offset:2px;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.btn-primary,button[type=submit]){box-shadow:0 5px 12px rgba(14,83,74,.12);}
+/* Dashboard composition: real weekly data gets a quiet spotlight, not a promotional banner. */
+.sprint4-dashboard .sprint4-welcome{
+ display:grid!important;grid-template-columns:minmax(0,1.8fr) minmax(210px,.7fr)!important;
+ gap:24px!important;align-items:stretch!important;
+ padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;
+ border-radius:0!important;overflow:visible!important;
+}
+.sprint4-dashboard .sprint4-welcome:before{display:none!important;}
+.sprint4-dashboard .sprint4-welcome-main{
+ background:linear-gradient(110deg,#1b4941 0%,#163d3b 72%,#224d4a 100%)!important;
+ border-radius:23px;padding:32px 34px;box-shadow:0 15px 30px rgba(14,58,52,.12);min-width:0;
+ position:relative;overflow:hidden;
+}
+.sprint4-dashboard .sprint4-welcome-main:after{
+ content:"";pointer-events:none;position:absolute;width:250px;height:250px;right:-115px;top:-135px;
+ border:1px solid rgba(209,245,222,.2);border-radius:50%;box-shadow:0 0 0 42px rgba(209,245,222,.035),0 0 0 85px rgba(209,245,222,.025);
+}
+.sprint4-dashboard .sprint4-kicker{color:#8de0c9!important;letter-spacing:.14em;font-size:11px!important;}
+.sprint4-dashboard .sprint4-welcome h2{font-size:clamp(29px,2.45vw,39px)!important;line-height:1.16!important;color:#f6fff9!important;max-width:530px;}
+.sprint4-dashboard .sprint4-welcome p{color:#c4dcd2!important;max-width:560px;font-size:14px!important;line-height:1.65;}
+.sprint4-dashboard .sprint4-welcome-actions{margin-top:23px;display:flex;gap:10px;flex-wrap:wrap;}
+.sprint4-dashboard .sprint4-action-primary{background:#e9f7ef!important;color:#15493e!important;border:1px solid #e9f7ef!important;}
+.sprint4-dashboard .sprint4-action-quiet{background:transparent!important;color:#e9f7ef!important;border:1px solid #6a9a8b!important;}
+.sprint4-dashboard .sprint4-welcome-snapshot{
+ background:var(--surface)!important;color:var(--text-strong)!important;border:1px solid var(--border)!important;
+ padding:27px!important;min-height:0!important;box-shadow:var(--shadow-sm)!important;border-radius:23px!important;
+ justify-content:space-between!important;display:flex;flex-direction:column;
+}
+.sprint4-dashboard .sprint4-welcome-snapshot>span{color:var(--accent-text)!important;font-size:11px;letter-spacing:.1em;}
+.sprint4-dashboard .sprint4-welcome-snapshot>strong{color:var(--text-strong)!important;font-size:clamp(28px,2.8vw,42px)!important;letter-spacing:-.04em;}
+.sprint4-dashboard .sprint4-welcome-snapshot>small{color:var(--text-muted)!important;}
+.sprint4-dashboard .sprint4-snapshot-bars{display:none!important;}
+.sprint4-dashboard .sprint4-section-heading{margin:34px 0 16px!important;}
+.sprint4-dashboard .sprint4-section-heading h2{font-size:26px!important;line-height:1.25;}
+.sprint4-dashboard .sprint4-section-heading p{font-size:13px!important;}
+.sprint4-dashboard .stat-grid{gap:13px!important;}
+.sprint4-dashboard .stat-card{
+ border-radius:17px!important;border:1px solid var(--border)!important;background:var(--surface)!important;
+ min-height:142px!important;box-shadow:var(--shadow-sm)!important;padding:21px!important;
+}
+.sprint4-dashboard .stat-card:before{height:3px!important;top:0!important;bottom:auto!important;width:100%!important;left:0!important;right:0!important;}
+.sprint4-dashboard .stat-card:nth-child(4n+1):before{background:#328b80!important;}
+.sprint4-dashboard .stat-card:nth-child(4n+2):before{background:#d19559!important;}
+.sprint4-dashboard .stat-card:nth-child(4n+3):before{background:#7f87b3!important;}
+.sprint4-dashboard .stat-card:nth-child(4n):before{background:#c27985!important;}
+.sprint4-dashboard .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)!important;}
+.sprint4-dashboard .dashboard-columns{gap:16px!important;align-items:start;}
+.sprint4-dashboard .dash-card{border-radius:20px!important;background:var(--surface)!important;border:1px solid var(--border)!important;box-shadow:var(--shadow-sm)!important;}
+.sprint4-dashboard .dash-get-started{background:linear-gradient(155deg,var(--accent-soft),var(--surface) 72%)!important;}
+.sprint4-dashboard .activity-row{border-radius:12px;border-bottom:1px solid var(--border);}
+.sprint4-dashboard .dashboard-customizer{background:var(--accent-soft)!important;border:1px solid var(--accent-border)!important;border-radius:19px!important;}
+/* Project cards are real working records, not marketing tiles. */
+.app-shell .projects-toolbar{background:var(--surface);padding:15px;border:1px solid var(--border);border-radius:17px;}
+.app-shell .project-card{background:var(--surface)!important;min-height:195px!important;border:1px solid var(--border)!important;border-radius:19px!important;box-shadow:var(--shadow-sm)!important;}
+.app-shell .project-card:before{height:4px!important;background:#368d82!important;}
+.app-shell .project-card:nth-child(3n+2):before{background:#d59961!important;}
+.app-shell .project-card:nth-child(3n):before{background:#8895be!important;}
+.app-shell .project-card:hover{transform:translateY(-3px);border-color:var(--accent-border)!important;box-shadow:var(--shadow-md)!important;}
+/* Search becomes the primary visual affordance without changing filtering. */
+.search-page-shell .search-panel{padding:20px!important;border:1px solid var(--border)!important;border-radius:20px!important;background:var(--surface)!important;box-shadow:var(--shadow-md)!important;}
+.search-page-shell .search-page-main{background:transparent!important;}
+/* Charting, settings and account surfaces share a recognizable treatment. */
+.stats-shell :is(.stats-summary-card,.stats-card,.stats-panel,.chart-card,.stats-chart-card),
+.settings-shell .settings-card,.profile-shell .profile-card{
+ background:var(--surface)!important;border:1px solid var(--border)!important;border-radius:20px!important;
+ box-shadow:var(--shadow-sm)!important;overflow:hidden;
+}
+.stats-shell .stats-summary-card:nth-child(3n+1){border-top:4px solid #328b80!important;}
+.stats-shell .stats-summary-card:nth-child(3n+2){border-top:4px solid #d59961!important;}
+.stats-shell .stats-summary-card:nth-child(3n){border-top:4px solid #8895be!important;}
+.settings-shell :is(.settings-card-header,.settings-section-header),.profile-shell :is(.profile-card-header,.profile-section-header){background:var(--surface-subtle)!important;}
+/* Dark mode uses its own cohesive palette and preserves legibility. */
+html[data-theme='dark'] .sprint4-dashboard .sprint4-welcome-main{background:linear-gradient(120deg,#184239,#213e47)!important;}
+html[data-theme='dark'] .sprint4-dashboard .sprint4-action-primary{background:#c5f1e2!important;color:#123f37!important;border-color:#c5f1e2!important;}
+html[data-theme='dark'] .sprint4-dashboard .sprint4-welcome-snapshot{background:var(--surface)!important;}
+html[data-theme='dark'] .sprint4-dashboard .stat-card,html[data-theme='dark'] .app-shell .project-card{background:var(--surface)!important;}
+@media(max-width:850px){
+ .sprint4-dashboard .sprint4-welcome{grid-template-columns:1fr!important;}
+ .sprint4-dashboard .sprint4-welcome-main{padding:24px!important;}
+ .sprint4-dashboard .sprint4-welcome-snapshot{min-height:120px!important;gap:6px;}
+}
+@media(max-width:600px){
+ .sprint4-dashboard .sprint4-welcome-main{padding:19px!important;}
+ .sprint4-dashboard .sprint4-welcome h2{font-size:27px!important;}
+ .sprint4-dashboard .stat-card{min-height:120px!important;padding:14px!important;}
+ .app-shell .project-card{min-height:0!important;}
+}
+@media(prefers-reduced-motion:reduce){.app-shell .project-card,.sprint4-dashboard .stat-card{transition:none!important;transform:none!important;}}
+/* Actual sidebar navigation class names. */
+.sidebar.sidebar .sidebar-nav-item{border-radius:12px;color:#bbd1c7;}
+.sidebar.sidebar .sidebar-nav-item:hover{background:rgba(218,248,232,.09)!important;color:#fff;}
+.sidebar.sidebar .sidebar-nav-item--active{background:#27584e!important;color:#effff9!important;}
+.sidebar.sidebar .sidebar-brand-name{color:#f4fff9;}
+.sidebar.sidebar .sidebar-profile{border-color:#31544d;}
+/* Sprint 4 — Navigator's Log visual identity.
+   Styling only: no altered routes, interaction logic, data or API behaviour. */
+:root {
+ --bg:#f3f2eb;--surface:#fffefa;--surface-subtle:#eaece9;--surface-inset:#f4f5f1;
+ --surface-hover:#edf3f1;--border:#d7dedc;--border-strong:#aebebc;
+ --text:#334a51;--text-strong:#142f3c;--text-muted:#5d747a;--text-faint:#80949a;
+ --accent:#126e78;--accent-hover:#0b5963;--accent-soft:#e2f1ef;--accent-text:#0d646d;
+ --accent-border:#9acac9;--ring:rgba(18,110,120,.25);
+ --radius-lg:14px;--radius-xl:20px;
+ --shadow-sm:0 3px 12px rgba(17,49,59,.035);--shadow-md:0 14px 34px rgba(20,51,63,.075);
+ --nautical-brass:#b38645;--nautical-brass-soft:#f6eee0;--nautical-ink:#112d3b;
+}
+html[data-theme='dark'] {
+ --bg:#101d27;--surface:#1b2c37;--surface-subtle:#233641;--surface-inset:#142631;
+ --surface-hover:#2b414b;--border:#39515a;--border-strong:#59717a;
+ --text:#d5e0e2;--text-strong:#f4f4ea;--text-muted:#afc4c8;--text-faint:#91adb5;
+ --accent:#6fc4c5;--accent-hover:#8bd7d5;--accent-soft:#1c454a;--accent-text:#9bdcdc;
+ --accent-border:#417d80;--ring:rgba(111,196,197,.32);
+ --nautical-brass:#d9b778;--nautical-brass-soft:#433b2e;--nautical-ink:#0a1c29;
+ color-scheme:dark;
+}
+body{background:var(--bg)!important;color:var(--text);}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell){background:var(--bg)!important;}
+/* Fine cartographic grid is non-interactive and very low contrast. */
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell)>main{
+ background-image:linear-gradient(rgba(25,83,99,.024) 1px,transparent 1px),linear-gradient(90deg,rgba(25,83,99,.024) 1px,transparent 1px);
+ background-size:46px 46px;
+}
+html[data-theme='dark'] :is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell)>main{
+ background-image:linear-gradient(rgba(193,224,223,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(193,224,223,.022) 1px,transparent 1px);
+}
+/* Navigation: navy instrument panel, brass rule and stable viewport position. */
+.sidebar.sidebar{background:linear-gradient(164deg,#102a3d,#152e40 59%,#122738)!important;border-right:2px solid #b38645!important;color:#ecf3f1!important;box-shadow:8px 0 30px rgba(9,29,42,.07);}
+.sidebar.sidebar .sidebar-brand-name{color:#fff8e7!important;letter-spacing:.005em;}
+.sidebar.sidebar :is(.sidebar-nav-item,.sidebar-link){color:#b8d0d3!important;border-radius:10px!important;}
+.sidebar.sidebar :is(.sidebar-nav-item:hover,.sidebar-link:hover){background:rgba(229,246,245,.09)!important;color:#fff!important;}
+.sidebar.sidebar :is(.sidebar-nav-item--active,.sidebar-link--active,.sidebar-link.active){background:rgba(103,184,190,.18)!important;color:#fff9e9!important;box-shadow:inset 3px 0 0 #dcb879;}
+.sidebar.sidebar .sidebar-profile{border-color:rgba(210,227,225,.18)!important;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell)>.sidebar{position:sticky!important;top:0!important;height:100dvh!important;max-height:100dvh!important;align-self:flex-start!important;overflow-y:auto!important;overscroll-behavior:contain;}
+/* Logbook-style page titles: elegant but deliberately not oversized. */
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.page-header-title,.stats-title,.profile-title,.settings-title){font-size:clamp(28px,2.15vw,37px)!important;line-height:1.18!important;color:var(--text-strong)!important;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.page-header-eyebrow,.sprint4-section-eyebrow,.settings-eyebrow){color:var(--accent-text)!important;letter-spacing:.15em!important;font-size:11px!important;font-weight:750!important;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.page-header-description,.settings-subtitle){color:var(--text-muted)!important;}
+/* Nautical hero: deep chart-blue and an understated compass-rose abstraction. */
+.sprint4-dashboard .sprint4-welcome-main{
+ background:linear-gradient(125deg,#153c51 0%,#155466 75%,#236a73 100%)!important;
+ border:1px solid rgba(214,190,136,.38)!important;box-shadow:0 15px 36px rgba(17,56,69,.13)!important;
+}
+.sprint4-dashboard .sprint4-welcome-main:after{
+ content:""!important;display:block!important;position:absolute;right:-90px;top:-135px;width:350px;height:350px;
+ border:1px solid rgba(247,235,202,.23)!important;border-radius:50%;
+ background:repeating-radial-gradient(circle at center,transparent 0px,transparent 43px,rgba(238,232,205,.13) 44px,transparent 45px),
+ linear-gradient(0deg,transparent 49.8%,rgba(238,232,205,.16) 50%,transparent 50.2%),
+ linear-gradient(90deg,transparent 49.8%,rgba(238,232,205,.16) 50%,transparent 50.2%);
+ box-shadow:none!important;opacity:.65;pointer-events:none;
+}
+.sprint4-dashboard .sprint4-kicker{color:#e1c68d!important;}
+.sprint4-dashboard .sprint4-welcome h2{color:#fffaf0!important;font-size:clamp(28px,2.2vw,36px)!important;}
+.sprint4-dashboard .sprint4-welcome p{color:#d5e5e5!important;}
+.sprint4-dashboard .sprint4-action-primary{background:#faf3e3!important;color:#164050!important;border-color:#faf3e3!important;}
+.sprint4-dashboard .sprint4-action-quiet{border-color:#94bfc2!important;color:#f7f6ed!important;}
+.sprint4-dashboard .sprint4-welcome-snapshot{background:linear-gradient(155deg,var(--surface),var(--accent-soft))!important;border:1px solid var(--border)!important;border-bottom:3px solid var(--nautical-brass)!important;}
+.sprint4-dashboard .sprint4-welcome-snapshot>span{color:var(--accent-text)!important;}
+.sprint4-dashboard .sprint4-welcome-snapshot>strong{color:var(--text-strong)!important;}
+/* Logbook entries and data cards: thin rules, warm paper, useful information first. */
+.sprint4-dashboard .stat-card,.app-shell .project-card,
+.stats-shell :is(.stats-summary-card,.stats-card,.stats-panel,.chart-card,.stats-chart-card),
+.settings-shell .settings-card,.profile-shell .profile-card,.search-page-shell .search-panel,
+.sprint4-dashboard .dash-card{
+ background:var(--surface)!important;border:1px solid var(--border)!important;border-radius:14px!important;
+ box-shadow:var(--shadow-sm)!important;
+}
+.sprint4-dashboard .stat-card:before{height:3px!important;background:var(--accent)!important;}
+.sprint4-dashboard .stat-card:nth-child(4n+2):before,.app-shell .project-card:nth-child(3n+2):before{background:var(--nautical-brass)!important;}
+.sprint4-dashboard .stat-card:nth-child(4n+3):before,.app-shell .project-card:nth-child(3n):before{background:#598ba2!important;}
+.sprint4-dashboard .stat-card:nth-child(4n):before{background:#8a9d8d!important;}
+.app-shell .project-card:before{height:4px!important;background:var(--accent)!important;}
+.app-shell .projects-toolbar{background:var(--surface)!important;border-color:var(--border)!important;box-shadow:var(--shadow-sm)!important;}
+.sprint4-dashboard .sprint4-section-heading{border-bottom:1px solid var(--border);padding-bottom:14px;}
+.sprint4-dashboard .sprint4-section-heading h2{font-size:25px!important;color:var(--text-strong)!important;}
+.sprint4-dashboard .dash-get-started{background:linear-gradient(140deg,var(--nautical-brass-soft),var(--surface) 68%)!important;}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.btn-primary,button[type='submit']){background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 3px 10px rgba(14,83,99,.12);}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(.btn-primary,button[type='submit']):hover:not(:disabled){background:var(--accent-hover);}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(input,select,textarea){border-color:var(--border-strong);}
+:is(.app-shell,.settings-shell,.profile-shell,.stats-shell,.search-page-shell) :is(button,a,input,select,textarea):focus-visible{outline:3px solid var(--ring);outline-offset:2px;}
+.settings-shell :is(.settings-card-header,.settings-section-header),.profile-shell :is(.profile-card-header,.profile-section-header){background:var(--surface-subtle)!important;}
+/* Keep project AI tools and video integrations at equal visual priority with other content. */
+.app-shell :is(.ai-coach-card,.learning-videos-card,.ai-project-coach-card){border-color:var(--accent-border);box-shadow:var(--shadow-sm);}
+html[data-theme='dark'] .sprint4-dashboard .sprint4-welcome-main{background:linear-gradient(120deg,#102d41,#144856)!important;}
+html[data-theme='dark'] .sprint4-dashboard .sprint4-action-primary{background:#f2e6ca!important;color:#153b4a!important;border-color:#f2e6ca!important;}
+html[data-theme='dark'] .sprint4-dashboard .sprint4-welcome-snapshot{background:linear-gradient(145deg,var(--surface),var(--surface-subtle))!important;}
+@media(max-width:850px){.sprint4-dashboard .sprint4-welcome{grid-template-columns:1fr!important;}.sprint4-dashboard .sprint4-welcome-main{padding:22px!important;}}
+@media(max-width:600px){.sprint4-dashboard .sprint4-welcome h2{font-size:27px!important;}.sprint4-dashboard .sprint4-welcome-main:after{width:210px;height:210px;right:-100px;top:-80px;}}
+@media(prefers-reduced-motion:reduce){.sprint4-dashboard .stat-card,.app-shell .project-card{transform:none!important;transition:none!important;}}

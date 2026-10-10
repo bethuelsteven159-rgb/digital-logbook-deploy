@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const { syncProjectFields } = require('../services/projectFieldsService');
+const { notifyProjectChange } = require("../services/collaboratorNotificationService");
 
 const router = express.Router();
 
@@ -328,6 +329,12 @@ router.patch("/:projectId", async (req, res, next) => {
 
     await client.query("COMMIT");
 
+    void notifyProjectChange({
+      projectId: req.params.projectId,
+      actorId: userId,
+      action: "project_updated",
+    });
+
     return res.status(200).json({
       success: true,
       data: mapProject({
@@ -396,6 +403,12 @@ router.patch("/:projectId/archive", async (req, res, next) => {
     if (result.rowCount === 0) {
       throw httpError(404, "Project not found");
     }
+
+    void notifyProjectChange({
+      projectId: req.params.projectId,
+      actorId: userId,
+      action: archived ? "project_archived" : "project_unarchived",
+    });
 
     return res.status(200).json({
       success: true,

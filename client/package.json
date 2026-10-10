@@ -15,10 +15,13 @@
     "test:node:coverage": "c8 --reporter=text --reporter=lcov --report-dir=coverage-node --all --include=src/pages/Projects/entryViews.js --include=src/pages/Profile/profilePicture.js --include=src/pages/Profile/avatarBuilder.js node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js src/pages/Profile/avatarBuilder.test.js"
   },
   "dependencies": {
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.1",
     "lucide-react": "^1.33.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.18.2"
+    "react-router-dom": "^7.18.2",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

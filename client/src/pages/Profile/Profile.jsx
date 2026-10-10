@@ -854,6 +854,65 @@ function ProfileStyles() {
         font-size: 14px;
       }
 
+      /* Profile respects the same document-level theme as Settings. */
+      html[data-theme="dark"] .profile-shell {
+        background: #101827;
+        color: #e2e8f0;
+      }
+      html[data-theme="dark"] .profile-title,
+      html[data-theme="dark"] .profile-name-placeholder,
+      html[data-theme="dark"] .profile-card-heading h2 {
+        color: #f1f5f9;
+      }
+      html[data-theme="dark"] .profile-subtitle,
+      html[data-theme="dark"] .profile-email-placeholder,
+      html[data-theme="dark"] .profile-card-heading p,
+      html[data-theme="dark"] .profile-detail-label,
+      html[data-theme="dark"] .profile-note,
+      html[data-theme="dark"] .profile-character-count,
+      html[data-theme="dark"] .profile-loading {
+        color: #a8b6cc;
+      }
+      html[data-theme="dark"] .profile-card {
+        background: #1d293b;
+        border-color: #34435a;
+        color: #e2e8f0;
+      }
+      html[data-theme="dark"] .profile-input,
+      html[data-theme="dark"] .profile-textarea {
+        color: #f1f5f9;
+        background: #111c2d;
+        border-color: #45546c;
+      }
+      html[data-theme="dark"] .profile-input::placeholder,
+      html[data-theme="dark"] .profile-textarea::placeholder {
+        color: #a8b6cc;
+      }
+      html[data-theme="dark"] .profile-detail-value {
+        color: #d5dfed;
+        background: #162236;
+        border-color: #45546c;
+      }
+      html[data-theme="dark"] .profile-btn-secondary {
+        color: #e2e8f0;
+        background: #27354a;
+        border-color: #45546c;
+      }
+      html[data-theme="dark"] .profile-avatar-large {
+        color: #b7c6ff;
+        background: #2e3b64;
+      }
+      html[data-theme="dark"] .profile-alert-error {
+        color: #fecaca;
+        background: #4c202b;
+        border-color: #904355;
+      }
+      html[data-theme="dark"] .profile-alert-success {
+        color: #bbf7d0;
+        background: #153b30;
+        border-color: #26745e;
+      }
+
       @media (max-width: 900px) {
         .profile-header,
         .profile-content {

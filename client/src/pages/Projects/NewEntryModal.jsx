@@ -663,10 +663,10 @@ export default function NewEntryModal({
                   when the work is related.
                 </p>
 
-                <div className="person4-reference-list">
+                <div className="person4-reference-list sprint4-reference-list">
                   {referenceProjectOptions.map((project) => (
                     <label
-                      className="person4-reference-option"
+                      className="person4-reference-option sprint4-reference-option"
                       key={project.id}
                     >
                       <input
@@ -700,10 +700,10 @@ export default function NewEntryModal({
                   provides useful context for this work.
                 </p>
 
-                <div className="person4-reference-list">
+                <div className="person4-reference-list sprint4-reference-list">
                   {referenceEntryOptions.map((entry) => (
                     <label
-                      className="person4-reference-option"
+                      className="person4-reference-option sprint4-reference-option"
                       key={entry.id}
                     >
                       <input

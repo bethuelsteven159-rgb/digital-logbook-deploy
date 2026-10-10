@@ -402,40 +402,6 @@ export default function Settings() {
             )}
           </section>
 
-          {/* DATA & RESET */}
-
-          <section className="settings-section">
-            <div className="settings-section-header">
-              <div className="settings-section-icon settings-section-icon-muted">
-                <IconRotate />
-              </div>
-
-              <div>
-                <h2>Data &amp; reset</h2>
-                <p>
-                  Manage application reset options.
-                </p>
-              </div>
-            </div>
-
-            <div className="coming-soon-card">
-              <div className="coming-soon-icon">
-                <IconClock />
-              </div>
-
-              <div>
-                <h3>Reset options</h3>
-                <p>
-                  Reset and data-clearing options will
-                  become available in a future version.
-                </p>
-              </div>
-
-              <span className="coming-soon-badge">
-                Available soon
-              </span>
-            </div>
-          </section>
         </div>
       </main>
 
