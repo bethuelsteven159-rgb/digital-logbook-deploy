@@ -229,9 +229,16 @@ async function getProjectDetailsService({
       linkedByEntryId.get(entry.id) || [];
   }
 
+  const viewerRole =
+    project.ownerId === userId
+      ? "owner"
+      : "collaborator";
+
   return {
     project: {
       id: project.id,
+      ownerId: project.ownerId ?? null,
+      viewerRole,
       name: project.name,
       description: project.description,
       startDate: project.startDate,

@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { getCurrentUser } from "../api/userApi.js";
+import { resetNotificationsStore } from "../hooks/useNotifications.js";
 
 const UserContext = createContext(null);
 
@@ -43,14 +44,26 @@ export function UserProvider({ children }) {
     refreshUser();
   }, [refreshUser]);
 
+  const logout = useCallback(() => {
+    localStorage.removeItem("authToken");
+
+    // The notifications feed is cached in module scope; reset it so
+    // the next signed-in user never sees the previous user's feed.
+    resetNotificationsStore();
+
+    setUser(null);
+    setError(null);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       loading,
       error,
       refreshUser,
+      logout,
     }),
-    [user, loading, error, refreshUser],
+    [user, loading, error, refreshUser, logout],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

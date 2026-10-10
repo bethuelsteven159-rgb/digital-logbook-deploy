@@ -30,7 +30,15 @@ async function getOwnedProject(projectId, userId) {
       SELECT id
       FROM projects
       WHERE id = $1
-        AND owner_id = $2
+        AND (
+          owner_id = $2
+          OR EXISTS (
+            SELECT 1
+            FROM project_collaborators pc
+            WHERE pc.project_id = projects.id
+              AND pc.user_id = $2
+          )
+        )
       LIMIT 1
     `,
     [projectId, userId],
@@ -727,7 +735,15 @@ const PROJECT_ACTIVITY_SQL = `
   LEFT JOIN entries e
     ON e.project_id = p.id
    AND e.archived_at IS NULL
-  WHERE p.owner_id = $1
+  WHERE (
+      p.owner_id = $1
+      OR EXISTS (
+        SELECT 1
+        FROM project_collaborators pc
+        WHERE pc.project_id = p.id
+          AND pc.user_id = $1
+      )
+    )
     AND p.archived_at IS NULL
   GROUP BY p.id, p.name
   ORDER BY minutes DESC, p.name ASC

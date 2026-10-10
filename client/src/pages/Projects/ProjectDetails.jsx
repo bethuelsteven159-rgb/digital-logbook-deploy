@@ -3,13 +3,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import Sidebar from '../../components/Sidebar';
-import { X, Plus, Zap, Check } from 'lucide-react';
+import { X, Plus, Zap, Check, Users } from 'lucide-react';
 import EditProjectModal from '../../components/EditProjectModal';
 import NewEntryModal from './NewEntryModal';
 import EditEntryModal from './EditEntryModal';
 import EntryHistoryModal from './EntryHistoryModal';
 import EntryDetailsModal from './EntryDetailsModal';
 import AutomationRulesModal from './AutomationRulesModal';
+import SharingModal from './SharingModal';
 import CalendarView from './CalendarView';
 import BoardView from './BoardView';
 import RecurringEntriesModal from './RecurringEntriesModal';
@@ -93,6 +94,8 @@ export default function ProjectDetails() {
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
 
   const [showAutomationRulesModal, setShowAutomationRulesModal] = useState(false);
+
+  const [showSharingModal, setShowSharingModal] = useState(false);
 
   const [showRecurringModal, setShowRecurringModal] = useState(false);
 
@@ -1110,6 +1113,16 @@ async function handleUnarchiveEntry(entry) {
 
             <button
               type="button"
+              className="btn btn-secondary"
+              onClick={() => setShowSharingModal(true)}
+              disabled={projectActionSaving}
+            >
+              <Users size={14} />
+              Share
+            </button>
+
+            <button
+              type="button"
               className="btn btn-ghost"
               onClick={() => setShowEditProjectModal(true)}
               disabled={projectActionSaving}
@@ -1982,6 +1995,13 @@ async function handleUnarchiveEntry(entry) {
           projectId={id}
           fields={fields}
           onClose={() => setShowAutomationRulesModal(false)}
+        />
+      )}
+
+      {showSharingModal && (
+        <SharingModal
+          projectId={id}
+          onClose={() => setShowSharingModal(false)}
         />
       )}
 

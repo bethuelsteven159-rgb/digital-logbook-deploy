@@ -153,3 +153,43 @@ CREATE INDEX IF NOT EXISTS idx_custom_statistics_owner
 
 CREATE INDEX IF NOT EXISTS idx_custom_statistics_project
     ON custom_statistics (project_id);
+
+
+-- =========================================================
+-- SHARED PROJECTS (collaborators + invitations)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS project_collaborators (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL DEFAULT 'editor' CHECK (role IN ('editor')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_project_collaborator
+        UNIQUE (project_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_collaborators_project
+    ON project_collaborators(project_id);
+
+CREATE INDEX IF NOT EXISTS idx_project_collaborators_user
+    ON project_collaborators(user_id);
+
+CREATE TABLE IF NOT EXISTS project_invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    inviter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invitee_email VARCHAR(320) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'accepted', 'declined', 'revoked')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    responded_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_invitations_project
+    ON project_invitations(project_id);
+
+CREATE INDEX IF NOT EXISTS idx_project_invitations_invitee
+    ON project_invitations(invitee_email, status);

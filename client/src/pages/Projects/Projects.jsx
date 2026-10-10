@@ -13,6 +13,11 @@ import {
     createProject,
     fetchProjects,
 } from "../../api/projectsApi";
+import {
+    fetchMyInvitations,
+    acceptInvitation,
+    declineInvitation,
+} from "../../api/projectSharingApi";
 import { loadPreferences, PREFERENCES_EVENT, sortProjects } from "../../utils/preferences";
 
 export default function Projects() {
@@ -40,6 +45,10 @@ export default function Projects() {
     const [hoursMax, setHoursMax] = useState("");
     const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
 
+    const [invitations, setInvitations] = useState([]);
+    const [invitationBusyId, setInvitationBusyId] = useState(null);
+    const [invitationError, setInvitationError] = useState("");
+
     const hasDateFilter = dateFrom || dateTo;
     const hasHoursFilter = hoursMin || hoursMax;
 
@@ -65,6 +74,47 @@ export default function Projects() {
     useEffect(() => {
         loadProjects(tab);
     }, [tab, loadProjects]);
+
+    const loadInvitations = useCallback(async () => {
+        try {
+            const data = await fetchMyInvitations();
+            setInvitations(Array.isArray(data) ? data : []);
+        } catch (invitationLoadError) {
+            console.error("Failed to load invitations:", invitationLoadError);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadInvitations();
+    }, [loadInvitations]);
+
+    async function respondToInvitation(invitationId, respond) {
+        setInvitationBusyId(invitationId);
+        setInvitationError("");
+
+        try {
+            await respond(invitationId);
+            setInvitations((current) =>
+                current.filter((invitation) => invitation.id !== invitationId),
+            );
+        } catch (respondError) {
+            setInvitationError(
+                respondError.message ||
+                    "The invitation could not be updated.",
+            );
+        } finally {
+            setInvitationBusyId(null);
+        }
+    }
+
+    function handleAcceptInvitation(invitationId) {
+        return respondToInvitation(invitationId, acceptInvitation)
+            .then(() => loadProjects(tab));
+    }
+
+    function handleDeclineInvitation(invitationId) {
+        return respondToInvitation(invitationId, declineInvitation);
+    }
 
     useEffect(() => {
         function handlePreferencesChanged(event) {
@@ -159,6 +209,52 @@ export default function Projects() {
         </header>
 
         <div className="projects-content">
+          {/* Pending project invitations */}
+          {invitationError && (
+            <div className="invitations-error" role="alert">
+              {invitationError}
+            </div>
+          )}
+
+          {invitations.length > 0 && (
+            <div className="invitations-panel">
+              <p className="invitations-panel-title">
+                Project invitations
+              </p>
+
+              {invitations.map((invitation) => (
+                <div className="invitation-row" key={invitation.id}>
+                  <div className="invitation-row-info">
+                    <strong>
+                      {invitation.projectName || "A project"}
+                    </strong>
+                    <span>
+                      {invitation.inviterName || invitation.inviterEmail || "Someone"}{" "}
+                      invited you to collaborate
+                    </span>
+                  </div>
+
+                  <div className="invitation-row-actions">
+                    <button
+                      className="btn btn-primary invitation-accept"
+                      onClick={() => handleAcceptInvitation(invitation.id)}
+                      disabled={invitationBusyId === invitation.id}
+                    >
+                      {invitationBusyId === invitation.id ? "Accepting..." : "Accept"}
+                    </button>
+                    <button
+                      className="btn btn-ghost invitation-decline"
+                      onClick={() => handleDeclineInvitation(invitation.id)}
+                      disabled={invitationBusyId === invitation.id}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Toolbar */}
           <div className="projects-toolbar">
             {/* Search */}
@@ -676,6 +772,74 @@ export default function Projects() {
           text-transform: uppercase;
         }
 
+        .project-card-badges {
+          display: flex;
+          flex-shrink: 0;
+          gap: 6px;
+        }
+
+        .project-card-badge--shared {
+          background: rgba(79,99,210,0.1);
+          color: #4f63d2;
+        }
+
+        /* Pending invitations */
+        .invitations-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 16px 18px;
+          border: 1.5px solid rgba(79,99,210,0.25);
+          border-radius: 12px;
+          background: rgba(79,99,210,0.04);
+        }
+        .invitations-panel-title {
+          margin: 0;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          color: #94a3b8;
+        }
+        .invitation-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 12px 14px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          background: #ffffff;
+        }
+        .invitation-row-info {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          min-width: 0;
+        }
+        .invitation-row-info strong {
+          font-size: 14px;
+          color: #1e293b;
+        }
+        .invitation-row-info span {
+          font-size: 12px;
+          color: #64748b;
+        }
+        .invitation-row-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        .invitations-error {
+          padding: 12px 16px;
+          border: 1px solid #fecaca;
+          border-radius: 10px;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-size: 13px;
+        }
+
         .project-card-description {
           min-height: 40px;
           margin: 0;
@@ -760,6 +924,8 @@ export default function Projects() {
           .toolbar-filters { flex-wrap: wrap; }
           .page-header { padding-top: 24px; }
           .page-header-title { font-size: 24px; }
+          .invitation-row { flex-direction: column; align-items: stretch; }
+          .invitation-row-actions { justify-content: flex-end; }
         }
       `}</style>
     </div>);
@@ -819,9 +985,18 @@ function ProjectCard({ project, onOpen }) {
             {project.name || "Untitled Project"}
           </h2>
 
-          {project.archivedAt && (
-            <span className="project-card-badge">
-              Archived
+          {(project.archivedAt || project.isShared) && (
+            <span className="project-card-badges">
+              {project.isShared && (
+                <span className="project-card-badge project-card-badge--shared">
+                  Shared
+                </span>
+              )}
+              {project.archivedAt && (
+                <span className="project-card-badge">
+                  Archived
+                </span>
+              )}
             </span>
           )}
         </div>

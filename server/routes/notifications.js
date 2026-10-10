@@ -155,7 +155,15 @@ const STALE_PROJECTS_SQL = `
   INNER JOIN entries e
     ON e.project_id = p.id
    AND e.archived_at IS NULL
-  WHERE p.owner_id = $1
+  WHERE (
+      p.owner_id = $1
+      OR EXISTS (
+        SELECT 1
+        FROM project_collaborators pc
+        WHERE pc.project_id = p.id
+          AND pc.user_id = $1
+      )
+    )
     AND p.archived_at IS NULL
   GROUP BY p.id, p.name
   HAVING MAX(e.occurred_at) < now() - make_interval(days => $2::int)

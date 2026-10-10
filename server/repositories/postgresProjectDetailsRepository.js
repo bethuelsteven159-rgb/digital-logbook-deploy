@@ -265,6 +265,8 @@ async function attachEntryFeatures(queryable, entries) {
 
 function createRepository(queryable) {
   return {
+    // "Owned" here means owned OR shared with the caller via
+    // project_collaborators, so collaborators get the same access.
     async getOwnedProject(projectId, userId, lock = false) {
       const result = await queryable.query(
         `SELECT id, owner_id, name, description,
@@ -272,7 +274,15 @@ function createRepository(queryable) {
                 created_at, updated_at
          FROM projects
          WHERE id = $1
-           AND owner_id = $2
+           AND (
+             owner_id = $2
+             OR EXISTS (
+               SELECT 1
+               FROM project_collaborators pc
+               WHERE pc.project_id = projects.id
+                 AND pc.user_id = $2
+             )
+           )
          LIMIT 1
          ${lock ? 'FOR UPDATE' : ''}`,
         [projectId, userId],
@@ -287,7 +297,15 @@ function createRepository(queryable) {
       const result = await queryable.query(
         `SELECT id
          FROM projects
-         WHERE owner_id = $1
+         WHERE (
+             owner_id = $1
+             OR EXISTS (
+               SELECT 1
+               FROM project_collaborators pc
+               WHERE pc.project_id = projects.id
+                 AND pc.user_id = $1
+             )
+           )
            AND id = ANY($2::uuid[])`,
         [userId, projectIds],
       );
@@ -309,7 +327,15 @@ function createRepository(queryable) {
                 ) AS used_by_entries
          FROM project_fields pf
          JOIN projects p ON p.id = pf.project_id
-         WHERE p.owner_id = $1
+         WHERE (
+             p.owner_id = $1
+             OR EXISTS (
+               SELECT 1
+               FROM project_collaborators pc
+               WHERE pc.project_id = p.id
+                 AND pc.user_id = $1
+             )
+           )
            AND ($2::boolean OR pf.archived_at IS NULL)
          ORDER BY pf.project_id, pf.position ASC`,
         [userId, includeArchived],
@@ -527,7 +553,15 @@ function createRepository(queryable) {
         sort = "newest",
       } = filters;
 
-      const conditions = ["p.owner_id = $1"];
+      const conditions = [`(
+                  p.owner_id = $1
+                  OR EXISTS (
+                    SELECT 1
+                    FROM project_collaborators pc
+                    WHERE pc.project_id = p.id
+                      AND pc.user_id = $1
+                  )
+                )`];
       const params = [userId];
 
       const addParam = (value) => {
@@ -1194,7 +1228,15 @@ function createRepository(queryable) {
          JOIN projects p
            ON p.id = e.project_id
          WHERE e.id = $1
-           AND p.owner_id = $2
+           AND (
+             p.owner_id = $2
+             OR EXISTS (
+               SELECT 1
+               FROM project_collaborators pc
+               WHERE pc.project_id = p.id
+                 AND pc.user_id = $2
+             )
+           )
          LIMIT 1`,
         [entryId, userId],
       );
@@ -1213,7 +1255,15 @@ function createRepository(queryable) {
          FROM entries e
          JOIN projects p
            ON p.id = e.project_id
-         WHERE p.owner_id = $1
+         WHERE (
+             p.owner_id = $1
+             OR EXISTS (
+               SELECT 1
+               FROM project_collaborators pc
+               WHERE pc.project_id = p.id
+                 AND pc.user_id = $1
+             )
+           )
            AND e.id = ANY($2::uuid[])`,
         [userId, entryIds],
       );
