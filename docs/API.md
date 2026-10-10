@@ -1284,6 +1284,24 @@ Decline a pending invitation. No collaborator access is granted.
 
 **Errors:** `404` invitation not found or addressed to a different email; `409` invitation no longer pending.
 
+### Change notification emails
+
+**Service:** `server/services/collaboratorNotificationService.js` (sends via `server/services/emailService.js`, Brevo transactional email API)
+
+When a member of a shared project makes a change, every other member (owner and collaborators) is emailed. The person who made the change is never emailed, and projects with no collaborators send nothing. Emails are sent in the background after the change is saved; a failed email is logged and never fails the request.
+
+Triggering endpoints:
+- `POST /api/projects/:projectId/entries` (entry added)
+- `PATCH /api/projects/:projectId/entries/:entryId` (entry edited)
+- `DELETE /api/projects/:projectId/entries/:entryId` (entry deleted)
+- `PATCH .../entries/:entryId/archive` and `.../unarchive`
+- `PATCH` / `POST .../entries/:entryId/complete`
+- `POST .../entries/:entryId/revisions/:revisionId/restore`
+- `PATCH /api/projects/:projectId` (project details edited)
+- `PATCH /api/projects/:projectId/archive` (project archived or unarchived)
+
+Each member receives at most one email per project per `COLLABORATOR_EMAIL_THROTTLE_MS` (default 10 minutes); further changes in that window are not emailed. Configure with `BREVO_API_KEY`, `EMAIL_FROM` (a Brevo-verified sender), optional `EMAIL_FROM_NAME`, and `FRONTEND_URL` for the "Open the project" link. Sending is disabled when the key or sender is missing.
+
 ---
 
 ## Validation Reference
