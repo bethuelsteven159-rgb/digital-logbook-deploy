@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export default function ConstellationFallback({ graph, detailsByProject, projectErrors, loadingProjectId, onLoadProject, selectedEntryId, onSelectEntry }) {
+export default function ConstellationFallback({ graph, detailsByProject, projectErrors, loadingProjectId, onLoadProject, selectedEntryId, onSelectEntry, onFocusProject, showSelection = true }) {
   const projects = graph.nodes.filter((node) => node.type === 'project');
   const selected = graph.nodes.find((node) => node.type === 'entry' && node.id === selectedEntryId);
   return (
@@ -13,6 +13,7 @@ export default function ConstellationFallback({ graph, detailsByProject, project
           const entries = graph.nodes.filter((node) => node.type === 'entry' && node.projectId === project.entityId);
           return <li key={project.id}>
             <h2><Link to={`/projects/${project.entityId}`}>{project.label}</Link>{project.archived && ' (archived)'}</h2>
+            {onFocusProject && <button type="button" onClick={() => onFocusProject(project.id)} aria-label={`Focus ${project.label}`}>Focus project</button>}
             <button type="button" onClick={() => onLoadProject(project.entityId)} disabled={busy || loaded} aria-label={`Load entries for ${project.label}`}>
               {busy ? 'Loading entries…' : loaded ? 'Entries loaded' : 'Load entries'}
             </button>
@@ -24,7 +25,7 @@ export default function ConstellationFallback({ graph, detailsByProject, project
           </li>;
         })}
       </ul>
-      <section aria-label="Selected entry" aria-live="polite">
+      {showSelection && <section aria-label="Selected entry" aria-live="polite">
         {selected ? <>
           <h2>{selected.label}</h2>
           <dl>
@@ -34,7 +35,7 @@ export default function ConstellationFallback({ graph, detailsByProject, project
           </dl>
           <Link to={`/projects/${selected.projectId}#entry-${selected.entityId}`}>Open entry in project</Link>
         </> : <p>Select an entry to inspect its recorded work.</p>}
-      </section>
+      </section>}
     </>
   );
 }

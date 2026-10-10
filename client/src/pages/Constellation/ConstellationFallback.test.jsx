@@ -46,3 +46,12 @@ it('explains empty data and does not retain a hidden selected record', () => {
   expect(screen.getByText(/No projects to show/)).toBeInTheDocument();
   expect(screen.queryByText('Graphs')).not.toBeInTheDocument();
 });
+
+it('can focus a project cluster while its inline selection stays hidden', async () => {
+  const user = userEvent.setup();
+  const onFocusProject = vi.fn();
+  renderFallback({ onFocusProject, showSelection: false });
+  await user.click(screen.getByRole('button', { name: 'Focus Research' }));
+  expect(onFocusProject).toHaveBeenCalledWith('project:p1');
+  expect(screen.queryByRole('region', { name: 'Selected entry' })).not.toBeInTheDocument();
+});
