@@ -83,6 +83,13 @@ All API responses follow a consistent pattern:
 | 40 | PATCH | `/api/projects/recurring-entries/:definitionId` | Yes |
 | 41 | DELETE | `/api/projects/recurring-entries/:definitionId` | Yes |
 | 42 | POST | `/api/projects/:projectId/recurring-entries/generate-due` | Yes |
+| 43 | GET | `/api/projects/:projectId/collaborators` | Yes |
+| 44 | POST | `/api/projects/:projectId/collaborators/invitations` | Yes |
+| 45 | DELETE | `/api/projects/:projectId/collaborators/invitations/:invitationId` | Yes |
+| 46 | DELETE | `/api/projects/:projectId/collaborators/:userId` | Yes |
+| 47 | GET | `/api/invitations` | Yes |
+| 48 | POST | `/api/invitations/:invitationId/accept` | Yes |
+| 49 | POST | `/api/invitations/:invitationId/decline` | Yes |
 
 ---
 
@@ -185,7 +192,7 @@ Proxies a random motivational quote from `dummyjson.com`.
 
 ### `GET /api/projects`
 
-List all projects owned by the authenticated user.
+List all projects the authenticated user owns **or collaborates on** (shared projects).
 
 **Query Params:**
 - `status` (optional, default `"active"`) -- one of: `"active"`, `"archived"`, `"all"`
@@ -204,6 +211,8 @@ List all projects owned by the authenticated user.
       "archivedAt": "timestamp|null",
       "createdAt": "timestamp",
       "updatedAt": "timestamp",
+      "ownerId": "uuid",
+      "isShared": false,
       "totalEntries": 0,
       "loggedMinutes": 0,
       "lastActivity": "timestamp|null"
@@ -211,6 +220,8 @@ List all projects owned by the authenticated user.
   ]
 }
 ```
+
+`ownerId` is the project owner's user id; `isShared` is `true` when the caller is a collaborator rather than the owner.
 
 **Error 400:** Invalid project status value.
 
@@ -260,7 +271,7 @@ The `fields` array triggers `syncProjectFields` which creates new fields, update
 
 **Response 200:** `{ "success": true, "data": { <project object> } }`
 
-**Errors:** `404` if project not found or not owned; `400`/`409` for validation failures.
+**Errors:** `404` if project not found or not accessible (caller is neither owner nor collaborator); `400`/`409` for validation failures.
 
 ### `PATCH /api/projects/:projectId/archive`
 
@@ -276,7 +287,7 @@ Use `false` to unarchive.
 
 **Response 200:** `{ "success": true, "data": { <project object> } }`
 
-**Error 404:** Project not found or not owned.
+**Error 404:** Project not found or not accessible (caller is neither owner nor collaborator).
 
 ---
 
@@ -299,6 +310,8 @@ Fetch full project details including fields, entries, checklists, references, li
   "data": {
     "project": {
       "id": "uuid",
+      "ownerId": "uuid",
+      "viewerRole": "owner|collaborator",
       "name": "string",
       "description": "string|null",
       "startDate": "YYYY-MM-DD|null",
@@ -1165,6 +1178,114 @@ Generate missing occurrences up to today for the project's enabled definitions. 
 
 ---
 
+## 13. Project Sharing (Collaborators & Invitations)
+
+**Route files:** `server/routes/projectCollaborators.js`, `server/routes/invitations.js`
+**Controller:** `server/controllers/projectCollaboratorController.js`
+**Service:** `server/services/projectCollaboratorService.js`
+**Auth:** Required (all endpoints)
+
+Shared projects let a user invite other users (by email) to collaborate. Once an invitation is accepted, the collaborator can view and manage the project exactly like the owner -- entries, fields, search, filters, automation rules, recurring entries, stats and dashboard included. Only collaborator management is owner-restricted (see below).
+
+### `GET /api/projects/:projectId/collaborators`
+
+List the owner, active collaborators, and pending invitations for a project. Accessible to the owner and every collaborator.
+
+**Path Params:** `projectId` (UUID)
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "project": { "id": "uuid", "name": "string", "ownerId": "uuid" },
+    "owner": { "id": "uuid", "name": "string", "email": "string", "avatarUrl": "string|null" },
+    "collaborators": [
+      { "id": "uuid", "projectId": "uuid", "userId": "uuid", "role": "editor", "name": "string", "email": "string", "avatarUrl": "string|null", "createdAt": "timestamp" }
+    ],
+    "invitations": [
+      { "id": "uuid", "projectId": "uuid", "inviterId": "uuid", "inviterName": "string", "inviterEmail": "string", "inviteeEmail": "string", "status": "pending", "createdAt": "timestamp", "respondedAt": "timestamp|null" }
+    ]
+  }
+}
+```
+
+**Error 404:** Project not found or not accessible.
+
+### `POST /api/projects/:projectId/collaborators/invitations`
+
+Invite a user to collaborate on a project by email. The owner and existing collaborators may invite. The email is matched case-insensitively; the invited user does not need an account yet.
+
+**Path Params:** `projectId` (UUID)
+
+**Request Body:**
+```json
+{ "email": "teammate@example.com" }
+```
+
+**Response 201:** `{ "success": true, "data": { <invitation object>, "inviterName": "string", "inviterEmail": "string" } }`
+
+**Errors:**
+- `400` invalid email, inviting yourself, or inviting the project owner
+- `404` project not found or not accessible
+- `409` an invitation for this email is already pending, or the user is already a collaborator
+
+### `DELETE /api/projects/:projectId/collaborators/invitations/:invitationId`
+
+Revoke a pending invitation. Allowed for the project owner or the original inviter.
+
+**Path Params:** `projectId`, `invitationId` (UUIDs)
+
+**Response 200:** `{ "success": true, "data": { "id": "uuid", "status": "revoked" } }`
+
+**Errors:** `403` caller is neither owner nor inviter; `404` invitation not found for this project; `409` invitation no longer pending.
+
+### `DELETE /api/projects/:projectId/collaborators/:userId`
+
+Remove a collaborator. The **owner** may remove any collaborator; a **collaborator** may only remove themselves (leaving the project).
+
+**Path Params:** `projectId`, `userId` (UUIDs)
+
+**Response 200:** `{ "success": true, "data": { "projectId": "uuid", "userId": "uuid", "removed": true } }`
+
+**Errors:** `400` the owner cannot be removed from their own project; `403` a collaborator removing someone else; `404` project or collaborator not found.
+
+### `GET /api/invitations`
+
+List the caller's pending project invitations, matched against the caller's account email (case-insensitive).
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "uuid", "projectId": "uuid", "projectName": "string", "inviterId": "uuid", "inviterName": "string", "inviterEmail": "string", "inviteeEmail": "string", "status": "pending", "createdAt": "timestamp", "respondedAt": "timestamp|null" }
+  ]
+}
+```
+
+### `POST /api/invitations/:invitationId/accept`
+
+Accept a pending invitation. Collaborator access is granted **before** the invitation is atomically resolved, so a lost race with a concurrent response still leaves the accepting user with access.
+
+**Path Params:** `invitationId` (UUID)
+
+**Response 200:** `{ "success": true, "data": { "id": "uuid", "projectId": "uuid", "projectName": "string", "status": "accepted" } }`
+
+**Errors:** `404` invitation not found or addressed to a different email; `409` invitation no longer pending.
+
+### `POST /api/invitations/:invitationId/decline`
+
+Decline a pending invitation. No collaborator access is granted.
+
+**Path Params:** `invitationId` (UUID)
+
+**Response 200:** `{ "success": true, "data": { "id": "uuid", "projectId": "uuid", "projectName": "string", "status": "declined" } }`
+
+**Errors:** `404` invitation not found or addressed to a different email; `409` invitation no longer pending.
+
+---
+
 ## Validation Reference
 
 All request validation uses **Zod** (with one imperative exception for avatar uploads).
@@ -1175,6 +1296,7 @@ All request validation uses **Zod** (with one imperative exception for avatar up
 | `server/validation/recurringEntry.validation.js` | `createRecurringEntrySchema`, `updateRecurringEntrySchema` |
 | `server/validation/savedFilter.validation.js` | `createSavedFilterSchema` |
 | `server/validation/automationRule.validation.js` | `createAutomationRuleSchema`, `updateAutomationRuleSchema` |
+| `server/validation/projectCollaborator.validation.js` | `inviteCollaboratorSchema` |
 | `server/validation/profileAvatar.js` | `validateAvatarUrl` (imperative -- checks MIME, base64, magic bytes, max 512 KiB decoded) |
 | `server/services/projectFieldsService.js` | `fieldsSchema` (project field sync during project edit) |
 
@@ -1182,12 +1304,14 @@ All request validation uses **Zod** (with one imperative exception for avatar up
 
 ## Database Tables
 
-The API operates on 13 PostgreSQL tables (11 defined in `server/db/schema.sql`, plus `automation_rules` added by `server/sql/20260927_automation_rules.sql` and `recurring_entry_definitions` from `server/sql/20260928_recurring_entries.sql`):
+The API operates on 16 PostgreSQL tables (11 defined in `server/db/schema.sql`, plus `automation_rules` added by `server/sql/20260927_automation_rules.sql`, `recurring_entry_definitions` from `server/sql/20260928_recurring_entries.sql`, `notification_state` from `server/sql/20261007_notifications.sql`, and `project_collaborators` + `project_invitations` from `server/sql/20261009_shared_projects.sql`):
 
 | Table | Purpose |
 |---|---|
 | `users` | User accounts (Google OAuth identity) |
 | `projects` | User-owned projects |
+| `project_collaborators` | Users invited to collaborate on a project (role `editor`) |
+| `project_invitations` | Pending/accepted/declined/revoked share invitations by email |
 | `project_fields` | Custom fields per project (short_text, long_text, number, date, computed) |
 | `entries` | Log entries within projects |
 | `entry_field_values` | Custom field values per entry |
@@ -1199,3 +1323,4 @@ The API operates on 13 PostgreSQL tables (11 defined in `server/db/schema.sql`, 
 | `saved_filters` | User-defined saved filters (JSONB criteria) |
 | `automation_rules` | Entry-creation automation rules (condition + add_tag action) |
 | `recurring_entry_definitions` | Recurrence rules for automatically generated log entries |
+| `notification_state` | Per-user read/dismissed state for derived notifications |
