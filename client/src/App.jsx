@@ -21,12 +21,14 @@ import Settings from "./pages/Settings/Settings";
 import HelpAssistant from "./components/HelpAssistant.jsx";
 
 import { UserProvider } from "./context/UserContext.jsx";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import {
   applyTheme,
   loadPreferences,
   PREFERENCES_EVENT,
 } from "./utils/preferences";
+
+const ProjectConstellation = lazy(() => import('./pages/Constellation/ProjectConstellation'));
 
 function AppContent() {
   const location = useLocation();
@@ -53,6 +55,7 @@ function AppContent() {
   return (
     <>
       <Routes>
+        <Route path="/constellation" element={<Suspense fallback={<p role="status">Loading constellation…</p>}><ProjectConstellation /></Suspense>} />
         <Route
           path="/"
           element={

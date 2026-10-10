@@ -6,6 +6,7 @@ import NotificationsBell from './NotificationsBell.jsx';
 const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: IconDashboard },
     { to: "/projects", label: "Projects", icon: IconProjects },
+    { to: "/constellation", label: "Constellation", icon: IconConstellation },
     { to: "/search", label: "Search", icon: IconSearch },
     { to: "/stats", label: "Stats", icon: IconStats },
     { to: "/settings", label: "Settings", icon: IconSettings },
@@ -321,6 +322,14 @@ function IconDashboard() {
 function IconProjects() {
     return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 7a2 2 0 0 1 2-2h4l2 3h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z"/>
+    </svg>);
+}
+function IconConstellation() {
+    return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="16" r="2"/>
+      <circle cx="12" cy="7" r="2.4"/>
+      <circle cx="18.5" cy="14.5" r="1.7"/>
+      <path d="M7.6 14.5 10.8 8.8M13.9 8.8l3.3 4.2M8 16h8.8"/>
     </svg>);
 }
 function IconSearch() {
