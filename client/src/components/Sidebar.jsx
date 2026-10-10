@@ -12,7 +12,13 @@ const navItems = [
 ];
 export default function Sidebar({ collapsed, onToggle }) {
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, logout } = useUser();
+
+  function handleSignOut() {
+    logout();
+    navigate("/login");
+  }
+
   return (<aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
       {/* Brand */}
       <div className="sidebar-brand">
@@ -52,6 +58,14 @@ export default function Sidebar({ collapsed, onToggle }) {
             <span className="sidebar-profile-name">{user?.name || 'My Profile'}</span>
             <span className="sidebar-profile-sub">View &amp; edit</span>
           </div>)}
+      </button>
+
+      {/* Sign out */}
+      <button className="sidebar-signout" onClick={handleSignOut} title={collapsed ? "Sign out" : undefined} aria-label="Sign out">
+        <span className="sidebar-signout-icon">
+          <IconSignOut />
+        </span>
+        {!collapsed && <span className="sidebar-signout-label">Sign out</span>}
       </button>
 
       <style>{`
@@ -247,6 +261,50 @@ export default function Sidebar({ collapsed, onToggle }) {
           color: rgba(255,255,255,0.38);
           white-space: nowrap;
         }
+
+        /* Sign out */
+        .sidebar-signout {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 2px 10px 0;
+          padding: 10px 12px;
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          color: rgba(255,255,255,0.45);
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          text-align: left;
+          transition: background 0.15s ease, color 0.15s ease;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+        .sidebar--collapsed .sidebar-signout {
+          justify-content: center;
+          padding: 10px 0;
+        }
+        .sidebar-signout:hover {
+          background: rgba(248, 113, 113, 0.12);
+          color: #f0a3a3;
+        }
+        .sidebar-signout:focus-visible {
+          outline: 2px solid #8f9fef;
+          outline-offset: -2px;
+        }
+        .sidebar-signout-icon {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+        }
+        .sidebar-signout-label {
+          font-family: 'Inter', sans-serif;
+        }
       `}</style>
     </aside>);
 }
@@ -286,5 +344,12 @@ function IconSettings() {
 function IconChevron({ collapsed }) {
     return (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? "rotate(180deg)" : "none", transition: "transform 0.22s ease" }}>
       <polyline points="15 18 9 12 15 6"/>
+    </svg>);
+}
+function IconSignOut() {
+    return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
     </svg>);
 }

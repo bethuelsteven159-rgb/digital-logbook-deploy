@@ -114,14 +114,17 @@ function setFeed(updater) {
   emit();
 }
 
-/** Test-only: wipe the shared store between tests. */
-export function __resetNotificationsStore() {
+/** Wipe the shared store: used by tests and on sign-out. */
+export function resetNotificationsStore() {
   stopPolling();
   inFlight = null;
   feed = EMPTY_FEED;
   loading = false;
   error = "";
 }
+
+/** Test-only alias kept for existing suites. */
+export const __resetNotificationsStore = resetNotificationsStore;
 
 /**
  * Shared notifications state.

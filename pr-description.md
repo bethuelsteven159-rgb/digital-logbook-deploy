@@ -15,6 +15,7 @@ Closes #
 - **Sharing API**: New collaborators/invitations endpoints — list collaborators, invite by email, revoke invitation, remove collaborator/leave, list my invitations, accept and decline. Race-safe acceptance grants access before resolving the invitation, so a lost race returns 409 without losing access.
 - **Project details**: Response now includes `ownerId` and `viewerRole` (`owner` | `collaborator`); project list includes `ownerId` and `isShared`.
 - **Client UI**: `SharingModal` (invite, owner/collaborators/pending lists, remove/leave/revoke), a Share button on the project details page, invitations banner with Accept/Decline on the Projects page, and a Shared badge on project cards; new `projectSharingApi.js`.
+- **Sign out**: Added a Sign out button to the sidebar (visible on every page) that clears the JWT session, the signed-in user and the cached notification feed — needed to switch accounts when testing shared projects.
 - **Docs**: `docs/API.md` documents all 7 new endpoints, response fields, error codes and the two new tables.
 
 ## Testing
