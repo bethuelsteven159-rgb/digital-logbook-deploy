@@ -11,6 +11,7 @@ import EntryHistoryModal from './EntryHistoryModal';
 import EntryDetailsModal from './EntryDetailsModal';
 import AutomationRulesModal from './AutomationRulesModal';
 import SharingModal from './SharingModal';
+import SavedFilterModal from './SavedFilterModal';
 import CalendarView from './CalendarView';
 import BoardView from './BoardView';
 import RecurringEntriesModal from './RecurringEntriesModal';
@@ -116,7 +117,6 @@ export default function ProjectDetails() {
   const [entrySearchQuery, setEntrySearchQuery] = useState('');
   const [entrySearchField, setEntrySearchField] = useState('all');
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchFromDate, setSearchFromDate] = useState('');
   const [searchToDate, setSearchToDate] = useState('');
   const [searchMinDuration, setSearchMinDuration] = useState('');
@@ -131,10 +131,6 @@ export default function ProjectDetails() {
 
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
   const [editingFilterId, setEditingFilterId] = useState(null);
-  const [filterName, setFilterName] = useState('');
-  const [filterConditions, setFilterConditions] = useState([
-    { targetField: 'durationMinutes', operator: 'greater_than', value: '' },
-  ]);
 
   const loadProject = useCallback(async () => {
     if (!id) {
@@ -475,40 +471,38 @@ async function handleUnarchiveEntry(entry) {
     }
   }
 
-  async function handleCreateSavedFilter(payload) {
-    try {
-      const newFilter = await createSavedFilter(id, payload);
-
-      setSavedFilters((current) => [newFilter, ...current]);
-    } catch (submitError) {
-      console.error('Failed to create saved filter:', submitError);
-    }
-  }
-
-  async function handleUpdateSavedFilter(filterId, payload) {
-    try {
-      const updatedFilter = await updateSavedFilter(filterId, payload);
+  async function handleSaveFilter(payload) {
+    // Errors are re-thrown so the modal can show them and stay open.
+    if (editingFilterId) {
+      const updatedFilter = await updateSavedFilter(editingFilterId, payload);
 
       setSavedFilters((current) =>
         current.map((filter) =>
-          filter.id === filterId ? updatedFilter : filter,
+          filter.id === editingFilterId ? updatedFilter : filter,
         ),
       );
-    } catch (submitError) {
-      console.error('Failed to update saved filter:', submitError);
+
+      if (activeFilterId === editingFilterId) {
+        handleApplyFilter(editingFilterId);
+      }
+    } else {
+      const newFilter = await createSavedFilter(id, payload);
+
+      setSavedFilters((current) => [newFilter, ...current]);
+      handleApplyFilter(newFilter.id);
     }
+
+    setShowFilterBuilder(false);
+    setEditingFilterId(null);
+  }
+
+  function handleCloseFilterBuilder() {
+    setShowFilterBuilder(false);
+    setEditingFilterId(null);
   }
 
   function handleOpenEditFilter(filter) {
     setEditingFilterId(filter.id);
-    setFilterName(filter.name);
-    setFilterConditions(
-      filter.criteria.map((criterion) => ({
-        targetField: criterion.fieldName || criterion.fieldId,
-        operator: criterion.operator,
-        value: criterion.value,
-      })),
-    );
     setShowFilterBuilder(true);
   }
 
@@ -549,22 +543,6 @@ async function handleUnarchiveEntry(entry) {
     }
   }
 
-  function addFilterCondition() {
-    setFilterConditions((current) => [
-      ...current,
-      { targetField: 'durationMinutes', operator: 'greater_than', value: '' },
-    ]);
-  }
-
-  function updateFilterCondition(index, updates) {
-    setFilterConditions((current) =>
-      current.map((condition, i) => (i === index ? { ...condition, ...updates } : condition)),
-    );
-  }
-
-  function removeFilterCondition(index) {
-    setFilterConditions((current) => current.filter((_, i) => i !== index));
-  }
   async function handleMarkComplete(entryId) {
     try {
       await markEntryComplete(id, entryId);
@@ -722,7 +700,6 @@ async function handleUnarchiveEntry(entry) {
             : undefined;
 
       const results = await searchProjectEntries(id, {
-        query: searchQuery,
         fromDate: searchFromDate,
         toDate: searchToDate,
         minDuration: searchMinDuration,
@@ -746,7 +723,6 @@ async function handleUnarchiveEntry(entry) {
   }
 
   function handleClearStructuredSearch() {
-    setSearchQuery('');
     setSearchFromDate('');
     setSearchToDate('');
     setSearchMinDuration('');
@@ -790,7 +766,6 @@ async function handleUnarchiveEntry(entry) {
   }
 
   async function handleToggleArchivedView() {
-    setSearchQuery('');
     setSearchFromDate('');
     setSearchToDate('');
     setSearchMinDuration('');
@@ -1401,22 +1376,32 @@ async function handleUnarchiveEntry(entry) {
                   ))}
                 </select>
 
+                {!project.archivedAt && (
+                  <button
+                    type="button"
+                    className="btn-add-field"
+                    onClick={() => {
+                      setEditingFilterId(null);
+                      setShowFilterBuilder(true);
+                    }}
+                  >
+                    + New filter
+                  </button>
+                )}
+
                 {activeFilterId && (
                   <>
                     <button
                       type="button"
                       className="btn btn-ghost btn-small"
-                      onClick={() => {
-                        const filter = savedFilters.find((f) => f.id === activeFilterId);
-
-                        if (filter) {
-                          handleOpenEditFilter(filter);
-                        }
-                      }}
+                      onClick={() =>
+                        handleOpenEditFilter(
+                          savedFilters.find((filter) => filter.id === activeFilterId),
+                        )
+                      }
                     >
                       Edit filter
                     </button>
-
                     <button
                       type="button"
                       className="btn btn-ghost btn-small"
@@ -1426,14 +1411,6 @@ async function handleUnarchiveEntry(entry) {
                     </button>
                   </>
                 )}
-
-                <button
-                  type="button"
-                  className="btn-add-field"
-                  onClick={() => setShowFilterBuilder(true)}
-                >
-                  + New filter
-                </button>
               </div>
 
               <div className="saved-filters-status" role="group" aria-label="Entry status">
@@ -1458,44 +1435,21 @@ async function handleUnarchiveEntry(entry) {
             </div>
 
             <form className="structured-search" onSubmit={handleStructuredSearch}>
-              <div className="structured-search-header">
-                <div>
-                  <h3 className="structured-search-title">Search entries</h3>
-                  <p className="structured-search-description">
-                    Find entries by name, tags, or custom field values. Add filters when you need to
-                    narrow the results.
-                  </p>
-                </div>
+              <div className="structured-search-main-row">
+                <button
+                  type="button"
+                  className="search-more-filters-toggle"
+                  onClick={() => setShowSearchFilters((current) => !current)}
+                  aria-expanded={showSearchFilters}
+                >
+                  {showSearchFilters ? '− Hide filters' : '+ Date, duration & status filters'}
+                </button>
                 {searchActive && (
                   <span className="search-result-count">
                     {entries.length} result{entries.length === 1 ? '' : 's'}
                   </span>
                 )}
               </div>
-
-              <div className="structured-search-main-row">
-                <input
-                  id="entry-search-query"
-                  className="form-input structured-search-main-input"
-                  type="search"
-                  aria-label="Search entries with filters"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search entries..."
-                />
-                <button type="submit" className="btn-save" disabled={searching}>
-                  {searching ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-
-              <button
-                type="button"
-                className="search-more-filters-toggle"
-                onClick={() => setShowSearchFilters((current) => !current)}
-                aria-expanded={showSearchFilters}
-              >
-                {showSearchFilters ? '− Fewer filters' : '+ More filters'}
-              </button>
 
               {showSearchFilters && (
                 <div className="search-more-filters-panel">
@@ -1643,13 +1597,18 @@ async function handleUnarchiveEntry(entry) {
                       </button>
                     </div>
                   )}
+
+                  <div className="structured-search-apply-row">
+                    <button type="submit" className="btn-save" disabled={searching}>
+                      {searching ? 'Applying...' : 'Apply filters'}
+                    </button>
+                  </div>
                 </div>
               )}
 
               {searchError && <div className="structured-search-error">{searchError}</div>}
 
               {(searchActive ||
-                searchQuery ||
                 searchFromDate ||
                 searchToDate ||
                 searchMinDuration ||
@@ -1664,7 +1623,7 @@ async function handleUnarchiveEntry(entry) {
                     onClick={handleClearStructuredSearch}
                     disabled={searching}
                   >
-                    Clear search
+                    Clear filters
                   </button>
                 </div>
               )}
@@ -1995,6 +1954,15 @@ async function handleUnarchiveEntry(entry) {
           projectId={id}
           fields={fields}
           onClose={() => setShowAutomationRulesModal(false)}
+        />
+      )}
+
+      {showFilterBuilder && (
+        <SavedFilterModal
+          fields={fields}
+          filter={savedFilters.find((filter) => filter.id === editingFilterId) || null}
+          onSave={handleSaveFilter}
+          onClose={handleCloseFilterBuilder}
         />
       )}
 
@@ -3763,6 +3731,8 @@ function ProjectDetailsStyles() {
 
 
       .structured-search-main-row { display: flex; gap: 12px; align-items: center; }
+      .structured-search-main-row { justify-content: space-between; }
+      .structured-search-apply-row { display: flex; justify-content: flex-end; margin-top: 12px; }
       .structured-search-main-input { flex: 1; min-width: 0; }
 
       .search-more-filters-toggle {

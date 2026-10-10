@@ -1430,16 +1430,17 @@ describe('ProjectDetails entry archive', () => {
 
     apiMocks.searchProjectEntries.mockClear();
 
-    await user.type(
-      screen.getByPlaceholderText('Search entries...'),
-      'old',
+    await user.click(
+      screen.getByRole('button', { name: /filters/i }),
     );
-    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Apply filters' }),
+    );
 
     await waitFor(() =>
       expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
         'project-1',
-        expect.objectContaining({ archived: true, query: 'old' }),
+        expect.objectContaining({ archived: true }),
       ),
     );
   });
@@ -1453,16 +1454,17 @@ describe('ProjectDetails entry archive', () => {
       expect(screen.getByText('First entry')).toBeInTheDocument(),
     );
 
-    await user.type(
-      screen.getByPlaceholderText('Search entries...'),
-      'first',
+    await user.click(
+      screen.getByRole('button', { name: /filters/i }),
     );
-    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Apply filters' }),
+    );
 
     await waitFor(() =>
       expect(apiMocks.searchProjectEntries).toHaveBeenCalledWith(
         'project-1',
-        expect.objectContaining({ archived: false, query: 'first' }),
+        expect.objectContaining({ archived: false }),
       ),
     );
   });
