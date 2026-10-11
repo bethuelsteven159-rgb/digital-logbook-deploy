@@ -19,15 +19,7 @@ const invitationsRoutes = require("./routes/invitations");
 // Dashboard route
 const dashboardRoutes = require("./routes/dashboard");
 
-let requireAuth = (_req, _res, next) => next();
-
-try {
-  requireAuth = require("./middleware/authMiddleware");
-} catch (e) {
-  console.log(
-    "Auth middleware not found yet, running fallback mode.",
-  );
-}
+const requireAuth = require("./middleware/authMiddleware");
 
 const app = express();
 

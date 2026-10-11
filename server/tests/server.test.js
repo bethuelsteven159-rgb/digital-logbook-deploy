@@ -1,6 +1,7 @@
 const { after, before, mock, test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const Module = require('node:module');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
@@ -147,4 +148,36 @@ test('GET /api/notifications is reachable with a valid token', async () => {
   });
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { mounted: true, userId: USER_ID });
+});
+
+test('server fails to start when the authentication middleware cannot be loaded', () => {
+  const authPath = require.resolve('../middleware/authMiddleware');
+  const serverPath = require.resolve('../server');
+
+  delete require.cache[authPath];
+  delete require.cache[serverPath];
+
+  const originalResolve = Module._resolveFilename;
+  const listen = mock.method(express.application, 'listen', function () {
+    return { on() {} };
+  });
+
+  try {
+    Module._resolveFilename = (request, parent, ...args) => {
+      const resolved = originalResolve(request, parent, ...args);
+
+      if (resolved === authPath) {
+        const error = new Error('Cannot find module');
+        error.code = 'MODULE_NOT_FOUND';
+        throw error;
+      }
+
+      return resolved;
+    };
+
+    assert.throws(() => require('../server'), /Cannot find module/);
+  } finally {
+    Module._resolveFilename = originalResolve;
+    listen.mock.restore();
+  }
 });
