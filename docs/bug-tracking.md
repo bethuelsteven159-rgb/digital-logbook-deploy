@@ -6,7 +6,7 @@
 
 **Document Status:** Living Document
 
-**Last Updated:** 2026-09-29
+**Last Updated:** 2026-10-11
 
 **Purpose:** To record the significant bugs and integration/deployment issues encountered during development, their impact, evidence, resolution, and current status.
 
@@ -19,37 +19,65 @@ This document records **major bugs and integration issues only**. Minor cosmetic
 The bug tracker is maintained as evidence of:
 
 - problems discovered during development and testing;
+
 - the impact of those problems;
+
 - how the team diagnosed and resolved them;
+
 - preventive actions taken to reduce recurrence;
+
 - the connection between implementation, testing, deployment, and stakeholder expectations.
 
 ---
 
 ## 2. Major Issue Summary
 
-| ID      | Sprint   | Issue                                                                                     | Impact                                                                                                 | Resolution                                                                                                                                                         | Status                           |
+| ID      | Sprint   | Issue                                                                                     | Impact                                                                                                 | Resolution                                                                                                                                                         | Status                           |
+
 | ------- | -------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
-| BUG-001 | Sprint 1 | Duplicate `backend/` and `server/` structures                                             | Created uncertainty about the authoritative backend and complicated authentication integration         | Authentication work was consolidated into the existing `server/` structure and the duplicate backend structure was removed                                         | Resolved                         |
-| BUG-002 | Sprint 1 | Google OAuth origin/configuration mismatch                                                | Google Sign-In could not complete successfully                                                         | Correct development/production origins and Google OAuth configuration were applied                                                                                 | Resolved                         |
-| BUG-003 | Sprint 1 | Authentication/database environment configuration failure                                 | Backend authentication returned server errors and users could not sign in                              | Correct database connection details and required authentication environment variables were configured                                                              | Resolved                         |
-| BUG-004 | Sprint 2 | Netlify blank page caused by incorrect Vite/Router base-path configuration                | Production frontend loaded a blank/incorrect page                                                      | Vite base and React Router configuration were aligned with the Netlify root deployment and redirects were added                                                    | Resolved                         |
-| BUG-005 | Sprint 2 | Production frontend attempted to call `localhost:5000`                                    | Authentication/API requests failed in the deployed site with `ERR_CONNECTION_REFUSED`                  | Production `VITE_API_URL` was configured to use the Render backend and the frontend was rebuilt/redeployed                                                         | Resolved                         |
-| BUG-006 | Sprint 2 | Missing `CalendarView` module during frontend integration                                 | Vite could not compile `ProjectDetails.jsx`, blocking the frontend                                     | Missing view files/integration changes were restored and the client build was re-run successfully                                                                  | Resolved                         |
-| BUG-007 | Sprint 2 | `db.connect is not a function` during entry/custom-field creation                         | Users could not save the intended entry/custom-field operation in the deployed application             | Backend/database integration was corrected and the production frontend/backend were redeployed with compatible versions                                            | Resolved                         |
-| BUG-008 | Sprint 2 | Render backend deployment failed / direct Gitea deployment limitation                     | Latest backend changes could not reliably reach production                                             | Gitea remained the authoritative repository; approved `main` was mirrored to GitHub and Render deployed from the GitHub mirror                                     | Resolved                         |
-| BUG-009 | Sprint 2 | Frontend deployed before matching backend Delete Entry route                              | Delete Entry returned `404 Route not found` even though the frontend action was visible                | Delete feature PR was merged into Gitea `main`, mirrored to GitHub, Render redeployed, and the Netlify frontend was rebuilt; production deletion was then verified | Resolved                         |
-| BUG-010 | Sprint 3 | Board view crashed for reserved JavaScript property names such as `constructor`           | Certain field/status values could break Board rendering instead of being displayed safely              | Board grouping logic was changed to handle reserved object-property names safely                                                                                   | Resolved                         |
-| BUG-011 | Sprint 3 | Entry-reference operations could return HTTP 500                                          | Users could not reliably create/use entry references                                                   | Reference handling was corrected and covered by targeted tests                                                                                                     | Resolved                         |
-| BUG-012 | Sprint 3 | Existing entry references were not correctly restored in the editor                       | Editing an existing entry could omit previously saved references                                       | Edit-state/reference mapping was corrected so persisted references are loaded into the editor                                                                      | Resolved                         |
-| BUG-013 | Sprint 3 | Editing entries could lose values belonging to archived/removed fields                    | Historical entry data risked being silently lost during later edits                                    | Entry-edit handling was changed to preserve archived/historical field values                                                                                       | Resolved                         |
-| BUG-014 | Sprint 3 | Due-date values could shift because of timezone/date conversion                           | A saved due date could appear as a different calendar day after edit/display                           | Date handling was corrected to preserve the intended date without unintended timezone shifting                                                                     | Resolved                         |
-| BUG-015 | Sprint 3 | Entry edit could partially save related changes                                           | A failed multi-part update could leave the entry in an inconsistent partially updated state            | Entry-edit operations were made safer/atomic so related changes succeed or fail together                                                                           | Resolved                         |
-| BUG-016 | Sprint 3 | Recurring-entry generation used an inappropriate global cap                               | One project's generated recurring entries could affect another project's generation allowance          | Recurrence generation limits were scoped correctly and edge cases were tested                                                                                      | Resolved                         |
-| BUG-017 | Sprint 3 | Frontend API tests depended on local `VITE_API_URL` assumptions                           | Tests failed when `.env` pointed to the deployed Render backend instead of localhost                   | Identified as environment-dependent test configuration; production code/build remained functional                                                                  | Known test-configuration issue   |
-| BUG-018 | Sprint 3 | `ProjectDetails.jsx` was structurally corrupted during merge conflict resolution          | Vite reported invalid `await`, invalid `return`, and component-brace errors, blocking production build | Duplicate function/body and extra braces were removed; correct component/function boundaries were restored; build passed                                           | Resolved                         |
-| BUG-019 | Sprint 3 | YouTube Learning Videos production integration reports “YouTube search is not configured” | Learning-video search is visible but cannot return videos in production                                | Requires the YouTube API environment variable to be configured in the deployed backend by the deployment owner                                                     | Pending deployment configuration |
-| BUG-020 | Sprint 3 | AI Project Coach production integration reports temporary AI service failure              | AI progress explanation cannot currently be generated in production                                    | AI feature owner/backend deployment owner must verify the required AI/Gemini service environment configuration and availability                                    | Pending deployment configuration |
+
+| BUG-001 | Sprint 1 | Duplicate `backend/` and `server/` structures                                             | Created uncertainty about the authoritative backend and complicated authentication integration         | Authentication work was consolidated into the existing `server/` structure and the duplicate backend structure was removed                                         | Resolved                         |
+
+| BUG-002 | Sprint 1 | Google OAuth origin/configuration mismatch                                                | Google Sign-In could not complete successfully                                                         | Correct development/production origins and Google OAuth configuration were applied                                                                                 | Resolved                         |
+
+| BUG-003 | Sprint 1 | Authentication/database environment configuration failure                                 | Backend authentication returned server errors and users could not sign in                              | Correct database connection details and required authentication environment variables were configured                                                              | Resolved                         |
+
+| BUG-004 | Sprint 2 | Netlify blank page caused by incorrect Vite/Router base-path configuration                | Production frontend loaded a blank/incorrect page                                                      | Vite base and React Router configuration were aligned with the Netlify root deployment and redirects were added                                                    | Resolved                         |
+
+| BUG-005 | Sprint 2 | Production frontend attempted to call `localhost:5000`                                    | Authentication/API requests failed in the deployed site with `ERR_CONNECTION_REFUSED`                  | Production `VITE_API_URL` was configured to use the Render backend and the frontend was rebuilt/redeployed                                                         | Resolved                         |
+
+| BUG-006 | Sprint 2 | Missing `CalendarView` module during frontend integration                                 | Vite could not compile `ProjectDetails.jsx`, blocking the frontend                                     | Missing view files/integration changes were restored and the client build was re-run successfully                                                                  | Resolved                         |
+
+| BUG-007 | Sprint 2 | `db.connect is not a function` during entry/custom-field creation                         | Users could not save the intended entry/custom-field operation in the deployed application             | Backend/database integration was corrected and the production frontend/backend were redeployed with compatible versions                                            | Resolved                         |
+
+| BUG-008 | Sprint 2 | Render backend deployment failed / direct Gitea deployment limitation                     | Latest backend changes could not reliably reach production                                             | Gitea remained the authoritative repository; approved `main` was mirrored to GitHub and Render deployed from the GitHub mirror                                     | Resolved                         |
+
+| BUG-009 | Sprint 2 | Frontend deployed before matching backend Delete Entry route                              | Delete Entry returned `404 Route not found` even though the frontend action was visible                | Delete feature PR was merged into Gitea `main`, mirrored to GitHub, Render redeployed, and the Netlify frontend was rebuilt; production deletion was then verified | Resolved                         |
+
+| BUG-010 | Sprint 3 | Board view crashed for reserved JavaScript property names such as `constructor`           | Certain field/status values could break Board rendering instead of being displayed safely              | Board grouping logic was changed to handle reserved object-property names safely                                                                                   | Resolved                         |
+
+| BUG-011 | Sprint 3 | Entry-reference operations could return HTTP 500                                          | Users could not reliably create/use entry references                                                   | Reference handling was corrected and covered by targeted tests                                                                                                     | Resolved                         |
+
+| BUG-012 | Sprint 3 | Existing entry references were not correctly restored in the editor                       | Editing an existing entry could omit previously saved references                                       | Edit-state/reference mapping was corrected so persisted references are loaded into the editor                                                                      | Resolved                         |
+
+| BUG-013 | Sprint 3 | Editing entries could lose values belonging to archived/removed fields                    | Historical entry data risked being silently lost during later edits                                    | Entry-edit handling was changed to preserve archived/historical field values                                                                                       | Resolved                         |
+
+| BUG-014 | Sprint 3 | Due-date values could shift because of timezone/date conversion                           | A saved due date could appear as a different calendar day after edit/display                           | Date handling was corrected to preserve the intended date without unintended timezone shifting                                                                     | Resolved                         |
+
+| BUG-015 | Sprint 3 | Entry edit could partially save related changes                                           | A failed multi-part update could leave the entry in an inconsistent partially updated state            | Entry-edit operations were made safer/atomic so related changes succeed or fail together                                                                           | Resolved                         |
+
+| BUG-016 | Sprint 3 | Recurring-entry generation used an inappropriate global cap                               | One project's generated recurring entries could affect another project's generation allowance          | Recurrence generation limits were scoped correctly and edge cases were tested                                                                                      | Resolved                         |
+
+| BUG-017 | Sprint 3 | Frontend API tests depended on local `VITE_API_URL` assumptions                           | Tests failed when `.env` pointed to the deployed Render backend instead of localhost                   | Identified as environment-dependent test configuration; production code/build remained functional                                                                  | Resolved — Sprint 4 test setup   |
+
+| BUG-018 | Sprint 3 | `ProjectDetails.jsx` was structurally corrupted during merge conflict resolution          | Vite reported invalid `await`, invalid `return`, and component-brace errors, blocking production build | Duplicate function/body and extra braces were removed; correct component/function boundaries were restored; build passed                                           | Resolved                         |
+
+| BUG-019 | Sprint 3 | YouTube Learning Videos production integration reports “YouTube search is not configured” | Learning-video search is visible but cannot return videos in production                                | Production service configuration corrected; subsequent operation reported working by the team                                                     | Resolved — Sprint 4 confirmation |
+
+| BUG-020 | Sprint 3 | AI Project Coach production integration reports temporary AI service failure              | AI progress explanation cannot currently be generated in production                                    | External AI service issue addressed; subsequent operation reported working by the team                                    | Resolved — Sprint 4 confirmation |
+| BUG-021 | Sprint 4 | Notification dropdown clipped and notification deep links ignored entry IDs | Notification items were not reachable; clicks could not reliably open the relevant project/entry | Dropdown moved to a viewport-positioned React portal; common destination helper, entry anchors, hash reactivity and keyboard handling covered by tests | Resolved — merged PR #132 |
+| BUG-022 | Sprint 4 | Saved-filter accessibility and insufficient page-level workflow coverage | Filter workflows lacked robust page-level regression evidence; selection control lacked accessible name | Added accessible label and six Project Details workflow tests; original builder was already implemented, so no duplicate implementation was needed | Resolved — merged test/filter PR (number to confirm) |
+| BUG-023 | Sprint 4 | Authentication middleware load failure could disable access checks | If auth middleware import fails, a no-op fallback could allow unauthenticated requests to protected endpoints | Fail-open auth middleware issue reported fixed by the team; exact commit and deployment evidence to be linked | Resolved — reported by team |
 
 ---
 
@@ -58,6 +86,7 @@ The bug tracker is maintained as evidence of:
 ### BUG-001 — Duplicate Backend Structures
 
 **Sprint:** Sprint 1
+
 **Severity:** Major integration issue
 
 **Description:**
@@ -83,6 +112,7 @@ Before introducing a new top-level structure, developers should confirm the curr
 ### BUG-002 — Google OAuth Origin / Configuration Mismatch
 
 **Sprint:** Sprint 1
+
 **Severity:** Major authentication issue
 
 **Description:**
@@ -112,6 +142,7 @@ Maintain documented development and production origins for external authenticati
 ### BUG-003 — Authentication / Database Environment Configuration Failure
 
 **Sprint:** Sprint 1
+
 **Severity:** Major backend issue
 
 **Description:**
@@ -133,7 +164,9 @@ The correct PostgreSQL connection information was configured through environment
 **Preventive Action:**
 
 - Keep a complete `.env.example` without real secrets.
+
 - Validate required environment variables at server startup.
+
 - Never commit database passwords, JWT secrets, OAuth credentials, or external API keys.
 
 **Status:** Resolved
@@ -143,6 +176,7 @@ The correct PostgreSQL connection information was configured through environment
 ### BUG-004 — Netlify Blank Page / Router Base-Path Mismatch
 
 **Sprint:** Sprint 2
+
 **Severity:** Major frontend deployment issue
 
 **Description:**
@@ -161,11 +195,18 @@ The production application appeared blank/unusable even though the frontend had 
 
 ![BUG-004 evidence - Netlify router basename mismatch](images/router-basename-warning.png)
 
+Additional deployed blank-page/asset-loading evidence:
+
+![BUG-004 evidence - blank page and missing frontend assets](images/blank_page_rendered.png)
+
 **Resolution:**
 
 - Vite's production base was corrected for the Netlify deployment.
+
 - The unnecessary `BrowserRouter` basename was removed.
+
 - Netlify SPA redirects were configured.
+
 - The frontend was rebuilt and redeployed.
 
 **Preventive Action:**
@@ -179,6 +220,7 @@ Production routing configuration must be tested using the real deployment URL be
 ### BUG-005 — Production Frontend Calling Localhost Backend
 
 **Sprint:** Sprint 2
+
 **Severity:** Major production integration issue
 
 **Description:**
@@ -204,13 +246,17 @@ Google authentication and API requests failed in production even though the fron
 **Resolution:**
 
 - Production `VITE_API_URL` was configured to point to the Render backend.
+
 - The client was rebuilt after changing the environment configuration.
+
 - The latest `dist` build was redeployed to Netlify.
 
 **Preventive Action:**
 
 - Keep local and production API URLs separate.
+
 - Verify the generated production build uses the deployed backend URL.
+
 - Never commit local-only `.env` values.
 
 **Status:** Resolved
@@ -220,6 +266,7 @@ Google authentication and API requests failed in production even though the fron
 ### BUG-006 — Missing `CalendarView` Module During Integration
 
 **Sprint:** Sprint 2
+
 **Severity:** Major frontend build/integration issue
 
 **Description:**
@@ -245,7 +292,9 @@ The missing/incomplete integration files were restored to the branch and the rel
 **Preventive Action:**
 
 - Verify all newly imported files are included in the same feature branch/PR.
+
 - Run `npm run build --prefix client` before requesting merge.
+
 - Avoid replacing large source directories with incomplete copies.
 
 **Status:** Resolved
@@ -255,6 +304,7 @@ The missing/incomplete integration files were restored to the branch and the rel
 ### BUG-007 — `db.connect is not a function`
 
 **Sprint:** Sprint 2
+
 **Severity:** Major backend/data integration issue
 
 **Description:**
@@ -278,8 +328,11 @@ The team aligned the backend/database access implementation and ensured that the
 **Preventive Action:**
 
 - Keep one agreed database access abstraction.
+
 - Avoid mixing incompatible database helper APIs.
+
 - Run backend/service tests and end-to-end creation tests before deployment.
+
 - Confirm Render is running the same approved `main` commit expected by the frontend.
 
 **Status:** Resolved
@@ -289,6 +342,7 @@ The team aligned the backend/database access implementation and ensured that the
 ### BUG-008 — Render Deployment Failure / Gitea Deployment Limitation
 
 **Sprint:** Sprint 2
+
 **Severity:** Major deployment issue
 
 **Description:**
@@ -300,7 +354,9 @@ This became a stakeholder/process concern because the team had already agreed th
 **Impact:**
 
 - Latest backend changes were not guaranteed to be live.
+
 - Frontend and backend versions could become unsynchronised.
+
 - Production testing could give misleading results when Render was still running an older commit.
 
 **Evidence:**
@@ -322,8 +378,11 @@ The backend is then deployed by Render from the GitHub mirror.
 **Preventive Action:**
 
 - Keep Gitea as the authoritative repository.
+
 - Mirror only approved/merged `main` to the deployment repository.
+
 - Compare commit hashes before assuming production is current.
+
 - Verify Render deployment status after every backend production update.
 
 **Status:** Resolved for deployment workflow; deployment verification remains an ongoing responsibility.
@@ -333,6 +392,7 @@ The backend is then deployed by Render from the GitHub mirror.
 ### BUG-009 — Delete Entry Returned `404 Route not found` in Production
 
 **Sprint:** Sprint 2
+
 **Severity:** Major frontend/backend version mismatch
 
 **Description:**
@@ -350,19 +410,29 @@ The user could confirm deletion, but the entry remained unchanged. This meant th
 **Resolution:**
 
 1. The Delete Entry feature branch was reviewed and merged into Gitea `main`.
+
 2. The merged `main` was pulled locally.
+
 3. The team verified that `deleteEntry` existed on `main`.
+
 4. The same `main` commit was pushed to the GitHub deployment mirror.
+
 5. Render redeployed the backend.
+
 6. The frontend was rebuilt and redeployed to Netlify.
+
 7. Delete Entry was tested in production and confirmed to work.
 
 **Verification Result:**
 
 - Delete button visible.
+
 - Confirmation warning displayed.
+
 - Cancelling leaves the entry unchanged.
+
 - Confirming removes the entry.
+
 - Refreshing the page confirms that the deletion persisted.
 
 **Preventive Action:**
@@ -376,6 +446,7 @@ For API changes, deploy backend and frontend versions from the same approved mai
 ### BUG-010 — Board View Crash on Reserved Property Names
 
 **Sprint:** Sprint 3
+
 **Severity:** Major frontend/runtime issue
 
 **Description:**
@@ -403,7 +474,9 @@ The fix was reviewed and integrated through the Sprint 3 Board bug-fix work.
 **Preventive Action:**
 
 - Treat user-provided values as arbitrary data.
+
 - Avoid assuming object keys are free of built-in property names.
+
 - Include values such as `constructor`, `prototype`, and `toString` in edge-case tests.
 
 **Status:** Resolved
@@ -413,6 +486,7 @@ The fix was reviewed and integrated through the Sprint 3 Board bug-fix work.
 ### BUG-011 — Entry Reference Operations Returned HTTP 500
 
 **Sprint:** Sprint 3
+
 **Severity:** Major backend/integration issue
 
 **Description:**
@@ -430,7 +504,9 @@ The entry-reference contract and related request/data handling were corrected. T
 **Preventive Action:**
 
 - Test reference creation with valid, empty, removed, and existing reference states.
+
 - Validate reference payloads at the API boundary.
+
 - Keep frontend and backend reference formats documented and consistent.
 
 **Status:** Resolved
@@ -440,6 +516,7 @@ The entry-reference contract and related request/data handling were corrected. T
 ### BUG-012 — Existing Entry References Missing When Editing
 
 **Sprint:** Sprint 3
+
 **Severity:** Major data-integrity/usability issue
 
 **Description:**
@@ -467,6 +544,7 @@ Include round-trip tests for:
 ### BUG-013 — Archived Field Values Lost During Entry Edit
 
 **Sprint:** Sprint 3
+
 **Severity:** Major data-integrity issue
 
 **Description:**
@@ -490,8 +568,11 @@ Entry-edit handling was changed so values belonging to archived or historical fi
 Test editing against:
 
 - current fields;
+
 - archived fields;
+
 - removed fields;
+
 - projects whose field structure has changed multiple times.
 
 **Status:** Resolved
@@ -501,6 +582,7 @@ Test editing against:
 ### BUG-014 — Due Date Shifted Because of Timezone Conversion
 
 **Sprint:** Sprint 3
+
 **Severity:** Major date-handling issue
 
 **Description:**
@@ -518,7 +600,9 @@ Due-date processing was corrected so date-only values preserve the calendar day 
 **Preventive Action:**
 
 - Treat date-only fields separately from timestamp fields.
+
 - Test due dates around midnight and across timezone offsets.
+
 - Verify save/reload behaviour using the production timezone/environment.
 
 **Status:** Resolved
@@ -528,6 +612,7 @@ Due-date processing was corrected so date-only values preserve the calendar day 
 ### BUG-015 — Partial Entry Saves Could Leave Inconsistent Data
 
 **Sprint:** Sprint 3
+
 **Severity:** Major data-integrity issue
 
 **Description:**
@@ -547,7 +632,9 @@ The entry-edit operation was made safer so related changes are handled together 
 **Preventive Action:**
 
 - Use transactional/atomic handling for operations involving multiple related database updates.
+
 - Test failure at each stage of a multi-step save.
+
 - Reload the final stored state after integration tests.
 
 **Status:** Resolved
@@ -557,6 +644,7 @@ The entry-edit operation was made safer so related changes are handled together 
 ### BUG-016 — Recurring Entry Generation Global Limit
 
 **Sprint:** Sprint 3
+
 **Severity:** Major advanced-feature logic issue
 
 **Description:**
@@ -578,10 +666,15 @@ Recurring-entry generation and limit handling were corrected so recurrence proce
 Test recurrence logic with:
 
 - multiple projects;
+
 - multiple recurrence definitions;
+
 - simultaneous eligible recurrences;
+
 - generation limits;
+
 - previously generated occurrences;
+
 - disabled/deleted recurrence definitions.
 
 **Status:** Resolved
@@ -591,6 +684,7 @@ Test recurrence logic with:
 ### BUG-017 — Frontend API Tests Depended on Environment-Specific API URL
 
 **Sprint:** Sprint 3
+
 **Severity:** Test configuration/integration issue
 
 **Description:**
@@ -613,24 +707,26 @@ The failures were associated with the API base URL expected by the tests versus 
 
 **Resolution / Current Handling:**
 
-The issue was identified as environment-dependent test configuration rather than a production build failure.
-
-The production frontend build continued to succeed.
+A test-only `VITE_API_URL` stub was added in `client/test/setup.js` so API modules receive a deterministic localhost URL during Vitest runs, regardless of the developer's `.env`. The production frontend still uses its configured Render API endpoint. Qoder reported **439/439 client Vitest tests passing** after this change; the associated PR was subsequently reported merged into Gitea `main` by the team. Confirm the deployed repository revision before treating CI evidence as final.
 
 **Preventive Action:**
 
 - Mock/stub the API base URL in unit tests.
+
 - Avoid relying on the developer's real `.env`.
+
 - Use a dedicated test environment configuration.
+
 - Ensure tests remain deterministic regardless of whether the local environment points to localhost or Render.
 
-**Status:** Known test-configuration issue
+**Status:** Resolved — Sprint 4 test setup
 
 ---
 
 ### BUG-018 — `ProjectDetails.jsx` Corrupted During Sprint 3 Merge Conflict Resolution
 
 **Sprint:** Sprint 3
+
 **Severity:** Major integration/build issue
 
 **Description:**
@@ -638,14 +734,23 @@ The production frontend build continued to succeed.
 While merging the latest `main` changes into the UI-polish branch, `ProjectDetails.jsx` contained overlapping changes from multiple features, including:
 
 - archiving;
+
 - reminders;
+
 - AI Project Coach;
+
 - Learning Videos;
+
 - automation;
+
 - recurring entries;
+
 - saved filters;
+
 - search;
+
 - entry editing;
+
 - UI polish.
 
 Manual conflict resolution accidentally introduced duplicate function declarations/bodies and extra braces.
@@ -677,15 +782,25 @@ The file was inspected and repaired while preserving both the latest `main` func
 The repair:
 
 - removed the duplicate `handleDeleteEntry`;
+
 - removed the duplicated delete body;
+
 - removed extra braces;
+
 - restored correct function boundaries;
+
 - ensured `ProjectDetails` closes before `ReferenceSelectionModal`;
+
 - preserved archiving behaviour;
+
 - preserved saved filters/search;
+
 - preserved Learning Videos;
+
 - preserved AI Project Coach;
+
 - preserved automation and recurring-entry features;
+
 - removed all remaining merge markers.
 
 **Verification:**
@@ -703,10 +818,15 @@ A bundle-size warning remained, but this was non-blocking.
 **Preventive Action:**
 
 - Avoid manually replacing large JSX sections when resolving conflicts.
+
 - Resolve one conflict block at a time.
+
 - Run `git diff --check`.
+
 - Search for remaining `<<<<<<<`, `=======`, and `>>>>>>>` markers.
+
 - Run the production build before concluding the merge.
+
 - Use targeted tests after resolving large multi-feature conflicts.
 
 **Status:** Resolved
@@ -716,6 +836,7 @@ A bundle-size warning remained, but this was non-blocking.
 ### BUG-019 — YouTube Search Not Configured in Production
 
 **Sprint:** Sprint 3
+
 **Severity:** Production integration/configuration issue
 
 **Description:**
@@ -728,36 +849,46 @@ The Learning Videos interface loads correctly in the deployed frontend, but atte
 
 **Impact:**
 
-Users can see the Learning Videos feature but cannot retrieve YouTube learning resources in production.
+At the time of the screenshot, users could see Learning Videos but could not retrieve YouTube learning resources in production. The team reports that this problem was subsequently fixed.
 
 **Diagnosis:**
 
-The frontend component is deployed and communicating with the application. The error indicates that the deployed backend does not currently have the required YouTube API configuration available.
+The frontend component is deployed and communicating with the application. The message indicated a production configuration problem at the time of capture; the precise underlying cause was not independently established in this record.
 
 The API key must remain server-side and should not be embedded into the public Vite frontend bundle.
 
-**Required Resolution:**
+**Evidence:**
 
-The YouTube feature owner should coordinate with the backend deployment owner to:
+![BUG-019 - YouTube Learning Videos not configured on the deployed site](images/youtube_not_configured.png)
+
+**Resolution and follow-up:**
+
+The team reports that the YouTube integration problem has been corrected. The original remediation checklist was:
 
 1. determine the environment-variable name expected by the YouTube service;
+
 2. configure the provided YouTube API key in the deployed backend environment;
+
 3. redeploy/restart the backend if required;
+
 4. test Learning Videos again from the production Netlify application.
 
 **Preventive Action:**
 
 - Document external API environment-variable requirements in `.env.example`.
+
 - Include external-service configuration in the deployment checklist.
+
 - Do not expose secret API keys in `VITE_` frontend variables unless the service is explicitly designed for public browser credentials.
 
-**Status:** Pending backend deployment configuration
+**Status:** Resolved — reported by team in Sprint 4; screenshot retained as historical evidence.
 
 ---
 
 ### BUG-020 — AI Project Coach Service Unavailable in Production
 
 **Sprint:** Sprint 3
+
 **Severity:** Production external-service integration issue
 
 **Description:**
@@ -770,30 +901,40 @@ The AI Project Coach interface loads successfully, but requesting a project expl
 
 **Impact:**
 
-Users cannot currently generate AI-powered project progress explanations on the deployed application.
+At the time of capture, users could not generate AI-powered project explanations. The team reports that the integration is working following subsequent fixes.
 
 **Diagnosis:**
 
 The frontend feature itself is present and rendering correctly. The failure occurs when attempting to use the external AI service.
 
-The AI feature owner and backend deployment owner need to verify the production AI-service configuration.
+The AI feature owner and backend deployment owner investigated the production service configuration; the precise root cause and commit are not documented in the available evidence.
 
 Possible deployment-level causes include:
 
 - missing AI/Gemini API environment variable;
+
 - invalid or restricted API credentials;
+
 - external service availability;
+
 - quota or configuration limitations.
 
 The exact root cause remains to be confirmed by the feature/deployment owner.
 
-**Required Resolution:**
+**Evidence:**
 
-The AI feature owner should coordinate with the backend deployment owner to verify:
+![BUG-020 - AI Project Coach service unavailable on the deployed site](images/ai_not_configured.png)
+
+**Resolution and follow-up:**
+
+The team reports that the AI Project Coach error has been resolved. The original verification checklist was:
 
 - the expected environment-variable name;
+
 - that the correct API credential exists in the backend deployment;
+
 - that the deployed backend can reach the AI service;
+
 - that production requests succeed after configuration.
 
 **Preventive Action:**
@@ -801,12 +942,72 @@ The AI feature owner should coordinate with the backend deployment owner to veri
 External API integrations should include:
 
 - documented environment variables;
+
 - production deployment instructions;
+
 - graceful error messages;
+
 - configuration/startup checks where appropriate;
+
 - a deployment verification step.
 
-**Status:** Pending investigation / backend deployment configuration
+**Status:** Resolved — reported by team in Sprint 4; screenshot retained as historical evidence.
+
+---
+
+## Sprint 4 Addendum — Major Bugs and Verification (11 October 2026)
+
+### BUG-021 — Notification Dropdown Clipping and Missing Entry Deep Links
+
+**Sprint:** Sprint 4
+**Severity:** Major user-facing navigation defect
+**Description:** The sidebar's `overflow-y: auto` clipped an absolutely positioned notification dropdown outside its scroll box. Notification handlers also navigated only to the project, even when the payload included an entry ID. Clicking an entry notification while already on the project could appear to do nothing.
+
+**Impact:** Users could not reliably interact with notifications or reach a relevant entry.
+
+**Diagnosis and resolution:** The dropdown was rendered through a `createPortal` into `document.body` with fixed viewport-aware positioning. Shared destination logic routes project alerts to `/projects/:id` and entry alerts to `/projects/:id#entry-:entryId`. Project Details now reacts to hash changes; keyboard and focus interactions were improved. Informational weekly summaries without a target are displayed as non-navigation items.
+
+**Verification:** Qoder reported 39/39 notification tests and 37/37 Project Details tests passing, plus a synthetic browser hit-test showing 36/36 reachable points after the fix. The user reported that the PR was merged. Real production interaction should still be checked following the final deployment.
+
+**Preventive Action:** Test dropdowns inside scroll containers and include click-through navigation and same-route hash behaviour in regression tests.
+
+**Status:** Resolved — notification PR #132 merged.
+
+---
+
+### BUG-022 — Saved Filter Test Coverage and Accessibility
+
+**Sprint:** Sprint 4
+**Severity:** Quality and regression-prevention issue
+**Description:** An earlier audit concluded that the Saved Filter Builder did not render. A subsequent review found that the complete builder had already been merged by a teammate. The actual remaining issues were a missing accessible name on the filter selector and insufficient page-level integration tests.
+
+**Impact:** Save/apply/edit/delete workflows had inadequate page-level regression evidence, and the selector lacked an accessible label.
+
+**Resolution:** Added `aria-label="Saved filters"` to the selection control and six workflow tests to Project Details. The existing modal and backend contract were preserved.
+
+**Verification:** 43/43 Project Details tests, 7/7 Saved Filter Modal tests, and 439/439 client Vitest tests passed. The user reported that the combined test/configuration and saved-filter PR was merged.
+
+**Preventive Action:** Recheck recently merged functionality before reopening bugs, and cover complete UI workflows in tests.
+
+**Status:** Resolved — Sprint 4 PR merged; PR number to be confirmed.
+
+---
+
+### BUG-023 — Potential Authentication Fail-Open Fallback
+
+**Sprint:** Sprint 4
+**Severity:** Critical latent security risk
+**Description:** The production server startup code in `server/server.js` (reported lines 22–30) conditionally loaded authentication middleware. If loading failed, the fallback middleware called `next()` without enforcing authentication.
+
+**Impact:** A missing or broken middleware module could silently leave otherwise protected routes accessible. The normal deployed middleware was reported to load correctly, so this is a failure-mode risk, **not evidence of a currently exploited production bypass**.
+
+**Resolution:** The team reports that this authentication fail-open risk has been fixed. The identified code-level remedy is a mandatory `require("./middleware/authMiddleware")` instead of a permissive fallback. The specific fix commit, security-test result and Render deployment reference were not supplied with this documentation update and should be linked when available.
+
+**Verification status:** Resolved as reported by the team; independent confirmation of the deployed backend commit is not recorded here.
+
+**Preventive Action:** Never use permissive fallback authentication on protected production routes; include fail-closed behaviour in startup tests.
+
+**Status:** Resolved — team confirmation; fix/deployment evidence reference pending.
 
 ---
 
@@ -814,21 +1015,41 @@ External API integrations should include:
 
 The following screenshots and records are retained as supporting evidence for major bugs and integration issues.
 
-| Evidence File / Record                    | Related Bug               | What It Demonstrates                                       |
+| Evidence File / Record                    | Related Bug               | What It Demonstrates                                       |
+
 | ----------------------------------------- | ------------------------- | ---------------------------------------------------------- |
-| `images/router-basename-warning.png`      | BUG-004                   | Router basename mismatch on Netlify                        |
-| `images/frontend-localhost-api-error.png` | BUG-005                   | Production frontend attempting to call `localhost:5000`    |
-| `images/calendar-view-import-error.png`   | BUG-006                   | Vite failing to resolve `CalendarView`                     |
-| `images/db-connect-error.png`             | BUG-007                   | `db.connect is not a function` during entry creation       |
-| `images/render-deploy-failed.jpeg`        | BUG-008                   | Render deployment failure notification                     |
-| Sprint 3 Board tests / PR                 | BUG-010                   | Reserved-property Board grouping failure and fix           |
-| Sprint 3 entry-reference tests / PR       | BUG-011, BUG-012          | Entry-reference API/editor behaviour                       |
-| Sprint 3 entry-edit safety tests / PR     | BUG-013, BUG-014, BUG-015 | Archived values, date handling, and safe updates           |
-| Sprint 3 recurring-entry tests / PR       | BUG-016                   | Recurrence generation limit behaviour                      |
-| Frontend test output                      | BUG-017                   | Environment-dependent API URL test failures                |
-| Vite build output during UI integration   | BUG-018                   | Invalid `await`/`return` syntax caused by merge corruption |
-| Production Learning Videos screenshot     | BUG-019                   | YouTube search reports missing configuration               |
-| Production AI Project Coach screenshot    | BUG-020                   | AI service reports temporary unavailability                |
+
+| `images/router-basename-warning.png`      | BUG-004                   | Router basename mismatch on Netlify                        |
+
+| `images/frontend-localhost-api-error.png` | BUG-005                   | Production frontend attempting to call `localhost:5000`    |
+
+| `images/calendar-view-import-error.png`   | BUG-006                   | Vite failing to resolve `CalendarView`                     |
+
+| `images/db-connect-error.png`             | BUG-007                   | `db.connect is not a function` during entry creation       |
+
+| `images/render-deploy-failed.jpeg`        | BUG-008                   | Render deployment failure notification                     |
+
+| Sprint 3 Board tests / PR                 | BUG-010                   | Reserved-property Board grouping failure and fix           |
+
+| Sprint 3 entry-reference tests / PR       | BUG-011, BUG-012          | Entry-reference API/editor behaviour                       |
+
+| Sprint 3 entry-edit safety tests / PR     | BUG-013, BUG-014, BUG-015 | Archived values, date handling, and safe updates           |
+
+| Sprint 3 recurring-entry tests / PR       | BUG-016                   | Recurrence generation limit behaviour                      |
+
+| Frontend test output                      | BUG-017                   | Environment-dependent API URL test failures                |
+
+| Vite build output during UI integration   | BUG-018                   | Invalid `await`/`return` syntax caused by merge corruption |
+
+| `images/blank_page_rendered.png` | BUG-004 | Deployed blank screen and missing static assets (additional screenshot) |
+| `images/youtube_not_configured.png` | BUG-019 | Learning Videos displays missing YouTube configuration |
+| `images/ai_not_configured.png` | BUG-020 | AI Project Coach displays service-unavailable error |
+| Sprint 4 notification regression tests / PR #132 | BUG-021 | Dropdown clickability, navigation and keyboard functionality |
+| Sprint 4 Project Details filter tests / merged PR | BUG-022 | Saved-filter create/apply/edit/delete workflows and API URL test isolation |
+| Read-only security audit of `server/server.js` | BUG-023 | Authentication fallback risk requiring fail-closed protection |
+| Production Learning Videos screenshot     | BUG-019                   | YouTube search reports missing configuration               |
+
+| Production AI Project Coach screenshot    | BUG-020                   | AI service reports temporary unavailability                |
 
 The browser favicon `404` shown in one earlier screenshot is not tracked as a major bug because it did not block core application functionality.
 
@@ -839,36 +1060,71 @@ The browser favicon `404` shown in one earlier screenshot is not tracked as a ma
 During Sprint 3, the following integration/build behaviour was verified after the relevant fixes:
 
 - Board grouping no longer depends on unsafe assumptions about object-property names.
+
 - Entry references are included in the intended create/edit workflow.
+
 - Existing entry references are restored during editing.
+
 - Historical values belonging to archived fields are preserved.
+
 - Due-date handling avoids unintended timezone date shifts.
+
 - Entry-edit safety was improved to prevent inconsistent partial updates.
+
 - Recurring-entry edge cases received targeted test coverage.
+
 - Automation functionality received targeted edge-case testing.
+
 - Coverage was added for project and transfer-related backend code.
+
 - The UI-polish branch was updated with the latest `main` changes.
+
 - The `ProjectDetails.jsx` merge corruption was repaired.
+
 - All merge conflicts were marked resolved in Git.
+
 - The production frontend build completed successfully.
+
 - The integrated Project Details page includes current Sprint 3 functionality such as:
-  - automation;
-  - recurring entries;
-  - AI Project Coach;
-  - Learning Videos;
-  - archiving;
-  - search and saved filters;
-  - list/calendar/board views;
-  - entry references;
-  - entry editing and deletion.
 
-**Known production integration items remaining:**
+- automation;
 
-- YouTube Learning Videos requires backend API-key/environment configuration.
-- AI Project Coach requires verification of its deployed external-service configuration.
-- These external-service configuration tasks belong to the relevant feature/deployment owners rather than the frontend UI-polish implementation.
+- recurring entries;
 
-**Overall Sprint 3 integration status:** Core application build and integrated UI are operational; identified external API deployment configuration remains pending.
+- AI Project Coach;
+
+- Learning Videos;
+
+- archiving;
+
+- search and saved filters;
+
+- list/calendar/board views;
+
+- entry references;
+
+- entry editing and deletion.
+
+**Sprint 3 issues subsequently resolved in Sprint 4:**
+
+- The team reports that the YouTube Learning Videos production issue (BUG-019) has been fixed.
+
+- The team reports that the AI Project Coach production issue (BUG-020) has been fixed.
+
+- The original error screenshots remain in the tracker as historical evidence of defects encountered during development.
+
+**Overall Sprint 3 integration status:** Core application integration issues have been resolved according to the team’s latest update; the screenshots document their earlier occurrence.
+
+---
+
+## Sprint 4 Verification and Resolution Updates
+
+- The notification navigation fix was reported merged and the Netlify frontend was rebuilt and redeployed by the team.
+- The Saved Filter Builder was already present; Sprint 4 added accessibility and end-to-end component workflow tests.
+- The API test environment was made deterministic. Qoder reported **439/439 client Vitest tests passing** before the corresponding PR was merged.
+- The original production screenshots document historical Learning Videos and AI Project Coach failures. **BUG-019 and BUG-020 are reported resolved by the team**; the screenshots are retained to show the errors encountered during earlier sprints.
+- **BUG-023 is reported resolved by the team**. Its fix commit and backend deployment/test evidence should be linked to the record when available.
+- Screenshots are evidence of the issue at capture time; they do not establish that the issue is still reproducible after later deployments.
 
 ---
 
@@ -877,52 +1133,68 @@ During Sprint 3, the following integration/build behaviour was verified after th
 The major Sprint 1, Sprint 2, and Sprint 3 issues produced the following team lessons:
 
 1. **Keep one authoritative architecture.**
-   Avoid duplicate backend structures or competing database abstractions.
+
+Avoid duplicate backend structures or competing database abstractions.
 
 2. **Keep Gitea as the official review source.**
-   Deployment tooling should not bypass the agreed branch/PR/review process.
+
+Deployment tooling should not bypass the agreed branch/PR/review process.
 
 3. **Synchronise production frontend and backend versions.**
-   A new UI feature may fail if the corresponding backend route has not been deployed.
+
+A new UI feature may fail if the corresponding backend route has not been deployed.
 
 4. **Use environment-specific configuration.**
-   Production builds must never depend on `localhost` APIs.
+
+Production builds must never depend on `localhost` APIs.
 
 5. **Build before merge/deployment.**
-   Missing imports and merge-corrupted JSX should be caught before deployment.
+
+Missing imports and merge-corrupted JSX should be caught before deployment.
 
 6. **Test full flows, not only individual components.**
-   Important operations should be verified from UI → API → backend → database → refreshed UI state.
+
+Important operations should be verified from UI → API → backend → database → refreshed UI state.
 
 7. **Treat deployment as part of testing.**
-   A locally working feature is not considered production-ready until the deployed services are running the intended commits and configuration.
+
+A locally working feature is not considered production-ready until the deployed services are running the intended commits and configuration.
 
 8. **Record evidence.**
-   Screenshots, console errors, tests, PRs, deployment checks, and build outputs should be retained for significant issues.
+
+Screenshots, console errors, tests, PRs, deployment checks, and build outputs should be retained for significant issues.
 
 9. **Preserve historical data when schemas evolve.**
-   Editing old entries must not remove information just because the current project format has changed.
+
+Editing old entries must not remove information just because the current project format has changed.
 
 10. **Treat user-controlled values as arbitrary data.**
-    Values such as `constructor` must not break grouping or object-based logic.
+
+Values such as `constructor` must not break grouping or object-based logic.
 
 11. **Use atomic operations for related updates.**
-    Multi-step entry changes should not leave partial data when one stage fails.
+
+Multi-step entry changes should not leave partial data when one stage fails.
 
 12. **Treat dates and timestamps differently.**
-    Date-only values such as due dates should not be unintentionally shifted through timezone conversion.
+
+Date-only values such as due dates should not be unintentionally shifted through timezone conversion.
 
 13. **Keep tests independent from developer-specific `.env` configuration.**
-    Unit tests should mock configuration rather than depend on whichever API URL is active locally.
+
+Unit tests should mock configuration rather than depend on whichever API URL is active locally.
 
 14. **Resolve large merge conflicts cautiously.**
-    Multi-feature files such as `ProjectDetails.jsx` should be repaired incrementally and validated using the production build.
+
+Multi-feature files such as `ProjectDetails.jsx` should be repaired incrementally and validated using the production build.
 
 15. **External APIs require deployment configuration as well as source code.**
-    YouTube, AI/Gemini, authentication, and similar integrations must document the environment variables required by the deployed backend.
+
+YouTube, AI/Gemini, authentication, and similar integrations must document the environment variables required by the deployed backend.
 
 16. **Secrets belong on the server.**
-    External API keys and authentication secrets must not be exposed through public frontend bundles.
+
+External API keys and authentication secrets must not be exposed through public frontend bundles.
 
 ---
 
@@ -931,23 +1203,37 @@ The major Sprint 1, Sprint 2, and Sprint 3 issues produced the following team le
 New significant bugs should be recorded with:
 
 - unique bug ID;
+
 - sprint/date where known;
+
 - severity;
+
 - description;
+
 - user/system impact;
+
 - evidence where available;
+
 - diagnosis/root cause;
+
 - resolution;
+
 - preventive action;
+
 - current status;
+
 - relevant PR/commit/issue reference where available.
 
 For external-service bugs, also record:
 
 - whether the problem occurs locally, in production, or both;
+
 - whether the failure is frontend, backend, deployment, or third-party-service related;
+
 - the responsible feature/deployment owner;
+
 - whether an environment variable or secret is required;
+
 - whether production was re-tested after configuration.
 
 Resolved bugs should remain in this document to preserve development history and traceability.
@@ -956,8 +1242,13 @@ Resolved bugs should remain in this document to preserve development history and
 
 ## 8. Revision History
 
-| Version | Date       | Author          | Changes                                                                                                                                                                                                                                                                        |
+| Version | Date       | Author          | Changes                                                                                                                                                                                                                                                                        |
+
 | ------- | ---------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | Sprint 1   | Team            | Initial major authentication/integration bugs recorded.                                                                                                                                                                                                                        |
-| 0.2     | 15/09/2026 | Simphiwe / Team | Document refocused on major issues; Sprint 2 Netlify, API configuration, module integration, database, Render/Gitea deployment, and Delete Entry deployment issues added with evidence and resolutions.                                                                        |
-| 0.3     | 29/09/2026 | Simphiwe / Team | Added Sprint 3 Board reserved-key crash, entry-reference issues, entry-edit data preservation/date/atomicity fixes, recurring-entry limit issue, environment-dependent API tests, ProjectDetails merge corruption, and outstanding YouTube/AI production configuration issues. |
+
+| 0.1     | Sprint 1   | Team            | Initial major authentication/integration bugs recorded.                                                                                                                                                                                                                        |
+
+| 0.2     | 15/09/2026 | Simphiwe / Team | Document refocused on major issues; Sprint 2 Netlify, API configuration, module integration, database, Render/Gitea deployment, and Delete Entry deployment issues added with evidence and resolutions.                                                                        |
+
+| 0.3     | 29/09/2026 | Simphiwe / Team | Added Sprint 3 Board reserved-key crash, entry-reference issues, entry-edit data preservation/date/atomicity fixes, recurring-entry limit issue, environment-dependent API tests, ProjectDetails merge corruption, and outstanding YouTube/AI production configuration issues. |
+| 0.4 | 11/10/2026 | Documentation owner / Team | Sprint 4 updates: embedded historical error screenshots; recorded BUG-017, BUG-019, BUG-020, BUG-021, BUG-022 and BUG-023 as resolved based on team updates; retained original diagnoses, prevention actions and evidence; added verification follow-up notes where commit/deployment references are unavailable. |

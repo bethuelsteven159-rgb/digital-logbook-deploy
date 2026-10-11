@@ -8,7 +8,7 @@
 
 **Document Status:** Living Document
 
-**Last Updated:** 2026-09-29
+**Last Updated:** 2026-10-11
 
 ---
 
@@ -255,6 +255,18 @@ Key Sprint 3 outcomes were:
 - Frontend UI consistency and usability were improved without replacing the established navigation or changing the application architecture.
 - The integrated `ProjectDetails` area was updated to include current Sprint 3 functionality such as archiving, automation, recurring entries, AI progress assistance, Learning Videos, search/filtering, and multiple entry views.
 - Production checks identified two remaining external-service configuration items: YouTube Learning Videos requires backend API configuration, and the AI Project Coach requires verification of its deployed AI-service configuration. These are deployment/configuration tasks rather than frontend requirement failures.
+
+**Sprint 4 Team Implementation Review — October 2026**
+
+The Sprint 4 contribution summary below comes from development-team reports, not from an additional recorded client/mentor meeting. It records implemented work and requirement implications without attributing unconfirmed decisions to the stakeholder.
+
+- **Collaborator activity notifications:** a team member worked on notifying users when a collaborator updates a shared project (FR-038).
+- **Shared entries and email collaboration:** a team member reported implementing and testing shared entries and connecting users through email (FR-039).
+- **Profile avatar:** a team member reported adding an avatar personalisation feature (FR-040).
+- **Interactive 3D Project Constellation:** **Simphiwe** implemented the Project Constellation visual experience for exploring project information (FR-041).
+- **Visual design and mobile layout:** a team member improved the application's expressive styling and mobile presentation to keep the interface usable on smaller screens (NFR-013).
+
+The team also addressed integration and quality issues during the final milestone. These include notification usability/theme consistency and a fail-closed backend authentication startup fix. Testing and PR/deployment evidence are maintained separately; completion of development does not by itself establish lecturer/client acceptance.
 
 **### 4.3 Development Team**
 
@@ -711,6 +723,67 @@ Older records may be archived while remaining accessible.
 
 ---
 
+**## 6.8 Sprint 4 Collaboration, Personalisation and Visualisation Requirements**
+
+The following requirements extend the Digital Logbook based on Sprint 4 team-reported implementation work. The team member's reported implementation is distinguished from formal stakeholder acceptance.
+
+**### FR-038 – Collaborator Activity Notifications**
+
+When a collaborator updates a shared project, the system shall provide a notification to relevant collaborators so that they can remain informed about changes to shared work.
+
+**Acceptance Criteria:**
+
+- A relevant update to a shared project can create a notification for another collaborator.
+- The notification indicates which shared project or activity requires attention.
+- The recipient can view the notification in the application and, where supported, navigate to the relevant project or entry.
+- Notifications remain associated with the correct authorised users and do not expose unrelated private project information.
+
+**Sprint 4 Status:** Team-reported implemented; final acceptance and exact event coverage should be confirmed against feature tests.
+
+**### FR-039 – Shared Entries and Email-Based Collaboration**
+
+The system shall support sharing selected logbook entries with appropriate collaborators and connecting users through email-based identification or invitations.
+
+**Acceptance Criteria:**
+
+- An authorised user can initiate an available entry-sharing workflow.
+- A collaborator can be identified or connected using their email address.
+- Shared entries are available only to users permitted to access them.
+- Relevant shared-entry operations work after saving and reloading.
+- Sharing and access behaviour can be tested with more than one user.
+
+**Sprint 4 Status:** Team-reported implemented and tested. Exact permissions and invitation behaviour should be confirmed against the finished feature.
+
+**### FR-040 – User Profile Avatar**
+
+The system shall display a personal avatar or profile representation to improve account recognition and personalisation.
+
+**Acceptance Criteria:**
+
+- The user is represented by an avatar in the intended profile or account interface.
+- The avatar presentation does not prevent users from accessing their normal profile and account controls.
+- Any supported avatar-selection or update behaviour remains associated with the correct user.
+
+**Sprint 4 Status:** Team-reported implemented as an additional feature. Whether an avatar can be uploaded, generated, or selected requires feature-level confirmation.
+
+**### FR-041 – Interactive 3D Project Constellation**
+
+The system shall provide an interactive 3D Project Constellation experience that gives users a visual way to explore their project-related information and navigate to relevant logbook content.
+
+**Acceptance Criteria:**
+
+- An authenticated user can open the Project Constellation from the application.
+- Project-related items are represented in a recognisable 3D visual layout, centred on the main constellation/hub experience.
+- The user can interact with the visualisation and navigate to corresponding project information using supported controls.
+- The experience does not remove access to standard project and entry views.
+- An understandable fallback or alternative access path is available if the 3D presentation is unavailable or unsuitable.
+
+**Sprint 4 Contribution:** **Simphiwe — design, implementation and integration of the 3D Project Constellation.**
+
+**Sprint 4 Status:** Implemented and locally verified by the feature contributor; formal reviewer acceptance remains separate.
+
+---
+
 **# 7. Non-Functional Requirements**
 
 Non-functional requirements describe **how the system should operate and the qualities or constraints that should apply to the system**.
@@ -825,6 +898,23 @@ Features should be implemented in a way that allows meaningful testing of both f
 
 ---
 
+**## 7.13 Visual Consistency and Mobile Experience**
+
+**### NFR-013 – Consistent, Expressive and Responsive User Interface**
+
+The Digital Logbook should maintain a coherent visual identity across screens and should remain usable on desktop and mobile devices. Theme-dependent components should use the application's shared design tokens rather than unrelated hard-coded colours where feasible.
+
+**Acceptance Criteria:**
+
+- Shared interface elements use consistent surfaces, typography, contrast, spacing and interaction styles.
+- Important user workflows remain accessible on mobile-sized viewports as well as desktop.
+- Light and dark themes, where supported, do not cause unreadable text or visibly incompatible panels.
+- Responsive improvements preserve the underlying project, entry and notification functionality.
+
+**Sprint 4 Status:** Team-reported mobile and design improvement; the Dashboard Notifications Panel theme consistency fix was locally verified through targeted tests and light/dark computed-style checks.
+
+---
+
 **# 8. Feature Organisation and Prioritisation**
 
 The Digital Logbook features are organised according to the Basic, Intermediate, and Advanced levels identified in the project specification.
@@ -922,6 +1012,18 @@ Advanced functionality includes:
 - Long-term performance optimisation and archival.
 
 The feature tiers should be treated as prioritisation guidance rather than a requirement to implement every advanced feature if doing so would compromise the quality or stability of the core product.
+
+---
+
+**## 8.4 Sprint 4 Delivered Extensions**
+
+The following additions were reported by the team for the final milestone. They are separate from the original Basic/Intermediate/Advanced prioritisation tiers and do not imply every original backlog item was completed:
+
+- Collaborator update notifications (FR-038).
+- Shared entries and email-based collaboration (FR-039).
+- User profile avatars (FR-040).
+- Interactive 3D Project Constellation (FR-041; **Simphiwe**).
+- Expressive, consistent styling and mobile responsiveness (NFR-013).
 
 ---
 
@@ -1158,6 +1260,22 @@ AI Project Coach and Learning Videos are treated as supplementary integrations. 
 
 ---
 
+**## 9.8 Sprint 4 Collaboration, Personalisation and Visualisation User Stories**
+
+The stories below describe the final-milestone work reported by the team. They map to requirements FR-038–FR-041 and NFR-013 and can also be entered into the Sprint 4 Taiga backlog.
+
+| User Story                                                  | User Need                                                                                                                                                            | Related Requirement | Sprint 4 Status                               |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | --------------------------------------------- |
+| **US-S4-01 – Collaborator Activity Notifications**          | As a collaborator on a shared project, I want to receive a notification when another collaborator updates the project so that I can stay informed about shared work. | FR-038              | Team-reported implemented                     |
+| **US-S4-02 – Shared Entries and Email-Based Collaboration** | As a project user, I want to share relevant entries and connect with collaborators through email so that authorised teammates can work with shared records.          | FR-039              | Team-reported implemented and tested          |
+| **US-S4-03 – User Profile Avatar**                          | As a user, I want a personal avatar associated with my account so that I can personalise my profile and recognise my account easily.                                 | FR-040              | Team-reported implemented                     |
+| **US-S4-04 – Interactive 3D Project Constellation**         | As a user, I want to explore my projects visually in an interactive 3D constellation so that I can understand and navigate my logbook work in a more engaging way.   | FR-041              | Implemented by **Simphiwe**; locally verified |
+| **US-S4-05 – Consistent Responsive UI/UX**                  | As a user, I want a visually consistent and mobile-friendly interface so that I can comfortably use the Digital Logbook on different devices.                        | NFR-013             | Team-reported design/mobile improvements      |
+
+The complete acceptance criteria are recorded under each related functional or non-functional requirement in Sections 6 and 7. Final client acceptance is not inferred from the implementation reports.
+
+---
+
 **# 10. Acceptance Criteria Principles**
 
 A feature should not be considered complete merely because code exists.
@@ -1229,6 +1347,18 @@ The following table provides the initial traceability between requirements and c
 | FR-037 – Entry Archiving | US-A07 | Archive/unarchive entry flow | Archiving frontend/backend tests | Sprint 3 integration review |
 
 This table should continue to be expanded as implementation, testing, and stakeholder review progress.
+
+---
+
+**## 11.1 Sprint 4 Requirements Traceability Additions**
+
+| Requirement                                           | User Story | Implementation / Contribution                                                   | Verification Evidence                                                               | Review Status                           |
+| ----------------------------------------------------- | ---------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------- |
+| FR-038 – Collaborator Activity Notifications          | US-S4-01   | Shared-project update notifications                                             | Team implementation report; inspect notification feature tests                      | Stakeholder acceptance not yet recorded |
+| FR-039 – Shared Entries and Email-Based Collaboration | US-S4-02   | Entry-sharing functionality and email-linked users                              | Contributor reports testing shared entries                                          | Stakeholder acceptance not yet recorded |
+| FR-040 – User Profile Avatar                          | US-S4-03   | Profile avatar enhancement                                                      | Contributor implementation report; UI verification to confirm                       | Stakeholder acceptance not yet recorded |
+| FR-041 – Interactive 3D Project Constellation         | US-S4-04   | 3D constellation by **Simphiwe**                                                | Contributor local interaction checks / feature PR                                   | Stakeholder acceptance not yet recorded |
+| NFR-013 – Consistent Responsive UI/UX                 | US-S4-05   | Expressive UI and mobile improvements; token-based notification-panel theme fix | Mobile review reported; NotificationsPanel targeted tests and computed-style checks | Stakeholder acceptance not yet recorded |
 
 ---
 
@@ -1450,6 +1580,16 @@ Production verification then identified that the Learning Videos and AI Project 
 
 ---
 
+**### Sprint 4 — Final-Milestone Team Contributions and Quality Review**
+
+The team reported five strands of final-milestone work: notifications for shared-project updates, shared entries connected through email, profile avatars, improvements to expressive design and mobile layouts, and the 3D Project Constellation developed by **Simphiwe**.
+
+The team also investigated and corrected a Dashboard Notifications Panel theme inconsistency and a potential authentication-middleware fail-open startup path. Local regression tests and a frontend build passed for those fixes; merge approval and production deployment should be checked separately before marking release verification complete.
+
+These updates were mapped to requirements FR-038–FR-041, NFR-013 and user stories US-S4-01–US-S4-05. The team reports are not presented as an additional formal lecturer/client meeting.
+
+---
+
 **# 13. Development Decisions Affecting Requirements**
 
 Requirements are not isolated from technical decisions.
@@ -1660,6 +1800,23 @@ Production integration issues encountered during Sprint 2 and Sprint 3 are recor
 
 ---
 
+**## 14.5 Sprint 4 Final-Milestone Implementation Progress**
+
+| Area                                       | Status                           | Notes                                                                                                                               |
+| ------------------------------------------ | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Collaborator update notifications          | Team-reported implemented        | Notifications for collaborator updates to shared projects; acceptance/event coverage to be verified                                 |
+| Shared entries and email collaboration     | Team-reported implemented/tested | Contributor reports sharing entries, testing the flow and connecting users by email                                                 |
+| Profile avatar                             | Team-reported implemented        | Additional personalisation feature; precise avatar-editing capability to be confirmed                                               |
+| 3D Project Constellation                   | Implemented / locally verified   | **Simphiwe** developed the interactive constellation view; final stakeholder acceptance remains separate                            |
+| Expressive UI and mobile responsiveness    | Team-reported improved           | Visual design and usability improvements for mobile users                                                                           |
+| Dashboard notification theme consistency   | Locally fixed/tested             | CSS design tokens; 16/16 targeted notification tests and frontend production build passed                                           |
+| Backend authentication fail-closed startup | Locally fixed/tested             | Mandatory middleware import; 8/8 focused server startup tests passed; release deployment to be confirmed                            |
+| Learning Videos / AI Project Coach         | Team reports issues fixed        | Previously recorded Sprint 3 integration errors; production acceptance and exact deployment evidence should be confirmed separately |
+
+**Release distinction:** “Implemented” and “tested locally” do not imply a reviewed Gitea PR has merged or that Render/Netlify are running the updated version.
+
+---
+
 **# 15. Requirement Change Management**
 
 Requirements may change throughout the project.
@@ -1819,6 +1976,8 @@ These items should be resolved through the stakeholder interaction process and t
 
 ---
 
+**Sprint 4 confirmation items:** verify final stakeholder acceptance of FR-038–FR-041 and NFR-013; confirm the exact email-sharing permissions and avatar functionality against deployed behaviour; confirm completion of the pending authentication/theme PR deployment before claiming production release verification.
+
 **# 19. Definition of Requirement Completion**
 
 A requirement should be considered fully completed only when:
@@ -1873,6 +2032,8 @@ A requirement should be considered fully completed only when:
 | 1.2 | 29/09/2026 | Simphiwe / Team | Sprint 3 Advanced and QA work documented; automation, recurring entries and entry archiving traced; historical-entry preservation and external-API configuration decisions added; current implementation/deployment status updated. |
 
 ---
+
+| 1.3 | 11/10/2026 | Simphiwe / Team | Added Sprint 4 collaborator notifications, shared entries/email collaboration, profile avatar, 3D Project Constellation (**Simphiwe**), expressive UI/mobile responsiveness, user stories, acceptance criteria, traceability, team progress, and verification notes while preserving previous sprint records. |
 
 **# 21. References**
 
