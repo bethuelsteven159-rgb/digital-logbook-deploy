@@ -6,6 +6,7 @@ import {
   SEVERITY_COLORS,
   describeNotification,
   formatMinutes,
+  getNotificationTarget,
 } from "../../utils/notificationFormat";
 
 const TYPE_LABELS = {
@@ -49,8 +50,10 @@ export default function NotificationsPanel() {
       markRead(notification.key);
     }
 
-    if (notification.projectId) {
-      navigate(`/projects/${notification.projectId}`);
+    const target = getNotificationTarget(notification);
+
+    if (target) {
+      navigate(target);
     }
   }
 
@@ -238,6 +241,75 @@ export default function NotificationsPanel() {
         {visible.map((notification) => {
           const color =
             SEVERITY_COLORS[notification.severity] || SEVERITY_COLORS.low;
+          const target = getNotificationTarget(notification);
+
+          const mainStyle = {
+            flex: 1,
+            display: "block",
+            padding: "14px 16px",
+            border: "none",
+            borderLeft: `4px solid ${color}`,
+            background: "transparent",
+            textAlign: "left",
+            opacity: notification.readAt ? 0.65 : 1,
+          };
+
+          const content = (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    background: `${color}1a`,
+                    color,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {TYPE_LABELS[notification.type] || "Update"}
+                </span>
+
+                <strong style={{ fontSize: "14px", color: "#111827" }}>
+                  {notification.title}
+                </strong>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "5px",
+                  fontSize: "13px",
+                  color: "#6b7280",
+                }}
+              >
+                {describeNotification(notification)}
+              </div>
+
+              {notification.type === "weekly_summary" &&
+                notification.projects > 0 && (
+                  <div
+                    style={{
+                      marginTop: "4px",
+                      fontSize: "12px",
+                      color: "#9ca3af",
+                    }}
+                  >
+                    Across {notification.projects}{" "}
+                    {notification.projects === 1 ? "project" : "projects"} ·{" "}
+                    {formatMinutes(notification.minutes)} logged
+                  </div>
+                )}
+            </>
+          );
 
           return (
             <div
@@ -251,74 +323,18 @@ export default function NotificationsPanel() {
                 background: notification.readAt ? "#fcfcfd" : "#fff",
               }}
             >
-              <button
-                type="button"
-                onClick={() => handleOpen(notification)}
-                style={{
-                  flex: 1,
-                  display: "block",
-                  padding: "14px 16px",
-                  border: "none",
-                  borderLeft: `4px solid ${color}`,
-                  background: "transparent",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  opacity: notification.readAt ? 0.65 : 1,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    flexWrap: "wrap",
-                  }}
+              {/* Items without a destination stay static so they do not look navigable. */}
+              {target ? (
+                <button
+                  type="button"
+                  onClick={() => handleOpen(notification)}
+                  style={{ ...mainStyle, cursor: "pointer" }}
                 >
-                  <span
-                    style={{
-                      padding: "2px 8px",
-                      borderRadius: "999px",
-                      background: `${color}1a`,
-                      color,
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    {TYPE_LABELS[notification.type] || "Update"}
-                  </span>
-
-                  <strong style={{ fontSize: "14px", color: "#111827" }}>
-                    {notification.title}
-                  </strong>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: "5px",
-                    fontSize: "13px",
-                    color: "#6b7280",
-                  }}
-                >
-                  {describeNotification(notification)}
-                </div>
-
-                {notification.type === "weekly_summary" &&
-                  notification.projects > 0 && (
-                    <div
-                      style={{
-                        marginTop: "4px",
-                        fontSize: "12px",
-                        color: "#9ca3af",
-                      }}
-                    >
-                      Across {notification.projects}{" "}
-                      {notification.projects === 1 ? "project" : "projects"} ·{" "}
-                      {formatMinutes(notification.minutes)} logged
-                    </div>
-                  )}
-              </button>
+                  {content}
+                </button>
+              ) : (
+                <div style={mainStyle}>{content}</div>
+              )}
 
               <button
                 type="button"

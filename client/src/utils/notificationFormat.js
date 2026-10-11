@@ -91,3 +91,20 @@ export function describeNotification(notification) {
         .join(" · ");
   }
 }
+
+/**
+ * Where a notification should take the user when opened, or null when it
+ * has no destination (e.g. the weekly summary). Entry-level notifications
+ * deep-link to `#entry-<id>`, which ProjectDetails scrolls into view.
+ */
+export function getNotificationTarget(notification) {
+  if (!notification?.projectId) {
+    return null;
+  }
+
+  const projectTarget = `/projects/${notification.projectId}`;
+
+  return notification.entryId
+    ? `${projectTarget}#entry-${notification.entryId}`
+    : projectTarget;
+}

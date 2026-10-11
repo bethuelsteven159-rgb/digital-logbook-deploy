@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 const hookMocks = vi.hoisted(() => ({
@@ -28,6 +28,7 @@ const feed = {
       title: 'Lab report is overdue',
       projectName: 'Cyber Security',
       projectId: 'p1',
+      entryId: 'e1',
       dueAt: '2026-10-05T09:00:00.000Z',
       readAt: null,
     },
@@ -38,7 +39,18 @@ const feed = {
       title: 'Design review is due today',
       projectName: 'Thesis',
       projectId: 'p2',
+      entryId: 'e2',
       dueAt: '2026-10-07T15:00:00.000Z',
+      readAt: '2026-10-07T06:00:00.000Z',
+    },
+    {
+      key: 'recurring_pending:r1',
+      type: 'recurring_pending',
+      severity: 'info',
+      title: 'Standup series needs the next entry',
+      projectName: 'Thesis',
+      projectId: 'p2',
+      body: 'Next occurrence is ready to generate.',
       readAt: '2026-10-07T06:00:00.000Z',
     },
     {
@@ -60,7 +72,14 @@ const feed = {
 };
 
 function ProjectDestination() {
-  return <div>Project destination</div>;
+  const location = useLocation();
+
+  return (
+    <div>
+      <div>Project destination</div>
+      <span data-testid="destination">{`${location.pathname}${location.hash}`}</span>
+    </div>
+  );
 }
 
 function renderPanel() {
@@ -254,5 +273,61 @@ describe('NotificationsPanel', () => {
     );
 
     expect(screen.getByText('No unread notifications.')).toBeInTheDocument();
+  });
+
+  it('navigates entry notifications to the entry anchor', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByText('Lab report is overdue'));
+
+    expect(hookMocks.markRead).toHaveBeenCalledWith('entry_overdue:e1');
+    expect(screen.getByTestId('destination')).toHaveTextContent(
+      '/projects/p1#entry-e1',
+    );
+  });
+
+  it('deep-links read entry notifications without re-marking them read', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByText('Design review is due today'));
+
+    expect(hookMocks.markRead).not.toHaveBeenCalled();
+    expect(screen.getByTestId('destination')).toHaveTextContent(
+      '/projects/p2#entry-e2',
+    );
+  });
+
+  it('navigates project-level notifications to the project page', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByText('Standup series needs the next entry'));
+
+    expect(hookMocks.markRead).not.toHaveBeenCalled();
+    expect(screen.getByTestId('destination')).toHaveTextContent('/projects/p2');
+    expect(screen.getByTestId('destination')).not.toHaveTextContent('#entry-');
+  });
+
+  it('keeps informational notifications static and non-navigating', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const title = screen.getByText('Your week so far');
+
+    // No destination => static text, not a button, and clicking does nothing.
+    expect(title.closest('button')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: /dismiss your week so far/i }),
+    ).toBeInTheDocument();
+
+    await user.click(title);
+
+    expect(hookMocks.markRead).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('destination')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Notifications' }),
+    ).toBeInTheDocument();
   });
 });
