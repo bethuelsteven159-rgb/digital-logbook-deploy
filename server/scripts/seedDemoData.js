@@ -1245,7 +1245,7 @@ async function main({
   log(`  ${describeDatabaseTarget(env.DATABASE_URL)}`);
   log("");
 
-  let user = null;
+  let user;
 
   if (userId) {
     user = await gateways.findUserById(userId);

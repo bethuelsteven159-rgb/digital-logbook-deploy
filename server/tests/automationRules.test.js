@@ -62,7 +62,7 @@ function createClient({ fields = [], rules = [], failOn } = {}) {
       }
 
       if (sql.startsWith("SELECT id, owner_id, name, description")) {
-        assert.match(sql, /FROM projects WHERE id = \$1 AND owner_id = \$2 LIMIT 1 FOR UPDATE/);
+        assert.match(sql, /FROM projects WHERE id = \$1 AND \( owner_id = \$2 OR EXISTS \( SELECT 1 FROM project_collaborators pc WHERE pc\.project_id = projects\.id AND pc\.user_id = \$2 \) \) LIMIT 1 FOR UPDATE/);
         const project = client.projects.find(
           (p) => p.id === parameters[0] && p.owner_id === parameters[1],
         );

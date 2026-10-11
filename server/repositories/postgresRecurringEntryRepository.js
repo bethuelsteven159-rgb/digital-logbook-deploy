@@ -66,12 +66,22 @@ async function insertChecklistItems(
 
 function createRepository(queryable) {
   return {
+    // "Owned" here means owned OR shared with the caller via
+    // project_collaborators, so collaborators get the same access.
     async getOwnedProject(projectId, userId) {
       const result = await queryable.query(
         `SELECT id, owner_id, name, archived_at
          FROM projects
          WHERE id = $1
-           AND owner_id = $2
+           AND (
+             owner_id = $2
+             OR EXISTS (
+               SELECT 1
+               FROM project_collaborators pc
+               WHERE pc.project_id = projects.id
+                 AND pc.user_id = $2
+             )
+           )
          LIMIT 1`,
         [projectId, userId],
       );

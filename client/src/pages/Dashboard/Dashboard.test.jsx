@@ -79,7 +79,7 @@ async function openCustomizer() {
   await waitFor(() => {
     expect(statCardLabels()).toContain("Hours Logged");
   });
-  await user.click(screen.getByRole("button", { name: "Customize dashboard widgets" }));
+  await user.click(screen.getByRole("button", { name: "Personalize dashboard" }));
   return user;
 }
 
@@ -147,13 +147,14 @@ test("loads and displays the saved dashboard widget layout", async () => {
 
 test("keeps Recent Activity, Overview, and Get Started outside customization", async () => {
   const user = await openCustomizer();
-  expect(screen.getByText("Recent Activity")).toBeInTheDocument();
-  expect(screen.getByText("Overview")).toBeInTheDocument();
-  expect(screen.getByText("Get Started")).toBeInTheDocument();
+  const persistentSections = ["Recent activity", "Your next step", "More from your logbook"];
+  for (const heading of persistentSections) {
+    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+  }
   await user.click(screen.getAllByRole("button", { name: "Remove" })[0]);
-  expect(screen.getByText("Recent Activity")).toBeInTheDocument();
-  expect(screen.getByText("Overview")).toBeInTheDocument();
-  expect(screen.getByText("Get Started")).toBeInTheDocument();
+  for (const heading of persistentSections) {
+    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+  }
 });
 
 test("adds a widget using the selected statistic", async () => {
@@ -177,11 +178,11 @@ test("changes, removes, and reorders widgets while customizing", async () => {
   expect(screen.getAllByLabelText("Widget statistic")).toHaveLength(1);
 });
 
-test("cancelling customization discards unsaved layout changes", async () => {
+test("leaving customization discards unsaved layout changes", async () => {
   const user = await openCustomizer();
   await user.click(screen.getAllByRole("button", { name: "Remove" })[0]);
   expect(statCardLabels()).not.toContain("Hours Logged");
-  await user.click(screen.getByRole("button", { name: "Cancel customization" }));
+  await user.click(screen.getByRole("button", { name: "Done editing" }));
   expect(statCardLabels()).toEqual(["Hours Logged", "Active Projects"]);
   expect(saveDashboardLayout).not.toHaveBeenCalled();
 });
@@ -199,7 +200,7 @@ test("saves the customized layout and exits customization mode", async () => {
     "activeProjects",
     "projectsArchived",
   ]);
-  expect(await screen.findByRole("button", { name: "Customize dashboard widgets" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Personalize dashboard" })).toBeInTheDocument();
   expect(screen.getByText("Projects Archived")).toBeInTheDocument();
 });
 
@@ -208,7 +209,7 @@ test("shows a save error and stays in customization mode when persistence fails"
   const user = await openCustomizer();
   await user.click(screen.getByRole("button", { name: "Save Layout" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Could not save layout");
-  expect(screen.getByRole("button", { name: "Cancel customization" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Done editing" })).toBeInTheDocument();
 });
 
 test("supports an empty saved dashboard and adding the first widget", async () => {

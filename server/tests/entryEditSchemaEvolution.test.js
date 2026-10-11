@@ -233,7 +233,7 @@ function createClient({
       return { rows: [] };
     }
     if (sql.startsWith('SELECT ') && sql.includes(' FROM projects ')) {
-      assert.match(sql, /WHERE id = \$1 AND owner_id = \$2/);
+      assert.match(sql, /WHERE id = \$1 AND \( owner_id = \$2 OR EXISTS \( SELECT 1 FROM project_collaborators pc WHERE pc\.project_id = projects\.id AND pc\.user_id = \$2 \) \)/);
       const owned =
         parameters[0] === client.project.id && parameters[1] === client.project.owner_id;
       return { rows: owned ? [structuredClone(client.project)] : [] };

@@ -12,6 +12,9 @@ const userRoutes = require("./routes/users");
 const statsRoutes = require("./routes/stats");
 const externalRoutes = require("./routes/external");
 const logbookTransferRoutes = require("./routes/logbookTransfer");
+const notificationsRoutes = require("./routes/notifications");
+const projectCollaboratorsRoutes = require("./routes/projectCollaborators");
+const invitationsRoutes = require("./routes/invitations");
 
 // Dashboard route
 const dashboardRoutes = require("./routes/dashboard");
@@ -88,6 +91,19 @@ app.use(
   automationRulesRoutes,
 );
 
+// Project sharing: collaborators and invitations
+app.use(
+  "/api/projects",
+  requireAuth,
+  projectCollaboratorsRoutes,
+);
+
+app.use(
+  "/api/invitations",
+  requireAuth,
+  invitationsRoutes,
+);
+
 app.use(
   "/api/users",
   requireAuth,
@@ -118,6 +134,8 @@ app.use(
 // ==========================
 // 404 Handler
 // ==========================
+
+app.use("/api/notifications", requireAuth, notificationsRoutes);
 
 app.use((_req, res) => {
   return res.status(404).json({

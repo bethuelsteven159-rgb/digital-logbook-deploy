@@ -36,7 +36,7 @@ async function request(
     },
   );
 
-  let body = null;
+  let body;
 
   try {
     body = await response.json();

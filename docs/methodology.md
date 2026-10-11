@@ -226,12 +226,6 @@ Each member gave a short update on the ownership area assigned to them during sp
 
 ![Daily Standup 4 Screenshot](./screenshots/sprint1-standup-4.jpeg)
 
-#### Client Meeting 3 – Progress Demo
-
-The team demoed the current state of the project to the client, showing that a number of the user stories prioritised during sprint planning had been implemented. The client reviewed the demo and gave feedback on the progress made so far and on areas to focus on going into the sprint review.
-
-![Client Meeting 3 Screenshot](./screenshots/sprint1-client-meeting-3.jpeg)
-
 #### Sprint Review
 
 To close out Sprint 1, the team held a sprint review with the client to walk through the completed work, confirm what met the Definition of Done, and discuss what still needed attention.
@@ -310,10 +304,18 @@ The client's feedback was that the implemented features looked good overall, but
 
 ![Sprint Review Screenshot](./screenshots/sprint2-standup-2.png)
 
-
 #### Sprint Retrospective
 
-*Content pending — the Sprint 2 retrospective has not yet taken place. This section will summarise what went well during Sprint 2, what didn't go well, and what the team agreed to change or carry forward into Sprint 3.*
+The Sprint 1 retrospective was held at the end of the Sprint 1 marking , where the team reflected on what went well and what needed improvement before moving into Sprint 2 planning.
+
+Two main points were raised:
+
+* **Communication** needed to improve going into Sprint 2 — raised by Inga.
+* **Daily standups** needed to happen more consistently, and the **bug tracker** needed to actually be used and kept up to date going forward — raised by Simphiwe.
+
+These two points were carried forward directly into the Sprint 2 backlog and working agreements.
+
+![Sprint 1 Retrospective Screenshot](./screenshots/sprint2-first-meeting-2.png)
 
 ### 8.3 Sprint 3
 
@@ -397,6 +399,36 @@ The Sprint 3 retrospective was held over Teams, where the team reflected on the 
 Overall the team felt the sprint went well. The main area raised for improvement was **communication**, which had also been raised in the Sprint 1 retrospective, along with the **way the team works together**. These points are carried forward into the next sprint's working agreements.
 
 ![Sprint 3 Retrospective Screenshot](./screenshots/sprint3-sprint-review.png)
+
+### 8.4 Sprint 4
+
+Sprint 4 is the final sprint. After three sprints of feature, testing and performance work, and with the client's Sprint 3 review confirming that the implemented features worked as expected, the team did not plan another block of requirement-tier features. Instead, the sprint is about final touches: finishing whatever is still missing and adding a small set of extra features that sit outside the Basic, Intermediate and Advanced tiers in the requirements.
+
+#### Sprint 4 Meeting
+
+The team held one meeting for this sprint over Microsoft Teams, with all six members (Tumi, Bethuel, Morare, Sino, Simphiwe and Inga) present. The meeting was used to agree what the final touches would be rather than to plan a full new sprint backlog, since the main user stories were already in place.
+
+The extra features agreed for the final sprint were:
+
+* **Sharing projects** – letting a project be shared with other users as collaborators.
+* **Notifications** – keeping users informed of what happens in the application, including when someone else changes a shared project.
+* **Avatar** – letting users have an avatar on their profile, building on the profile picture support from Sprint 2.
+* **Improve the design** – making the interface more intuitive and easier to navigate, which responds directly to the client's feedback in the Sprint 2 and Sprint 3 reviews (see Sections 9.8 and 9.11).
+
+![Sprint 4 Meeting Screenshot](./screenshots/sprint4-meeting-1.png)
+
+#### Sprint 4 Work
+
+Each of these items was taken on by a member of the team, along with one extra feature that was added during the sprint:
+
+| Member | Sprint 4 work | Extra feature |
+| --- | --- | --- |
+| Inga | Sharing projects | Sharing projects |
+| Bethuel | Email notifications to the other members of a shared project whenever a collaborator changes an entry or the project. Emails are sent through the Brevo API and throttled per recipient and project so that bursts of edits don't flood inboxes. Sending runs in the background and never fails the request that triggered it. | Notifications |
+| Simphiwe | Premium 3D project constellation explorer, a visual way to explore projects in 3D | Added during the sprint |
+| Morare | Final Sprint 4 UI/UX redesign of the application | Improve the design |
+| Tumi | Avatar creator on the profile, so users can build their own avatar (hair, skin tone, eyes, mouth, accessory and background) instead of only uploading a picture. Also merged the two duplicate entry search boxes on the project page into a single search bar with a collapsible filters panel. | Avatar |
+
 
 ## 9. Stakeholder Reviews
 
@@ -507,7 +539,7 @@ Below are examples of stakeholder feedback gathered this way, how the team evalu
 
 **Stakeholder feedback:** The team demonstrated the work completed during Sprint 3 and discussed the current state of the application with the client. The client's feedback was positive overall: the implemented functionality was working as expected. The main area identified for improvement was the user interface and navigation, with the client recommending that the system should be more intuitive and easier for users to navigate.
 
-**Evaluation & integration:** The team accepted the usability feedback as an area requiring further improvement. Although the underlying functionality was working, the review highlighted that successful implementation also depends on users being able to discover and move between features easily. The feedback was therefore recorded as a UI/UX improvement to guide the team's final refinement of the application.
+**Evaluation & integration:** The team accepted the usability feedback as an area requiring further improvement. Although the underlying functionality was working, the review highlighted that successful implementation also depends on users being able to discover and move between features easily. The feedback was therefore recorded as a UI/UX improvement to guide the team's final refinement of the application. This was carried into Sprint 4, where "improve the design" was agreed as one of the final items and the UI/UX redesign was completed by Morare (see Section 8.4).
 
 ![Sprint 3 Stakeholder Review with Client Jan Moloto](./screenshots/sprint3-stakeholder-review-arrangement.jpeg)
 ![Sprint 3 Stakeholder Review with Client Jan Moloto](./screenshots/sprint3-sprint-review.png)

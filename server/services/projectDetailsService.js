@@ -229,9 +229,16 @@ async function getProjectDetailsService({
       linkedByEntryId.get(entry.id) || [];
   }
 
+  const viewerRole =
+    project.ownerId === userId
+      ? "owner"
+      : "collaborator";
+
   return {
     project: {
       id: project.id,
+      ownerId: project.ownerId ?? null,
+      viewerRole,
       name: project.name,
       description: project.description,
       startDate: project.startDate,
@@ -1574,6 +1581,7 @@ async function archiveEntryService({
   return {
     id: archived.id,
     projectId: archived.project_id,
+    name: archived.name ?? null,
     archivedAt: archived.archived_at,
   };
 }
@@ -1613,6 +1621,7 @@ async function unarchiveEntryService({
   return {
     id: unarchived.id,
     projectId: unarchived.project_id,
+    name: unarchived.name ?? null,
     archivedAt: unarchived.archived_at,
   };
 }
@@ -1637,6 +1646,7 @@ async function deleteEntryService({ projectId, entryId, userId }) {
 
   return {
     id: entryId,
+    name: deleted.name ?? null,
     deleted: true,
   };
 }
@@ -1695,7 +1705,6 @@ async function searchProjectEntriesService({ projectId, userId, filters = {} }) 
       ? filters.sort
       : "newest",
     customFields: Array.isArray(filters.customFields) ? filters.customFields : [],
-    archived: filters.archived === true || filters.archived === "true",
     archived: filters.archived === true || filters.archived === "true",
   };
 

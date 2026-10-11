@@ -40,6 +40,12 @@ const {
 );
 
 const {
+  notifyProjectChange,
+} = require(
+  "../services/collaboratorNotificationService",
+);
+
+const {
   createEntrySchema,
   updateChecklistSchema,
   updateProjectReferencesSchema,
@@ -66,6 +72,15 @@ function requireUserId(req) {
   }
 
   return userId;
+}
+
+function notifyMembers(req, userId, action, entry) {
+  void notifyProjectChange({
+    projectId: req.params.projectId,
+    actorId: userId,
+    action,
+    entryName: entry?.name,
+  });
 }
 
 async function getProjectDetails(
@@ -366,6 +381,8 @@ async function createProjectEntry(
           parsed.data,
       });
 
+    notifyMembers(req, userId, "entry_created", data);
+
     return res
       .status(201)
       .json({
@@ -419,6 +436,8 @@ async function updateEntry(
           parsed.data,
       });
 
+    notifyMembers(req, userId, "entry_updated", data);
+
     return res
       .status(200)
       .json({
@@ -437,6 +456,8 @@ async function archiveEntry(req, res, next) {
       userId: req.user.id,
     });
 
+    notifyMembers(req, req.user.id, "entry_archived", data);
+
     return res.status(200).json({
       success: true,
       data,
@@ -452,6 +473,8 @@ async function unarchiveEntry(req, res, next) {
       entryId: req.params.entryId,
       userId: req.user.id,
     });
+
+    notifyMembers(req, req.user.id, "entry_unarchived", data);
 
     return res.status(200).json({
       success: true,
@@ -481,6 +504,8 @@ async function deleteEntry(
 
         userId,
       });
+
+    notifyMembers(req, userId, "entry_deleted", data);
 
     return res
       .status(200)
@@ -803,6 +828,8 @@ async function markEntryComplete(
           req.params.entryId,
       });
 
+    notifyMembers(req, userId, "entry_completed", data);
+
     return res
       .status(200)
       .json({
@@ -833,6 +860,8 @@ async function completeProjectEntry(
 
         userId,
       });
+
+    notifyMembers(req, userId, "entry_completed", data);
 
     return res
       .status(200)
@@ -932,6 +961,8 @@ async function restoreEntryRevision(
 
         userId,
       });
+
+    notifyMembers(req, userId, "entry_revision_restored", data);
 
     return res
       .status(200)

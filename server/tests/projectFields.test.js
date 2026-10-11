@@ -149,13 +149,13 @@ function createClient({ fields = defaultFields(), entryValues = defaultValues(),
       return { rows: [] };
     }
     if (sql.startsWith('SELECT ') && sql.includes(' FROM projects ')) {
-      assert.match(sql, /WHERE id = \$1 AND owner_id = \$2/);
+      assert.match(sql, /WHERE id = \$1 AND \( owner_id = \$2 OR EXISTS \( SELECT 1 FROM project_collaborators pc WHERE pc\.project_id = projects\.id AND pc\.user_id = \$2 \) \)/);
       const owned =
         parameters[0] === client.project.id && parameters[1] === client.project.owner_id;
       return { rows: owned ? [structuredClone(client.project)] : [] };
     }
     if (sql.startsWith('UPDATE projects SET ')) {
-      assert.match(sql, /WHERE id = \$1 AND owner_id = \$2/);
+      assert.match(sql, /WHERE id = \$1 AND \( owner_id = \$2 OR EXISTS \( SELECT 1 FROM project_collaborators pc WHERE pc\.project_id = projects\.id AND pc\.user_id = \$2 \) \)/);
       assert.equal(parameters[0], client.project.id);
       assert.equal(parameters[1], client.project.owner_id);
       Object.assign(client.project, {
@@ -798,7 +798,7 @@ test('PATCH commits metadata and safe field changes on one owned, locked connect
   assert.equal(client.queries[0].sql, 'BEGIN');
   assert.match(
     client.queries[1].sql,
-    /FROM projects WHERE id = \$1 AND owner_id = \$2 LIMIT 1 FOR UPDATE$/,
+    /FROM projects WHERE id = \$1 AND \( owner_id = \$2 OR EXISTS \( SELECT 1 FROM project_collaborators pc WHERE pc\.project_id = projects\.id AND pc\.user_id = \$2 \) \) LIMIT 1 FOR UPDATE$/,
   );
   assert.deepEqual(client.queries[1].parameters, [PROJECT_ID, OWNER_ID]);
   assert.equal(client.queries.at(-1).sql, 'COMMIT');

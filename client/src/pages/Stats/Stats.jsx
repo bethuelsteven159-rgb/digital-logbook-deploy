@@ -16,72 +16,58 @@ import {
 
 import CustomStatistics from "./CustomStatistics";
 
-const API_URL = (
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5000"
-).replace(/\/$/, "");
+import {
+  fetchActivityStats,
+  fetchStatistics,
+} from "../../api/statsApi";
 
-function getAuthToken() {
-  return localStorage.getItem("authToken");
-}
+import {
+  BarChart,
+  DonutChart,
+  LineChart,
+  ScatterChart,
+  formatMinutesShort,
+} from "../../components/charts";
 
-async function fetchStatistics(params) {
-  const token = getAuthToken();
-
-  if (!token) {
-    const error = new Error(
-      "Authentication required. Please sign in again.",
-    );
-    error.status = 401;
-    throw error;
-  }
-
-  const {
-    projectId,
-    ...queryParams
-  } = params;
-
-  if (!projectId) {
-    throw new Error("Project ID is required.");
-  }
-
-  const query = new URLSearchParams(
-    queryParams,
-  ).toString();
-
-  const response = await fetch(
-    `${API_URL}/api/stats/projects/${projectId}?${query}`,
-    {
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
+/**
+ * The activity endpoint only returns days that have entries, so fill the
+ * gaps with zero-minute days to keep the line chart continuous.
+ */
+function fillDailyGaps(daily, days) {
+  const byDate = new Map(
+    (Array.isArray(daily) ? daily : []).map(
+      (point) => [point.date, point],
+    ),
   );
 
-  const contentType =
-    response.headers.get("content-type");
+  const filled = [];
 
-  const body =
-    contentType?.includes("application/json")
-      ? await response.json()
-      : null;
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const date = new Date();
 
-  if (!response.ok) {
-    const error = new Error(
-      body?.message ||
-        body?.error?.message ||
-        body?.error ||
-        `Request failed with status ${response.status}`,
-    );
+    date.setDate(date.getDate() - offset);
 
-    error.status = response.status;
-    error.body = body;
+    const key = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
 
-    throw error;
+    filled.push({
+      label: date.toLocaleDateString(
+        undefined,
+        {
+          day: "numeric",
+          month: "short",
+        },
+      ),
+      value: Number(
+        byDate.get(key)?.minutes || 0,
+      ),
+    });
   }
 
-  return body;
+  return filled;
 }
 
 export default function Stats() {
@@ -119,6 +105,15 @@ export default function Stats() {
     useState(false);
 
   const [statisticsError, setStatisticsError] =
+    useState("");
+
+  const [activity, setActivity] =
+    useState(null);
+
+  const [activityDays, setActivityDays] =
+    useState(30);
+
+  const [activityError, setActivityError] =
     useState("");
 
   useEffect(() => {
@@ -210,6 +205,45 @@ export default function Stats() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActivity() {
+      try {
+        setActivityError("");
+
+        const result =
+          await fetchActivityStats({
+            days: activityDays,
+          });
+
+        if (!cancelled) {
+          setActivity(result);
+        }
+      } catch (requestError) {
+        console.error(
+          "Failed to load activity statistics:",
+          requestError,
+        );
+
+        if (!cancelled) {
+          setActivityError(
+            requestError.message ||
+              "Unable to load activity charts.",
+          );
+
+          setActivity(null);
+        }
+      }
+    }
+
+    loadActivity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityDays]);
 
   const allEntries = useMemo(() => {
     return Object.values(projectDetails)
@@ -413,6 +447,64 @@ export default function Stats() {
       .slice(0, 8);
   }, [allEntries]);
 
+  const dailyChartData = useMemo(() => {
+    return fillDailyGaps(
+      activity?.daily,
+      activityDays,
+    );
+  }, [activity, activityDays]);
+
+  const weekdayChartData = useMemo(() => {
+    return (
+      Array.isArray(activity?.weekdays)
+        ? activity.weekdays
+        : []
+    ).map((day) => ({
+      label: day.label,
+      value: Number(day.minutes || 0),
+    }));
+  }, [activity]);
+
+  const projectChartData = useMemo(() => {
+    const rows = (
+      Array.isArray(activity?.projects)
+        ? activity.projects
+        : []
+    )
+      .filter(
+        (row) => Number(row.minutes || 0) > 0,
+      )
+      .sort(
+        (a, b) =>
+          Number(b.minutes || 0) -
+          Number(a.minutes || 0),
+      );
+
+    const top = rows
+      .slice(0, 6)
+      .map((row) => ({
+        label: row.name || "Untitled project",
+        value: Number(row.minutes || 0),
+      }));
+
+    const otherMinutes = rows
+      .slice(6)
+      .reduce(
+        (total, row) =>
+          total + Number(row.minutes || 0),
+        0,
+      );
+
+    if (otherMinutes > 0) {
+      top.push({
+        label: "Other projects",
+        value: otherMinutes,
+      });
+    }
+
+    return top;
+  }, [activity]);
+
   function formatMinutes(minutes) {
     const value = Number(minutes || 0);
 
@@ -519,6 +611,154 @@ export default function Stats() {
                   icon={<IconEntry />}
                 />
               </div>
+
+              <section className="stats-panel">
+                <div className="stats-panel-heading">
+                  <div>
+                    <h2>
+                      Activity charts
+                    </h2>
+
+                    <span>
+                      Your logged time over the
+                      last {activityDays} days
+                    </span>
+                  </div>
+
+                  <div
+                    className="stats-range-toggle"
+                    role="group"
+                    aria-label="Chart date range"
+                  >
+                    {[7, 30, 90].map(
+                      (range) => (
+                        <button
+                          key={range}
+                          type="button"
+                          className={`stats-range-btn${activityDays === range ? " active" : ""}`}
+                          aria-pressed={
+                            activityDays ===
+                            range
+                          }
+                          onClick={() =>
+                            setActivityDays(
+                              range,
+                            )
+                          }
+                        >
+                          {range}d
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
+
+                {activityError && (
+                  <div className="stats-inline-error">
+                    {activityError}
+                  </div>
+                )}
+
+                {activity && (
+                  <>
+                    <div className="stats-chart-totals">
+                      <span>
+                        <strong>
+                          {formatMinutes(
+                            activity
+                              .totals
+                              ?.minutes ??
+                              0,
+                          )}
+                        </strong>{" "}
+                        logged
+                      </span>
+
+                      <span>
+                        <strong>
+                          {activity.totals
+                            ?.entries ?? 0}
+                        </strong>{" "}
+                        entries
+                      </span>
+                    </div>
+
+                    {(activity.totals
+                      ?.minutes ??
+                      0) > 0 ||
+                    (activity.totals
+                      ?.entries ??
+                      0) > 0 ? (
+                      <div className="stats-charts-grid">
+                        <div className="stats-chart-card stats-chart-card-wide">
+                          <h3>
+                            Time per day
+                          </h3>
+
+                          <LineChart
+                            data={
+                              dailyChartData
+                            }
+                            formatValue={
+                              formatMinutesShort
+                            }
+                            formatTooltip={
+                              formatMinutesShort
+                            }
+                            ariaLabel={`Minutes logged per day over the last ${activityDays} days`}
+                          />
+                        </div>
+
+                        <div className="stats-chart-card">
+                          <h3>
+                            Time by weekday
+                          </h3>
+
+                          <BarChart
+                            data={
+                              weekdayChartData
+                            }
+                            formatValue={
+                              formatMinutesShort
+                            }
+                            formatTooltip={
+                              formatMinutesShort
+                            }
+                            ariaLabel="Minutes logged by weekday"
+                          />
+                        </div>
+
+                        {projectChartData.length >
+                          0 && (
+                          <div className="stats-chart-card">
+                            <h3>
+                              Time by project
+                            </h3>
+
+                            <DonutChart
+                              data={
+                                projectChartData
+                              }
+                              formatValue={
+                                formatMinutesShort
+                              }
+                              centerLabel="Logged"
+                              ariaLabel="Minutes logged by project"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="stats-selection-empty">
+                        No activity in the last{" "}
+                        {activityDays} days yet
+                        — log an entry and your
+                        charts will light up.
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
 
               <section className="stats-panel">
                 <div className="stats-panel-heading">
@@ -1381,6 +1621,81 @@ export default function Stats() {
           color: var(--text, #334155);
         }
 
+        .stats-range-toggle {
+          display: inline-flex;
+          gap: 6px;
+          padding: 4px;
+          border: 1px solid var(--border, #e2e8f0);
+          border-radius: 999px;
+          background: var(--surface-subtle, #f1f5f9);
+        }
+
+        .stats-range-btn {
+          min-height: 28px;
+          padding: 0 14px;
+          border: 0;
+          border-radius: 999px;
+          background: transparent;
+          color: var(--text-muted, #64748b);
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .stats-range-btn:hover {
+          color: var(--text, #334155);
+        }
+
+        .stats-range-btn.active {
+          background: var(--accent, #4f63d2);
+          color: #fff;
+        }
+
+        .stats-chart-totals {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 18px;
+          padding: 16px 22px 0;
+          color: var(--text-faint, #94a3b8);
+          font-size: 12px;
+        }
+
+        .stats-chart-totals strong {
+          color: var(--text-strong, #1a2340);
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        .stats-charts-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+          padding: 14px 22px 22px;
+        }
+
+        .stats-chart-card {
+          min-width: 0;
+          padding: 16px;
+          border: 1px solid var(--border, #eef2f7);
+          border-radius: var(--radius-md, 8px);
+          background: var(--surface-inset, #f8fafc);
+        }
+
+        .stats-chart-card-wide {
+          grid-column: 1 / -1;
+        }
+
+        .stats-chart-card h3 {
+          margin: 0 0 12px;
+          color: var(--text-muted, #475569);
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .statistics-scatter {
+          margin-top: 14px;
+        }
+
         .stats-detail-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -1659,7 +1974,8 @@ export default function Stats() {
           }
 
           .stats-summary-grid,
-          .stats-detail-grid {
+          .stats-detail-grid,
+          .stats-charts-grid {
             grid-template-columns: 1fr;
           }
 
@@ -1788,6 +2104,25 @@ function StatisticsResult({
 
     return (
       <div className="statistics-result">
+        <DonutChart
+          data={groups.map(
+            (group, index) => ({
+              label:
+                String(
+                  group.value ?? "",
+                ) || `Group ${index + 1}`,
+              value: Number(
+                group.count || 0,
+              ),
+            }),
+          )}
+          formatValue={(value) =>
+            String(value)
+          }
+          centerLabel="Entries"
+          ariaLabel="Entries grouped by field value"
+        />
+
         <div className="statistics-groups">
           {groups.map(
             (group, index) => (
@@ -1832,62 +2167,32 @@ function StatisticsResult({
       );
     }
 
-    const maximum = Math.max(
-      ...plotData.map((item) =>
-        Number(item.value || 0),
-      ),
-      1,
-    );
-
     return (
       <div className="statistics-result">
-        <div className="statistics-plot">
-          {plotData.map(
-            (item, index) => {
-              const value = Number(
+        <BarChart
+          data={plotData.map(
+            (item) => ({
+              label:
+                item.label ||
+                "No label",
+              value: Number(
                 item.value || 0,
-              );
-
-              const width =
-                (value / maximum) * 100;
-
-              return (
-                <div
-                  className="statistics-plot-row"
-                  key={`${item.label}-${index}`}
-                >
-                  <span className="statistics-plot-label">
-                    {item.label ||
-                      "No label"}
-                  </span>
-
-                  <div className="statistics-plot-track">
-                    <div
-                      className="statistics-plot-bar"
-                      style={{
-                        width: `${Math.max(
-                          width,
-                          value > 0
-                            ? 2
-                            : 0,
-                        )}%`,
-                      }}
-                    />
-                  </div>
-
-                  <span className="statistics-plot-value">
-                    {formatNumber(value)}
-                  </span>
-                </div>
-              );
-            },
+              ),
+            }),
           )}
-        </div>
+          formatValue={formatNumber}
+          ariaLabel="Field values per entry"
+        />
       </div>
     );
   }
 
   if (operation === "compare") {
+    const comparedPoints =
+      Array.isArray(statistics.points)
+        ? statistics.points
+        : [];
+
     return (
       <div className="statistics-result">
         <div className="statistics-compare">
@@ -1945,6 +2250,24 @@ function StatisticsResult({
             </p>
           </div>
         </div>
+
+        {comparedPoints.length > 0 && (
+          <div className="statistics-scatter">
+            <ScatterChart
+              points={comparedPoints}
+              xLabel={
+                statistics.fields?.[0]
+                  ?.name || "First field"
+              }
+              yLabel={
+                statistics.fields?.[1]
+                  ?.name || "Second field"
+              }
+              formatValue={formatNumber}
+              ariaLabel="Compared field values per entry"
+            />
+          </div>
+        )}
 
         <div className="statistics-summary">
           <StatisticsItem

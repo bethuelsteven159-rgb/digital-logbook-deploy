@@ -88,7 +88,15 @@ router.get("/", async (req, res, next) => {
               WHERE archived_at IS NOT NULL
             )::int AS projects_archived
           FROM projects
-          WHERE owner_id = $1
+          WHERE (
+            owner_id = $1
+            OR EXISTS (
+              SELECT 1
+              FROM project_collaborators pc
+              WHERE pc.project_id = projects.id
+                AND pc.user_id = $1
+            )
+          )
         ),
         entry_stats AS (
           SELECT
@@ -114,7 +122,15 @@ router.get("/", async (req, res, next) => {
           FROM entries e
           INNER JOIN projects p
             ON p.id = e.project_id
-          WHERE p.owner_id = $1
+          WHERE (
+            p.owner_id = $1
+            OR EXISTS (
+              SELECT 1
+              FROM project_collaborators pc
+              WHERE pc.project_id = p.id
+                AND pc.user_id = $1
+            )
+          )
         )
         SELECT
           ps.projects_created,
@@ -142,7 +158,15 @@ router.get("/", async (req, res, next) => {
         FROM entries e
         INNER JOIN projects p
           ON p.id = e.project_id
-        WHERE p.owner_id = $1
+        WHERE (
+          p.owner_id = $1
+          OR EXISTS (
+            SELECT 1
+            FROM project_collaborators pc
+            WHERE pc.project_id = p.id
+              AND pc.user_id = $1
+          )
+        )
         ORDER BY e.occurred_at DESC
         LIMIT 5
       `,

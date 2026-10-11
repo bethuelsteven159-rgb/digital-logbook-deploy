@@ -16,6 +16,7 @@ vi.mock("./components/Sidebar", () => ({ default: () => null }));
 vi.mock("./pages/LogIn/Login.jsx", () => ({ default: () => null }));
 vi.mock("./pages/Projects/Projects", () => ({ default: () => <div>Projects page</div> }));
 vi.mock("./pages/Projects/ProjectDetails", () => ({ default: () => null }));
+vi.mock("./pages/Constellation/ProjectConstellation", () => ({ default: () => <h1>Project Constellation</h1> }));
 vi.mock("./pages/Profile/Profile", () => ({ default: () => null }));
 vi.mock("./pages/Stats/Stats", () => ({ default: () => null }));
 vi.mock("./pages/Settings/Settings", () => ({ default: () => null }));
@@ -39,6 +40,12 @@ afterEach(() => {
 function requestOnboarding() {
   act(() => window.dispatchEvent(new CustomEvent(eventName)));
 }
+
+test("the constellation route loads its isolated page", async () => {
+  window.history.replaceState(null, "", "/constellation");
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Project Constellation' })).toBeInTheDocument();
+});
 
 async function expectFirstStep() {
   expect(await screen.findByRole("dialog", { name: "Create a project" })).toBeInTheDocument();
