@@ -6,10 +6,12 @@ Follow these steps to get the Digital Logbook running on your machine.
 
 ## Prerequisites
 
-- Node.js v18 or higher
+- Node.js v24 (the version used by the project's CI workflow; older versions may not work with the current dependencies)
 - Git (for cloning the repository and version control)
 - npm (included with Node.js, for managing dependencies)
 - A code editor (VS Code recommended)
+- Access to the project's PostgreSQL database (connection string from the team)
+- Google OAuth credentials for sign-in (client ID from the team)
 
 ## 1. Clone the repository
 
@@ -67,12 +69,16 @@ cd ../client
 |---|---|
 | `PORT` | Port the server runs on (default: 5000) |
 | `FRONTEND_URL` | URL of the running client app, used for CORS (default: `http://localhost:8443`) |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `USE_FAKE_DB` | When `true`, bypasses the real PostgreSQL database with an in-memory fake |
-| `DEV_BYPASS_AUTH` | When `true`, skips Google OAuth login for local development |
-| `DEV_USER_ID` / `DEV_USER_EMAIL` | Fake user identity used when `DEV_BYPASS_AUTH` is enabled |
+| `DATABASE_URL` | PostgreSQL connection string (the team's shared database is PostgreSQL hosted on Neon) |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID, used to verify Google sign-in tokens |
 | `JWT_SECRET` | Secret used to sign and verify session tokens |
+| `GEMINI_API_KEY` | Gemini API key for AI Project Progress and Text-to-Speech (optional for local setup) |
+| `GEMINI_MODEL` | Gemini model used for AI Project Progress |
+| `GEMINI_TTS_MODEL` | Gemini model used for text-to-speech generation |
+| `GEMINI_TIMEOUT_MS` | Timeout for project-progress generation |
+| `GEMINI_TTS_TIMEOUT_MS` | Optional timeout for speech generation |
+| `YOUTUBE_API_KEY` | YouTube Data API key for the Learning Videos feature (optional for local setup) |
+| `YOUTUBE_TIMEOUT_MS` | Timeout for YouTube search requests |
 
 **`client/.env` contains:**
 
@@ -81,11 +87,12 @@ cd ../client
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID used by the frontend sign-in button |
 | `VITE_API_URL` | Base URL of the server API (default: `http://localhost:5000`) |
 
-**For quick local setup**, leave `USE_FAKE_DB=true` and `DEV_BYPASS_AUTH=true` in `server/.env` — this lets you run and test the app without a real database or Google credentials.
+**Local setup requires a real database and Google sign-in.** The backend always connects to PostgreSQL and authenticates users with Google, so provide a real `DATABASE_URL`, `GOOGLE_CLIENT_ID` and `JWT_SECRET` in `server/.env`, and `VITE_GOOGLE_CLIENT_ID` and `VITE_API_URL` in `client/.env`. The team's shared database is PostgreSQL hosted on Neon; request the connection string through the team's private secret-sharing method. Note: `server/` also requires the `google-auth-library` package — if missing, run `npm install google-auth-library` inside `server/`.
 
-**For full setup with real Google sign-in** (confirmed working): set `USE_FAKE_DB=false` and `DEV_BYPASS_AUTH=false`, and provide a real `DATABASE_URL`, `GOOGLE_CLIENT_ID`, and `JWT_SECRET` in both files. Note: `server/` also requires the `google-auth-library` package — if missing, run `npm install google-auth-library` inside `server/`.
+**For the external API features** (AI Project Progress, Listen to Insight and Learning Videos), add `GEMINI_API_KEY` and `YOUTUBE_API_KEY` to `server/.env`. Without these keys the rest of the application still works, but the AI and Learning Videos features return a configuration error. Request the keys through the team's private secret-sharing method. See [External API Setup & Deployment](./external-api/setup-deployment.md) for the full list of variables.
 
 - Never commit real `.env` files — they are excluded through `.gitignore`.
+- Never put the Gemini or YouTube API keys in `client/.env`, frontend files or `.env.example`. Only the backend needs them.
 
 ## 4. Running the project locally
 
@@ -111,16 +118,25 @@ http://localhost:8443/digital_logbook/
 
 Note the `/digital_logbook/` path is required — the client is configured with a custom base path, so `http://localhost:8443` alone will not show the app.
 
-With `DEV_BYPASS_AUTH=true`, you should be able to reach the app without signing in via Google, using the fake dev user configured in `server/.env`. With `DEV_BYPASS_AUTH=false` and real Google credentials configured, you can sign in with a real Google account — confirmed working.
+Sign in with a Google account. If sign-in fails, check that `GOOGLE_CLIENT_ID` (in `server/.env`) and `VITE_GOOGLE_CLIENT_ID` (in `client/.env`) are set, and that the server can reach the database.
+
+If you have configured the Gemini and YouTube keys, open a project and check that **Explain My Progress** and **Learning Videos** return results.
 
 ## 6. Running tests
 
-Testing configuration is currently pending confirmation.
-If tests are added, they can be executed using:
+Run the backend and frontend tests separately:
 
 ```bash
+cd server
 npm test
 ```
+
+```bash
+cd client
+npm test
+```
+
+The external API tests use mocked providers, so they do not need real Gemini or YouTube keys. See [External API Testing & Failure Handling](./external-api/testing.md) for details.
 
 ## 7. Running linting and formatting
 
@@ -136,16 +152,22 @@ npm run format:check
 ```
 digital-notebook_final/
 ├── .gitea/ → Gitea configuration files (e.g., pull request templates)
+├── .github/
+│   └── workflows/ → GitHub Actions workflow files
 ├── .vscode/ → VS Code project settings
 ├── client/ → React (Vite) frontend application
+├── coverage/ → Test coverage output (coverage-final.json)
 ├── docs/ → Project documentation
+├── node_modules/ → Installed root dependencies (generated by npm install)
 ├── server/ → Backend API server (Express.js, PostgreSQL, authentication)
 ├── .gitignore → Files/folders excluded from version control
 ├── .prettierignore → Files/folders excluded from Prettier formatting
 ├── .prettierrc → Prettier configuration
+├── codecov.yml → Codecov configuration (see codecov-setup.md)
 ├── eslint.config.mjs → ESLint configuration
 ├── package-lock.json → Locked dependency versions (root)
 ├── package.json → Root project scripts, ESLint, and Prettier dependencies
+├── pr-description.md → Pull request description notes
 └── README.md → Project overview and setup instructions
 ```
 For the full architecture breakdown, see [architecture.md](./architecture.md).
@@ -156,3 +178,4 @@ For the full architecture breakdown, see [architecture.md](./architecture.md).
 - Git workflow and branching rules → [Git Workflow](./git-workflow.md)
 - User stories and requirements → [Requirements](./requirements.md)
 - Technology choices and reasoning → [Tech Stack](./tech-stack.md)
+- Gemini and YouTube integration, keys and deployment → [External API Integration](./external-api/README.md)

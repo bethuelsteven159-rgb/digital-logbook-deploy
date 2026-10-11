@@ -39,16 +39,9 @@ The client sends two kinds of requests to the server:
 
 Once a user holds a valid JWT, that same token authorizes every later request — the server does not re-verify the Google token on every call, only once at login.
 
-### Local Development Shortcuts
+### Local Development
 
-Two dev-only environment variables bypass parts of this flow for local testing:
-
-| Variable | Purpose |
-| :------- | :------ |
-| `USE_FAKE_DB` | Swaps the real PostgreSQL connection for an in-memory fake, so the app can run without a real database. |
-| `DEV_BYPASS_AUTH` | Skips real Google sign-in and logs the developer in as a fixed test user. |
-
-Both are disabled (`false`) when testing against the real database and real Google authentication.
+Local development uses the same flow as production: a real PostgreSQL database (hosted on Neon) and real Google sign-in. There are no bypass modes, so a developer needs a database connection string and Google OAuth credentials in `server/.env`. See the [Onboarding Guide](./onboarding.md) for setup.
 
 ---
 
@@ -117,9 +110,6 @@ Backend configuration is managed through `server/.env`:
 | `PORT` | Port the Express server listens on (default `5000`). |
 | `FRONTEND_URL` | URL of the client, used for CORS configuration. |
 | `DATABASE_URL` | PostgreSQL connection string. |
-| `USE_FAKE_DB` | Toggles the in-memory fake database for local dev. |
-| `DEV_BYPASS_AUTH` | Toggles fake-user auto-login for local dev. |
-| `DEV_USER_ID` / `DEV_USER_EMAIL` | Identity used when `DEV_BYPASS_AUTH` is enabled. |
 | `GOOGLE_CLIENT_ID` | OAuth client ID used to verify Google sign-in tokens. |
 | `JWT_SECRET` | Secret used to sign and verify session JWTs. |
 

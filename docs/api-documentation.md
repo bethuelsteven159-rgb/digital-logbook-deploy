@@ -6,7 +6,7 @@ The Digital Logbook uses a REST API to provide communication between the React f
 
 The frontend does not communicate directly with the PostgreSQL database. Requests from the user interface are sent to the backend, where they are validated and processed before the appropriate database operations are performed.
 
-The application also integrates Google Sign-In as a third-party authentication service.
+The application also integrates Google Sign-In as a third-party authentication service, and uses the Google Gemini API and the YouTube Data API, both called only from the backend, for AI project insights and learning videos.
 
 This document describes the API functionality and external API integration implemented in the Digital Logbook project.
 
@@ -16,19 +16,21 @@ This document describes the API functionality and external API integration imple
 
 The application follows a layered architecture:
 
+```text
 React Frontend
-↓
+      ↓
 HTTP / REST API
-↓
+      ↓
 Express Routes
-↓
+      ↓
 Controllers
-↓
+      ↓
 Services / Business Logic
-↓
+      ↓
 Repositories
-↓
+      ↓
 PostgreSQL Database
+```
 
 Each layer has a separate responsibility.
 
@@ -225,17 +227,19 @@ This allows users to authenticate using a Google account instead of the Digital 
 
 The implemented authentication flow can be represented as:
 
+```text
 User
-↓
+  ↓
 Digital Logbook Frontend
-↓
+  ↓
 Google Sign-In
-↓
+  ↓
 Google authentication result
-↓
+  ↓
 Digital Logbook authentication/backend processing
-↓
+  ↓
 Authenticated Digital Logbook session/access
+```
 
 Google is responsible for authenticating the Google account, while the Digital Logbook remains responsible for application-specific access and user operations.
 
@@ -318,7 +322,7 @@ These include:
 - reference validation; and
 - separation of frontend, service, and database responsibilities.
 
-Sensitive database operations are performed on the backend and are not exposed directly to the browser.
+Sensitive database operations are performed on the backend and are not exposed directly to the browser. The Gemini and YouTube API keys are likewise server-side configuration and are never sent to the browser.
 
 ---
 
@@ -347,23 +351,25 @@ API and deployment defects discovered during development were handled through th
 
 The API implementation can be traced through the project as follows:
 
+```text
 Project Requirements
-↓
+        ↓
 Sprint/User Stories
-↓
+        ↓
 Frontend Feature
-↓
+        ↓
 REST API Request
-↓
+        ↓
 Controller and Validation
-↓
+        ↓
 Service / Business Logic
-↓
+        ↓
 Repository
-↓
+        ↓
 PostgreSQL Database
-↓
+        ↓
 Testing and Review
+```
 
 This provides separation between the user interface, application logic, and persistent storage while allowing implemented requirements to be traced to backend functionality.
 
@@ -371,11 +377,16 @@ This provides separation between the user interface, application logic, and pers
 
 ## 17. External Integration Summary
 
-The external third-party integration currently documented for the Digital Logbook is:
+The external third-party integrations currently documented for the Digital Logbook are:
 
 | Integration | Purpose | Status |
 |---|---|---|
 | Google Sign-In | Authenticate users using their Google accounts | Implemented |
+| Google Gemini API (AI Project Progress) | Generate project-progress insights from project evidence | Implemented |
+| Google Gemini API (Text-to-Speech) | Convert project insights into spoken audio | Implemented |
+| YouTube Data API (Learning Videos) | Search YouTube for project-related learning videos | Implemented |
+
+See [External API Integration](external-api/README.md) for the Gemini and YouTube documentation.
 
 The Calendar and Board views are application features and are not documented as external APIs because they operate on Digital Logbook data rather than an external calendar or board service.
 
@@ -387,6 +398,6 @@ The Digital Logbook uses a REST API as the main communication mechanism between 
 
 The API supports the application's core and Intermediate functionality while keeping business logic and PostgreSQL database operations on the backend.
 
-Google Sign-In provides the application's implemented third-party authentication integration.
+Google Sign-In provides the application's implemented third-party authentication integration, while the Gemini and YouTube integrations extend the application with AI project insights and learning videos.
 
 Together, these components provide the API and authentication infrastructure currently used by the deployed Digital Logbook application.
