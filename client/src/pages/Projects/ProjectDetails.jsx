@@ -1367,6 +1367,7 @@ async function handleUnarchiveEntry(entry) {
               <div className="saved-filters-group">
                 <select
                   className="form-select saved-filters-select"
+                  aria-label="Saved filters"
                   value={activeFilterId || ''}
                   onChange={(event) => handleApplyFilter(event.target.value || null)}
                 >
