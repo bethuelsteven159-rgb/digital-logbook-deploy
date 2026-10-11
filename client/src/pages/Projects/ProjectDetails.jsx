@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import Sidebar from '../../components/Sidebar';
 import { X, Plus, Zap, Check, Users } from 'lucide-react';
@@ -57,6 +57,8 @@ export default function ProjectDetails() {
   const { id } = useParams();
 
   const navigate = useNavigate();
+
+  const location = useLocation();
 
   const [collapsed, setSidebarCollapsed] = useState(false);
 
@@ -243,8 +245,8 @@ export default function ProjectDetails() {
   }, [isOnline]);
 
   useEffect(() => {
-    if (!details || !window.location.hash) return;
-    const targetId = window.location.hash.slice(1);
+    if (!details || !location.hash) return;
+    const targetId = location.hash.slice(1);
     const timer = window.setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({
         behavior: 'smooth',
@@ -252,7 +254,7 @@ export default function ProjectDetails() {
       });
     }, 100);
     return () => window.clearTimeout(timer);
-  }, [details]);
+  }, [details, location.hash]);
 
   function openEntryDetails(entry) {
     setSelectedEntryForDetails(entry);

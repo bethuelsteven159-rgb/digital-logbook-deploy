@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import ProjectDetails from './ProjectDetails';
 
 const apiMocks = vi.hoisted(() => ({
@@ -23,6 +23,8 @@ const apiMocks = vi.hoisted(() => ({
   unarchiveProjectEntry: vi.fn(),
   searchProjectEntries: vi.fn(),
 }));
+
+const scrollIntoViewMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../api/projectDetailsApi', () => ({
   createProjectEntry: apiMocks.createProjectEntry,
@@ -1496,5 +1498,108 @@ describe('ProjectDetails entry archive', () => {
     );
     expect(screen.getByText('No archived entries.')).toBeInTheDocument();
     expect(apiMocks.fetchProjectDetails).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('ProjectDetails notification deep links', () => {
+  const scrollContexts = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    scrollContexts.length = 0;
+
+    apiMocks.fetchSavedFilters.mockResolvedValue([]);
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+    });
+    apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse());
+    apiMocks.fetchProjects.mockResolvedValue([project]);
+
+    HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+    scrollIntoViewMock.mockImplementation(function scrollIntoView() {
+      scrollContexts.push(this);
+    });
+  });
+
+  afterEach(() => {
+    delete HTMLElement.prototype.scrollIntoView;
+  });
+
+  function renderAt(initialEntry, { withNavigator = false } = {}) {
+    function HashNavigator() {
+      const navigate = useNavigate();
+
+      return (
+        <button
+          type="button"
+          onClick={() => navigate('/projects/project-1#entry-entry-1')}
+        >
+          Jump to entry
+        </button>
+      );
+    }
+
+    return render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        {withNavigator && <HashNavigator />}
+        <Routes>
+          <Route
+            path="/projects/:id"
+            element={<ProjectDetails />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('scrolls to the entry targeted by the notification hash', async () => {
+    renderAt('/projects/project-1#entry-entry-1');
+
+    await waitFor(() =>
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'center',
+      }),
+    );
+
+    expect(scrollContexts[0]).toBe(
+      document.getElementById('entry-entry-1'),
+    );
+  });
+
+  it('scrolls again when a notification deep-links to an entry on the same page', async () => {
+    const user = userEvent.setup();
+
+    renderAt('/projects/project-1', { withNavigator: true });
+
+    await screen.findByText('First entry');
+    expect(scrollIntoViewMock).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Jump to entry' }),
+    );
+
+    await waitFor(() =>
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'center',
+      }),
+    );
+
+    expect(scrollContexts[0]).toBe(
+      document.getElementById('entry-entry-1'),
+    );
+  });
+
+  it('ignores a hash that does not match any entry', async () => {
+    renderAt('/projects/project-1#entry-does-not-exist');
+
+    await screen.findByText('First entry');
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    });
+
+    expect(scrollIntoViewMock).not.toHaveBeenCalled();
   });
 });

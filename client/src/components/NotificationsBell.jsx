@@ -1,11 +1,62 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
 import { useNotifications } from "../hooks/useNotifications";
 import {
   SEVERITY_COLORS,
   describeNotification,
+  getNotificationTarget,
 } from "../utils/notificationFormat";
+
+const DROPDOWN_GAP = 14;
+const DROPDOWN_WIDTH = 380;
+const MAX_DROPDOWN_HEIGHT = 480;
+const VIEWPORT_MARGIN = 8;
+// Below this much free space the dropdown flips below the bell instead of
+// squeezing above it.
+const MIN_SPACE_ABOVE = 240;
+
+// The sidebar is a scroll container (overflow-y: auto), so a dropdown
+// positioned inside it gets clipped. Rendering it through a portal with
+// fixed positioning keeps it anchored to the bell without being clipped.
+function computeDropdownPosition(bellWrap) {
+  const rect = bellWrap?.getBoundingClientRect();
+
+  if (!rect) {
+    return null;
+  }
+
+  const width = Math.min(DROPDOWN_WIDTH, window.innerWidth - 100);
+  const left = Math.max(
+    VIEWPORT_MARGIN,
+    Math.min(
+      rect.right + DROPDOWN_GAP,
+      window.innerWidth - width - VIEWPORT_MARGIN,
+    ),
+  );
+  const spaceAbove = rect.bottom - VIEWPORT_MARGIN * 2;
+  const spaceBelow = Math.max(
+    0,
+    window.innerHeight - rect.bottom - VIEWPORT_MARGIN * 2,
+  );
+
+  // Grow upward from the bell when there is room; otherwise hang below it
+  // so the panel stays inside the viewport.
+  if (spaceAbove >= MIN_SPACE_ABOVE) {
+    return {
+      left,
+      bottom: Math.max(VIEWPORT_MARGIN, window.innerHeight - rect.bottom),
+      maxHeight: Math.min(MAX_DROPDOWN_HEIGHT, spaceAbove),
+    };
+  }
+
+  return {
+    left,
+    top: Math.max(VIEWPORT_MARGIN, rect.bottom + VIEWPORT_MARGIN),
+    maxHeight: Math.min(MAX_DROPDOWN_HEIGHT, spaceBelow),
+  };
+}
 
 function BellIcon() {
   return (
@@ -35,9 +86,97 @@ export default function NotificationsBell({ collapsed = false }) {
   const { notifications, unreadCount, loading, error, markRead, markAllRead, dismiss } =
     useNotifications();
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState(null);
+  const bellWrapRef = useRef(null);
+  const bellButtonRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const autoFocusOnOpenRef = useRef(false);
 
   function close() {
     setOpen(false);
+  }
+
+  function toggleOpen(openedFromKeyboard = false) {
+    if (open) {
+      close();
+      return;
+    }
+
+    autoFocusOnOpenRef.current = openedFromKeyboard;
+    setPosition(computeDropdownPosition(bellWrapRef.current));
+    setOpen(true);
+  }
+
+  // Keep the dropdown pinned to the bell while the window, the page or
+  // the scrollable sidebar moves, and after the sidebar collapses.
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    function reposition() {
+      setPosition(computeDropdownPosition(bellWrapRef.current));
+    }
+
+    reposition();
+
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [open, collapsed]);
+
+  // Keyboard support: focus the dialog when it opens from the keyboard
+  // and let Escape close it, returning focus to the bell.
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    if (autoFocusOnOpenRef.current) {
+      autoFocusOnOpenRef.current = false;
+      (dropdownRef.current?.querySelector("button") || dropdownRef.current)?.focus();
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        bellButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  function handleDropdownKeyDown(event) {
+    if (event.key !== "Tab" || !dropdownRef.current) {
+      return;
+    }
+
+    const focusables = Array.from(dropdownRef.current.querySelectorAll("button"));
+
+    if (focusables.length === 0) {
+      return;
+    }
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (
+      event.shiftKey &&
+      (document.activeElement === first || document.activeElement === dropdownRef.current)
+    ) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   function handleItemClick(notification) {
@@ -47,17 +186,20 @@ export default function NotificationsBell({ collapsed = false }) {
 
     close();
 
-    if (notification.projectId) {
-      navigate(`/projects/${notification.projectId}`);
+    const target = getNotificationTarget(notification);
+
+    if (target) {
+      navigate(target);
     }
   }
 
   return (
-    <div className="notif-bell-wrap">
+    <div className="notif-bell-wrap" ref={bellWrapRef}>
       <button
         type="button"
+        ref={bellButtonRef}
         className={`notif-bell ${unreadCount > 0 ? "notif-bell--active" : ""}`}
-        onClick={() => setOpen((current) => !current)}
+        onClick={(event) => toggleOpen(event.detail === 0)}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
         aria-expanded={open}
         title={collapsed ? "Notifications" : undefined}
@@ -75,50 +217,51 @@ export default function NotificationsBell({ collapsed = false }) {
         )}
       </button>
 
-      {open && (
-        <>
-          <div className="notif-backdrop" onClick={close} />
+      {open &&
+        createPortal(
+          <>
+            <div className="notif-backdrop" onClick={close} />
 
-          <div className="notif-dropdown" role="dialog" aria-label="Notifications">
-            <div className="notif-dropdown-header">
-              <strong>Notifications</strong>
+            <div
+              className="notif-dropdown"
+              role="dialog"
+              aria-label="Notifications"
+              ref={dropdownRef}
+              tabIndex={-1}
+              style={position || undefined}
+              onKeyDown={handleDropdownKeyDown}
+            >
+              <div className="notif-dropdown-header">
+                <strong>Notifications</strong>
 
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  className="notif-mark-all"
-                  onClick={markAllRead}
-                >
-                  Mark all read
-                </button>
-              )}
-            </div>
-
-            <div className="notif-dropdown-list">
-              {error && <div className="notif-empty">{error}</div>}
-
-              {!error && notifications.length === 0 && (
-                <div className="notif-empty">
-                  {loading
-                    ? "Loading notifications..."
-                    : "You're all caught up."}
-                </div>
-              )}
-
-              {notifications.map((notification) => {
-                const color = SEVERITY_COLORS[notification.severity] || SEVERITY_COLORS.low;
-
-                return (
-                  <div
-                    key={notification.key}
-                    className={`notif-item ${notification.readAt ? "notif-item--read" : ""}`}
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    className="notif-mark-all"
+                    onClick={markAllRead}
                   >
-                    <button
-                      type="button"
-                      className="notif-item-main"
-                      onClick={() => handleItemClick(notification)}
-                      style={{ borderLeftColor: color }}
-                    >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div className="notif-dropdown-list">
+                {error && <div className="notif-empty">{error}</div>}
+
+                {!error && notifications.length === 0 && (
+                  <div className="notif-empty">
+                    {loading
+                      ? "Loading notifications..."
+                      : "You're all caught up."}
+                  </div>
+                )}
+
+                {notifications.map((notification) => {
+                  const color = SEVERITY_COLORS[notification.severity] || SEVERITY_COLORS.low;
+                  const target = getNotificationTarget(notification);
+
+                  const content = (
+                    <>
                       <span className="notif-item-title">
                         {!notification.readAt && (
                           <span
@@ -132,24 +275,49 @@ export default function NotificationsBell({ collapsed = false }) {
                       <span className="notif-item-body">
                         {describeNotification(notification)}
                       </span>
-                    </button>
+                    </>
+                  );
 
-                    <button
-                      type="button"
-                      className="notif-dismiss"
-                      aria-label={`Dismiss ${notification.title}`}
-                      title="Dismiss"
-                      onClick={() => dismiss(notification.key)}
+                  return (
+                    <div
+                      key={notification.key}
+                      className={`notif-item ${notification.readAt ? "notif-item--read" : ""}`}
                     >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
+                      {target ? (
+                        <button
+                          type="button"
+                          className="notif-item-main"
+                          onClick={() => handleItemClick(notification)}
+                          style={{ borderLeftColor: color }}
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        <div
+                          className="notif-item-main notif-item-main--static"
+                          style={{ borderLeftColor: color }}
+                        >
+                          {content}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        className="notif-dismiss"
+                        aria-label={`Dismiss ${notification.title}`}
+                        title="Dismiss"
+                        onClick={() => dismiss(notification.key)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>,
+          document.body,
+        )}
 
       <style>{`
         .notif-bell-wrap {
@@ -236,9 +404,7 @@ export default function NotificationsBell({ collapsed = false }) {
         }
 
         .notif-dropdown {
-          position: absolute;
-          left: calc(100% + 14px);
-          bottom: 0;
+          position: fixed;
           width: min(380px, calc(100vw - 100px));
           max-height: min(480px, calc(100vh - 80px));
           display: flex;
@@ -305,6 +471,7 @@ export default function NotificationsBell({ collapsed = false }) {
           border-left: 3px solid transparent;
           background: transparent;
           text-align: left;
+          font-family: inherit;
           cursor: pointer;
         }
 
@@ -314,6 +481,14 @@ export default function NotificationsBell({ collapsed = false }) {
 
         .notif-item--read .notif-item-main {
           opacity: 0.62;
+        }
+
+        .notif-item-main--static {
+          cursor: default;
+        }
+
+        .notif-item-main--static:hover {
+          background: transparent;
         }
 
         .notif-item-title {
