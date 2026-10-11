@@ -4,6 +4,7 @@
 - [System Architecture, Backend & API](architecture.md)
 - [API Overview](api-documentation.md)
 - [API Reference](API.md)
+- [API Documentation](api-documentation.md)
 - [Frontend Architecture, UI/UX & Accessibility](ui-ux.md)
 - [Requirements & User Stories](requirements.md)
 - [Tech Stack](tech-stack.md)
