@@ -8,18 +8,18 @@ The project is being developed incrementally across six broad stages, executed t
 
 Stage 2 and Stage 4 map directly onto the feature tiers defined in [Requirements](./requirements.md) — Stage 2 corresponds to **Basic Features**, and Stage 4 corresponds to **Intermediate/Advanced Features** — so the roadmap and the requirements document stay consistent with each other.
 
-As of now, the team has completed **Sprint 1** and is partway through **Sprint 2**. The status below reflects real, verifiable progress (cross-checked against [Tech Stack](./tech-stack.md), [Bug Tracking](./bug-tracking.md), [Requirements](./requirements.md), and [Methodology](./methodology.md), including the Stakeholder Reviews section), not a projection of future sprints.
+As of now, the team has completed **Sprints 1 to 3** and is in **Sprint 4**, the final sprint. The status below reflects real, verifiable progress (cross-checked against [Tech Stack](./tech-stack.md), [Bug Tracking](./bug-tracking.md), [Requirements](./requirements.md), and [Methodology](./methodology.md), including the Stakeholder Reviews section), not a projection of future sprints.
 
 ## Roadmap at a Glance
 
 | Stage | Focus | Status | Sprint(s) |
 | --- | --- | --- | --- |
-| 1 | Project Setup | 🟢 Mostly complete | Sprint 1 (repo structure refined Sprint 2) |
+| 1 | Project Setup | 🟢 Complete | Sprint 1 (repo structure refined Sprint 2, database settled Sprint 3) |
 | 2 | Core Functionality (Basic Features) | 🟢 Implemented | Sprint 1 |
 | 3 | Authentication & User Management | 🟢 Implemented, tested locally | Sprint 1 (OAuth config finalised Sprint 2) |
-| 4 | Feature Development (Intermediate/Advanced) | 🟡 In progress | Sprint 2 |
-| 5 | Testing & Integration | 🟡 Started (deployment, external tester feedback); formal test coverage still outstanding | Sprint 2 onward |
-| 6 | Finalisation | ⚪ Not started | Planned |
+| 4 | Feature Development (Intermediate/Advanced, plus extras) | 🟡 Largely complete; extra features in progress | Sprints 2 to 4 |
+| 5 | Testing & Integration | 🟡 In progress (deployment, coverage tooling and 60% target, QA of Intermediate stories, performance benchmarking) | Sprint 2 onward |
+| 6 | Finalisation | 🟡 In progress (final touches) | Sprint 4 |
 
 ## Stage 1 – Project Setup
 
@@ -33,6 +33,8 @@ As of now, the team has completed **Sprint 1** and is partway through **Sprint 2
 The technical foundation has been confirmed: a **React (Vite)** frontend and a **Node.js/Express** backend, split into an authentication backend and a main application server, both organised in a single monorepo. **PostgreSQL** was selected as the primary database, connected via `pg`, with `dotenv` for environment configuration and `Zod` for input validation. The initial architecture has also been corrected where needed — clarifying that browser Local Storage/IndexedDB is not the primary database and that the backend/database remains the authoritative source of truth once data syncs.
 
 **Progress in Sprint 2:** the repository structure was refined further after duplicate `package.json` files appeared once the frontend and backend were being worked on independently. Following client guidance, frontend and backend now keep separate `package.json` files since they deploy separately, with the root-level configuration retained purely for local development convenience.
+
+**Progress in Sprint 3:** the open database question was settled — the team moved to **Neon** (hosted PostgreSQL) instead of a self-managed Postgres setup (reported in Sprint 3 Daily Standup 2), so features could be connected to a single shared database.
 
 ## Stage 2 – Core Functionality *(Basic Features)*
 
@@ -51,11 +53,17 @@ This stage corresponds to the **Basic Features** tier in the requirements: authe
 
 **Progress in Sprint 2:** the Google OAuth consent screen was explicitly configured as **External** on client guidance, so the app isn't restricted to a single Google Workspace organisation and can be signed into by any user. A sign-in issue affecting some team members locally was also identified and resolved (a missing test-user entry in the Google Console), and is tracked in [Bug Tracking](./bug-tracking.md).
 
+**Progress in Sprint 3:** the Sprint 3 coverage plan assigned test coverage of the authentication controller (`authController.js`) and `server.js`, so authentication is now covered by the team's automated testing effort rather than only by manual local testing.
+
 ## Stage 4 – Feature Development *(Intermediate Features)*
 
 This stage corresponds to the **Intermediate** tier (tags, checklists, entry links, computed fields, saved filters, calendar/board views, offline capture and sync, export/import) and **Advanced** tier (custom calculations, custom dashboards, historical versioning, structured search, automation/reminders, long-term performance) from the requirements document.
 
 **Progress in Sprint 2:** with the core system (Stage 2) stable, work moved into the Intermediate tier. User stories were assigned across the team User Story Assignment): Tumi completed tags on entries (US-101); Morare completed export/import (US-113) and continued work on project references (US-104) and checklists (US-102); Bethuel and Simphiwe both deployed their assigned work; Inga made progress on automatically calculating time spent on an entry, and simplified the calculation approach after client feedback that the original version was confusing; Sino was close to finishing her assigned stories (computed fields, due dates, saved filters). The remaining Intermediate items (calendar/board views, entry links, offline capture and sync) and all Advanced-tier items remain outstanding. Per the requirements document, feature tiers remain prioritisation guidance rather than a fixed requirement to implement everything.
+
+**Progress in Sprint 3:** by the start of the sprint the core Intermediate features were in place, so Sprint 3 shifted to the **Advanced tier** while the Intermediate stories (US-101 to US-113) were split across the team for acceptance testing. The Advanced stories were assigned as follows: US-A01 custom statistics/expressions (Bethuel), US-A02 custom dashboard (Morare), US-A03 revision history and restore (Sino), US-A04 structured search (Tumi), US-A05 automation rules and US-A06 recurring entries (Simphiwe), and US-A07 reminders and US-A08 archiving (Inga). At the Sprint 3 review the client's feedback was positive — the implemented functionality worked as expected — with the main improvement being that the design should be more intuitive to use.
+
+**Progress in Sprint 4:** the final sprint added a set of extra features beyond the requirement tiers, agreed in the Sprint 4 meeting: **sharing projects** (Inga), **notifications** (Bethuel, who added email notifications to the other members of a shared project when a collaborator changes an entry or the project, sent through the Brevo API and throttled per recipient and project), **user avatars** on the profile (Tumi, building on the Sprint 2 profile picture support) and an overall **design improvement** (Morare's final UI/UX redesign, in response to the client's navigation and usability feedback from the Sprint 2 and Sprint 3 reviews). Simphiwe also added a **3D project constellation explorer** during the sprint, and Tumi merged the two duplicate entry search boxes on the project page into a single search bar.
 
 ## Stage 5 – Testing and Integration
 
@@ -69,6 +77,8 @@ This stage corresponds to the **Intermediate** tier (tags, checklists, entry lin
 
 **Progress in Sprint 2:** deployment was prioritised at the start of the sprint, and by mid-sprint Simphiwe and Bethuel had both successfully deployed their assigned work. A feedback document was created to gather structured input from outside testers once features were deployed. A mid-sprint review was also held with the client, where the team demonstrated progress; the client's main feedback was that navigation between some features was confusing, which the team accepted and is addressing. Separately, the client requested that code coverage be configured on Gitea; this has been logged as a backlog item but **is not yet implemented**, so formal/automated test coverage remains outstanding going into later sprints.
 
+**Progress in Sprint 3:** the outstanding coverage request was resolved — Bethuel completed the code coverage setup, which now runs automatically through GitHub Actions (reported in Sprint 3 Daily Standup 2). Sprint 3 planning set a team-wide target of at least 60% backend coverage (starting from roughly 43% statement coverage), a 60% rule for the new code in each Advanced feature, and a stricter Definition of Done that requires automated tests and at least one UI/end-to-end happy-path test per new feature. Each member also took on coverage for specific legacy files and a performance focus, all measured against one shared benchmark dataset (for example 10,000 entries). Performance benchmarking was documented in `performance.md`, which showed that rebuilding the field-value index, not the aggregation arithmetic, was the main cost of custom calculations. An external API integration was also assigned during the sprint.
+
 ## Stage 6 – Finalisation
 
 * Complete remaining backlog items.
@@ -77,8 +87,8 @@ This stage corresponds to the **Intermediate** tier (tags, checklists, entry lin
 * Resolve remaining defects.
 * Prepare the system for final demonstration and submission.
 
-**Status:** not yet started. This stage will only begin once the preceding stages are substantially complete.
+**Progress in Sprint 4:** this stage has now begun. With the main feature work and testing effort behind them, the team used a single Sprint 4 meeting to agree the final touches: completing whatever is still missing and adding the extra features (sharing projects, notifications, avatars) together with an overall design improvement, plus the 3D constellation explorer added during the sprint. Final system testing, remaining defects and preparation for the final demonstration and submission are still to be reported.
 
 ## Why the Roadmap Is Structured This Way
 
-The stages are ordered so that foundational work (setup, architecture, authentication) is completed before building out secondary features, testing, and finalisation. In practice, Sprint 1 moved faster than the original stage-by-stage plan assumed — authentication (Stage 3) and the full Basic Feature set (Stage 2) were both implemented in the same sprint, since a working authenticated session was needed before project and entry functionality could be built and tested end-to-end anyway. This reflects an intentional Agile adjustment rather than a deviation from the plan, and gave the team a stable foundation to move into Intermediate/Advanced features (Stage 4) and formal testing (Stage 5) from Sprint 2 onward. Sprint 2 has confirmed this: Intermediate-tier user stories are actively being implemented, deployment has begun, and external tester feedback is being gathered — though formal/automated test coverage on Gitea, requested by the client, is still outstanding and carries forward as a priority into the next sprint.
+The stages are ordered so that foundational work (setup, architecture, authentication) is completed before building out secondary features, testing, and finalisation. In practice, Sprint 1 moved faster than the original stage-by-stage plan assumed — authentication (Stage 3) and the full Basic Feature set (Stage 2) were both implemented in the same sprint, since a working authenticated session was needed before project and entry functionality could be built and tested end-to-end anyway. This reflects an intentional Agile adjustment rather than a deviation from the plan, and gave the team a stable foundation to move into Intermediate/Advanced features (Stage 4) and formal testing (Stage 5) from Sprint 2 onward. Sprint 2 has confirmed this: Intermediate-tier user stories are actively being implemented, deployment has begun, and external tester feedback is being gathered — though formal/automated test coverage on Gitea, requested by the client, is still outstanding and carries forward as a priority into the next sprint. Sprint 3 then delivered that coverage setup alongside the Advanced-tier work, and Sprint 4, the final sprint, is focused on finishing what is missing — extra features and a more intuitive design in response to the client's feedback — rather than opening new areas of scope.
