@@ -8,6 +8,7 @@ import {
 } from "../../api/userApi.js";
 import { useUser } from "../../context/UserContext.jsx";
 import ProfileAvatar from '../../components/ProfileAvatar.jsx';
+import AvatarCreator from './AvatarCreator.jsx';
 import { createProfilePatch, readProfilePicture } from './profilePicture.js';
 
 export default function Profile() {
@@ -32,6 +33,7 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [readingPicture, setReadingPicture] = useState(false);
+  const [creatingAvatar, setCreatingAvatar] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const busy = saving || readingPicture;
@@ -109,6 +111,14 @@ export default function Profile() {
     } finally {
       setReadingPicture(false);
     }
+  }
+
+  function handleUseCreatedAvatar(picture) {
+    setAvatarUrl(picture);
+    setAvatarDirty(true);
+    setCreatingAvatar(false);
+    setError('');
+    setMessage('');
   }
 
   function handleRemovePicture() {
@@ -281,7 +291,16 @@ export default function Profile() {
                 onChange={handlePictureChange}
                 disabled={busy || !profile}
               />
-              <div>
+              <div className="profile-picture-actions">
+                <button
+                  type="button"
+                  className="profile-btn profile-btn-secondary"
+                  onClick={() => setCreatingAvatar((open) => !open)}
+                  disabled={busy || !profile}
+                  aria-expanded={creatingAvatar}
+                >
+                  {creatingAvatar ? 'Close avatar creator' : 'Create an avatar'}
+                </button>
                 <button
                   type="button"
                   className="profile-btn profile-btn-secondary"
@@ -291,6 +310,13 @@ export default function Profile() {
                   Remove profile picture
                 </button>
               </div>
+              {creatingAvatar && (
+                <AvatarCreator
+                  disabled={busy || !profile}
+                  onUse={handleUseCreatedAvatar}
+                  onCancel={() => setCreatingAvatar(false)}
+                />
+              )}
               <span className="profile-note" role="status">
                 {readingPicture ? 'Reading image...' : avatarDirty ? 'Unsaved picture change.' : ''}
               </span>
@@ -599,6 +625,144 @@ function ProfileStyles() {
         text-align: right;
         color: #94a3b8;
         font-size: 11px;
+      }
+
+      .profile-picture-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .avatar-creator {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 20px;
+        margin-top: 8px;
+        padding: 18px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+
+      .avatar-creator-preview {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .avatar-creator-preview-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .avatar-creator-tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .avatar-tab {
+        padding: 8px 16px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: #64748b;
+        font: 600 14px Inter, system-ui, sans-serif;
+        cursor: pointer;
+      }
+
+      .avatar-tab.is-active {
+        color: #4f63d2;
+        border-bottom-color: #4f63d2;
+      }
+
+      .avatar-creator-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .avatar-creator-preview img {
+        border-radius: 50%;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+      }
+
+      .avatar-creator-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .avatar-creator-group {
+        border: 0;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .avatar-creator-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .avatar-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #cbd5e1;
+        cursor: pointer;
+      }
+
+      .avatar-swatch.is-selected,
+      .avatar-chip.is-selected {
+        box-shadow: 0 0 0 2px #4f63d2;
+      }
+
+      .avatar-chip {
+        padding: 5px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        background: #fff;
+        color: #475569;
+        font: 500 13px Inter, system-ui, sans-serif;
+        cursor: pointer;
+      }
+
+      .avatar-chip.is-selected {
+        border-color: #4f63d2;
+        color: #4f63d2;
+      }
+
+      .avatar-swatch:disabled,
+      .avatar-chip:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+      }
+
+      .avatar-creator-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .avatar-creator > .profile-alert {
+        grid-column: 1 / -1;
+      }
+
+      @media (max-width: 600px) {
+        .avatar-creator {
+          grid-template-columns: 1fr;
+        }
       }
 
       .profile-details-grid {

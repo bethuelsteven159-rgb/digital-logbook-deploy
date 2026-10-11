@@ -8,11 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "format": "oxfmt",
-    "test": "vitest run && node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js",
+    "test": "vitest run && node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js src/pages/Profile/avatarBuilder.test.js",
     "test:run": "vitest run",
-    "test:node": "node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js",
+    "test:node": "node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js src/pages/Profile/avatarBuilder.test.js",
     "test:coverage": "vitest run --coverage && npm run test:node:coverage",
-    "test:node:coverage": "c8 --reporter=text --reporter=lcov --report-dir=coverage-node --all --include=src/pages/Projects/entryViews.js --include=src/pages/Profile/profilePicture.js node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js"
+    "test:node:coverage": "c8 --reporter=text --reporter=lcov --report-dir=coverage-node --all --include=src/pages/Projects/entryViews.js --include=src/pages/Profile/profilePicture.js --include=src/pages/Profile/avatarBuilder.js node --test src/pages/Projects/entryViews.test.js src/pages/Profile/profilePicture.test.js src/pages/Profile/avatarBuilder.test.js"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",

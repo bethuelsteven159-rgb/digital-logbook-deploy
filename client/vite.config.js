@@ -31,6 +31,7 @@ export default defineConfig({
       '**/dist/**',
       'src/pages/Projects/entryViews.test.js',
       'src/pages/Profile/profilePicture.test.js',
+      'src/pages/Profile/avatarBuilder.test.js',
     ],
     coverage: {
       // 'lcov' writes coverage/lcov.info, which the CI workflow
