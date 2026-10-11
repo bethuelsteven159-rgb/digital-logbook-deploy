@@ -11,6 +11,7 @@ const apiMocks = vi.hoisted(() => ({
   createSavedFilter: vi.fn(),
   applySavedFilter: vi.fn(),
   deleteSavedFilter: vi.fn(),
+  updateSavedFilter: vi.fn(),
   fetchProjects: vi.fn(),
   setProjectArchived: vi.fn(),
   updateProject: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock('../../api/projectDetailsApi', () => ({
   createSavedFilter: apiMocks.createSavedFilter,
   applySavedFilter: apiMocks.applySavedFilter,
   deleteSavedFilter: apiMocks.deleteSavedFilter,
+  updateSavedFilter: apiMocks.updateSavedFilter,
   archiveProjectEntry: apiMocks.archiveProjectEntry,
   unarchiveProjectEntry: apiMocks.unarchiveProjectEntry,
   searchProjectEntries: apiMocks.searchProjectEntries,
@@ -389,6 +391,209 @@ describe('ProjectDetails project-reference contract', () => {
     await user.click(second);
     await user.click(screen.getByRole('button', { name: 'Save references' }));
     await waitFor(() => expect(apiMocks.updateProjectReferences).toHaveBeenCalledExactlyOnceWith('project-1', ['project-2']));
+  });
+});
+
+describe('ProjectDetails saved filter workflows', () => {
+  const savedFilter = {
+    id: 'filter-1',
+    name: 'Long sessions',
+    criteria: [
+      { fieldName: 'durationMinutes', operator: 'greater_than', value: 60 },
+    ],
+  };
+
+  function mockFilteredEntries() {
+    apiMocks.applySavedFilter.mockResolvedValue([
+      { ...entry, id: 'entry-9', name: 'Filtered entry' },
+    ]);
+  }
+
+  async function applyFilterFromBar(user) {
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Saved filters' }),
+      'filter-1',
+    );
+    await waitFor(() =>
+      expect(screen.getByText('Filtered entry')).toBeInTheDocument(),
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    apiMocks.fetchSavedFilters.mockResolvedValue([savedFilter]);
+    apiMocks.fetchProjectDetails.mockResolvedValue(detailsResponse());
+    apiMocks.fetchProjects.mockResolvedValue([project]);
+    apiMocks.generateDueRecurringEntries.mockResolvedValue({
+      generatedCount: 0,
+    });
+    mockFilteredEntries();
+    apiMocks.createSavedFilter.mockResolvedValue({
+      id: 'filter-2',
+      name: 'My filter',
+      criteria: [
+        { fieldName: 'name', operator: 'contains', value: 'Report' },
+      ],
+    });
+    apiMocks.updateSavedFilter.mockResolvedValue({
+      ...savedFilter,
+      name: 'Even longer',
+    });
+    apiMocks.deleteSavedFilter.mockResolvedValue({ id: 'filter-1' });
+  });
+
+  it('creates a filter from the builder and applies it', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: '+ New filter' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'New filter' });
+    expect(dialog).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Filter name'), 'My filter');
+    await user.type(screen.getByLabelText('Condition 1 value'), 'Report');
+    await user.click(screen.getByRole('button', { name: 'Save filter' }));
+
+    await waitFor(() =>
+      expect(apiMocks.createSavedFilter).toHaveBeenCalledWith('project-1', {
+        name: 'My filter',
+        criteria: [
+          { fieldName: 'name', operator: 'contains', value: 'Report' },
+        ],
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'New filter' }),
+      ).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(apiMocks.applySavedFilter).toHaveBeenCalledWith(
+        'project-1',
+        'filter-2',
+      ),
+    );
+  });
+
+  it('applies and clears a saved filter from the saved-filters select', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await applyFilterFromBar(user);
+    expect(screen.queryByText('First entry')).not.toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Saved filters' }),
+      '',
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('First entry')).toBeInTheDocument(),
+    );
+  });
+
+  it('edits the active filter through the builder and re-applies it', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await applyFilterFromBar(user);
+
+    await user.click(screen.getByRole('button', { name: 'Edit filter' }));
+
+    await screen.findByRole('dialog', { name: 'Edit filter' });
+    expect(screen.getByLabelText('Filter name')).toHaveValue('Long sessions');
+    expect(screen.getByLabelText('Condition 1 value')).toHaveValue(60);
+
+    await user.clear(screen.getByLabelText('Filter name'));
+    await user.type(screen.getByLabelText('Filter name'), 'Even longer');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() =>
+      expect(apiMocks.updateSavedFilter).toHaveBeenCalledWith('filter-1', {
+        name: 'Even longer',
+        criteria: [
+          { fieldName: 'durationMinutes', operator: 'greater_than', value: 60 },
+        ],
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Edit filter' }),
+      ).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(apiMocks.applySavedFilter).toHaveBeenCalledTimes(2),
+    );
+  });
+
+  it('deletes the active filter and clears the selection', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await applyFilterFromBar(user);
+
+    await user.click(screen.getByRole('button', { name: 'Delete filter' }));
+
+    await waitFor(() =>
+      expect(apiMocks.deleteSavedFilter).toHaveBeenCalledWith('filter-1'),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole('combobox', { name: 'Saved filters' }),
+      ).toHaveValue(''),
+    );
+
+    expect(screen.queryByText('Filtered entry')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'Long sessions' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('closes the builder without saving when cancelled', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: '+ New filter' }));
+    await screen.findByRole('dialog', { name: 'New filter' });
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(
+      screen.queryByRole('dialog', { name: 'New filter' }),
+    ).not.toBeInTheDocument();
+    expect(apiMocks.createSavedFilter).not.toHaveBeenCalled();
+  });
+
+  it('surfaces save failures in the builder and keeps it open', async () => {
+    apiMocks.createSavedFilter.mockRejectedValue(
+      new Error('Filter name is too long'),
+    );
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: '+ New filter' }));
+    await screen.findByRole('dialog', { name: 'New filter' });
+
+    await user.type(screen.getByLabelText('Filter name'), 'My filter');
+    await user.type(screen.getByLabelText('Condition 1 value'), 'Report');
+    await user.click(screen.getByRole('button', { name: 'Save filter' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Filter name is too long',
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'New filter' }),
+    ).toBeInTheDocument();
   });
 });
 
