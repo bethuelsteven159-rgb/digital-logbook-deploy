@@ -718,34 +718,11 @@ Seed data allows developers to test API endpoints and application functionality 
 
 ---
 
-## 9. In-Memory Development Database
+## 9. Repository Layer
 
-The backend supports an in-memory database mode for development and testing.
-
-To enable it, add the following to `.env`:
-
-```env
-USE_FAKE_DB=true
-```
-
-When enabled, the repository layer bypasses the PostgreSQL `pg` driver and uses an in-memory JavaScript data structure instead.
-
-This allows developers to run and test the backend without a PostgreSQL server running locally.
-
-### When to Use
-
-The fake database is useful for:
-
-* API development
-* Automated testing
-* Local development
-* Testing database-independent functionality
-* Running the backend when PostgreSQL is unavailable
-
-For production environments, PostgreSQL should be used instead.
+The application uses PostgreSQL (hosted on Neon) through the `pg` driver, with raw SQL in the repository layer. All environments use a real database, configured through the `DATABASE_URL` environment variable.
 
 ---
-
 ## 10. Database Technology
 
 | Component        | Technology                          |
@@ -755,7 +732,6 @@ For production environments, PostgreSQL should be used instead.
 | Primary Key Type | UUID                                |
 | Timestamp Type   | `TIMESTAMPTZ`                       |
 | Numeric Values   | `NUMERIC(18,4)`                     |
-| Development Mock | In-memory JavaScript data structure |
 
 ---
 
@@ -774,16 +750,11 @@ Controller / Route
      v
 Repository / Data Layer
      |
-     +--------------------+
-     |                    |
-     v                    v
-PostgreSQL          In-Memory DB
-   (pg)             (USE_FAKE_DB)
+     v
+PostgreSQL (pg)
 ```
 
-This structure allows the application to use either PostgreSQL or the in-memory database without changing the API layer.
-
----
+All database access goes through the repository layer, so controllers and services do not depend on how data is stored.
 
 ## Person 1 Feature Data
 

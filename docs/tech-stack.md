@@ -2,7 +2,7 @@
 
 Owner: Sino
 
-This document explains the technologies used in the Digital Logbook, the role each technology plays in the system, and the reasons behind the choices made during development. Items marked **pending** are still awaiting final group confirmation.
+This document explains the technologies used in the Digital Logbook, the role each technology plays in the system, and the reasons behind the choices made during development. For the individual packages used in the root, `client/` and `server/`, see [third-party-code.md](./third-party-code.md).
 
 ## Design
 
@@ -26,7 +26,14 @@ Instead of building each page as a separate piece of code, React allows common e
 
 Vite is used as the frontend build tool and development server for the React application. It was selected because it provides a faster development experience, quicker startup times, and modern support for React projects compared to older tools such as Create React App.
 
-The frontend will be deployed using Netlify. Netlify was chosen because it provides a simple deployment process for Vite-based static applications, supports continuous deployment directly from the Git repository, and provides a free tier suitable for the project requirements.
+The following technologies support the frontend:
+
+- **React Router** handles navigation between pages without full page reloads.
+- **Tailwind CSS** provides utility classes for styling, keeping spacing, colour, and typography consistent when several people build different pages.
+- **lucide-react** provides a consistent icon set.
+- **three.js**, with **@react-three/fiber** and **@react-three/drei**, renders the 3D scene on the Constellation page.
+
+The frontend is deployed using Netlify. Netlify was chosen because it provides a simple deployment process for Vite-based static applications, supports continuous deployment directly from the Git repository, and provides a free tier suitable for the project requirements.
 
 ## Backend
 
@@ -34,21 +41,24 @@ The backend is implemented as a single Express.js application running on **Node.
 
 Node.js provides the runtime environment required to execute server-side JavaScript, while Express.js provides the framework used to build REST API endpoints, handle HTTP requests and responses, and organise backend routes.
 
-The backend is responsible for handling server-side operations such as user authentication, Google sign-in verification, JWT session management, project management, project details, user profiles, logbook entries, validation, and database communication.
+The backend is responsible for handling server-side operations such as user authentication, Google sign-in verification, JWT session management, project management, project details, user profiles, logbook entries, validation, database communication, and calls to external services.
 
 The following technologies support the backend:
 
 - **Node.js** is used as the server-side JavaScript runtime.
 - **Express.js** is used to create API routes and structure backend functionality.
 - **CORS** enables communication between the frontend and backend when they are running on different origins.
-- **dotenv** manages environment variables such as database credentials, authentication configuration, and application settings.
+- **dotenv** manages environment variables such as database credentials, authentication configuration, external API keys, and application settings.
 - **Zod** validates incoming request data to ensure that information received by the backend matches the expected format before processing.
+- **mathjs** safely evaluates user-typed formulas for computed fields.
 
 The backend follows a layered architecture consisting of routes, controllers, services, repositories, and database access layers. This separation keeps different responsibilities organised, making the system easier to maintain, debug, and extend as new features are added.
 
-A **REST API** is used as the communication layer between the frontend and backend. The API provides endpoints for authentication, user profiles, project management, project details, and logbook entries. JSON is used as the primary data format exchanged between the client and server.
+A **REST API** is used as the communication layer between the frontend and backend. The API provides endpoints for authentication, user profiles, project management, project details, logbook entries, and the external API-backed features. JSON is used as the primary data format exchanged between the client and server. See [API.md](./API.md) for the endpoint reference.
 
 Using a REST-based structure allows the frontend and backend to remain independent. This makes it easier to modify one part of the system without requiring major changes to the other.
+
+The backend is deployed using Render. Render was selected because it provides a free tier suitable for small Node.js services, supports environment variable configuration, and allows simple deployment directly from a Git repository. Because Render could not connect directly to the team's Gitea repository, the approved `main` branch is mirrored to GitHub and Render deploys from the GitHub mirror.
 
 ## Authentication
 
@@ -68,15 +78,13 @@ The authentication process follows this flow:
 
 This approach provides a secure authentication process while reducing the complexity of managing passwords and user credentials.
 
-The backend server will be deployed using Render. Render was selected because it provides a free tier suitable for small Node.js services, supports environment variable configuration, and allows simple deployment directly from the Git repository.
-
 ## Database
 
-**PostgreSQL** is used as the primary relational database for storing application data, including users, projects, project fields, entries, and profile information.
+**PostgreSQL** is used as the primary relational database for storing application data, including users, projects, project fields, entries, and profile information. The database is hosted on **Neon**, a managed PostgreSQL service, so all team members and the deployed backend work against the same shared database.
 
 PostgreSQL was selected because it provides reliable structured data storage and strong support for relationships between different entities. This makes it suitable for an application where users, projects, and logbook entries are connected through multiple relationships.
 
-**pg (node-postgres)** is used as the PostgreSQL client library that allows the backend application to communicate with the database.
+**pg (node-postgres)** is used as the PostgreSQL client library that allows the backend application to communicate with the database. Queries are written as raw SQL through `pg` rather than through an ORM, which keeps them transparent and easy to debug.
 
 The database follows relational database principles, including:
 
@@ -85,19 +93,41 @@ The database follows relational database principles, including:
 - Constraints to ensure valid data is stored.
 - Indexes to improve query performance.
 
-The main database entities include users, projects, project fields, entries, and entry field values. These entities are connected through relationships that allow users to create projects, define project-specific fields, and store structured logbook entries.
+The main database entities include users, projects, project fields, entries, and entry field values, along with supporting tables for checklists, references, saved filters, automation rules, recurring entries, and project sharing. These entities are connected through relationships that allow users to create projects, define project-specific fields, and store structured logbook entries. See [DATABASE.md](./DATABASE.md) for the full schema documentation.
+
+## External Services
+
+The application uses the following external services, all called from the backend so that API keys never reach the browser:
+
+- **Google Gemini API** generates project-progress insights and text-to-speech narration on the Project Details page.
+- **YouTube Data API** searches for learning videos on the Learning Videos page.
+- **Brevo** sends transactional emails for shared-project change notifications.
+- **Google Sign-In** authenticates users (see Authentication above).
+
+None of the Gemini or YouTube integrations require an additional npm package. See [External API Integration](./external-api/README.md) for the full documentation.
 
 ## Testing
 
-**Vitest** is used for unit and integration testing. It was chosen because it integrates well with the Vite-based frontend tooling already used in the project.
+**Vitest** is used for unit and integration testing on both the frontend and the backend. It was chosen because it integrates well with the Vite-based frontend tooling already used in the project, and using one test runner for both applications means the team only has to learn one tool. Frontend component tests use **Testing Library** and **jsdom** to simulate how a real user interacts with the interface, and parts of the test suite also use Node's built-in test runner.
 
-Testing coverage is still being developed, with additional tests and final verification pending as more features are completed.
+Code coverage is measured with `@vitest/coverage-v8` and `c8` using each application's `test:coverage` script, and coverage reports are uploaded to **Codecov**. The external API integrations are tested with mocked providers, so the tests do not depend on live Gemini or YouTube access.
+
+See [testing-documentation.md](./testing-documentation.md) for the testing approach and results, [codecov-setup.md](./codecov-setup.md) for coverage reporting, and [External API Testing & Failure Handling](./external-api/testing.md) for the external API tests.
 
 ## CI/CD
 
-**Gitea Actions** was evaluated for automating parts of the development workflow, but no automated CI pipeline is currently configured in this repository — there is no `.gitea/workflows/` directory set up to run tests on pull requests.
+The repository contains an automated test workflow, `tests.yml`, defined for both **Gitea Actions** (`.gitea/workflows/`) and **GitHub Actions** (`.github/workflows/`, for the GitHub mirror). Both versions run on every push to `main` and on every pull request, and perform the same steps:
 
-In practice, tests are run manually by each developer (`npm test` in `server/` and `client/`) before opening a pull request, and reviewers are expected to confirm the test suite passes before approving a merge. Setting up an automated Gitea Actions workflow to run tests on every pull request remains a possible improvement for future sprints.
+1. Check out the repository.
+2. Set up Node.js 24.
+3. Install the client and server dependencies with `npm ci`.
+4. Run the server tests with coverage.
+5. Run the client tests with coverage.
+6. Upload the coverage reports to Codecov. A failure at this step does not fail the workflow.
+
+Developers should still run the tests locally (`npm test` in `server/` and `client/`) before opening a pull request, and reviewers are expected to confirm that the workflow passes before approving a merge.
+
+Deployment is separate from testing: the frontend is deployed through Netlify, and the backend is deployed through Render from the GitHub mirror of the approved `main` branch.
 
 ## Repository Structure
 
@@ -105,7 +135,7 @@ The project uses a **single repository (monorepo)** containing separate folders 
 
 A monorepo structure was chosen because it simplifies collaboration within the 6-person team by keeping related code in one place. It reduces the overhead of managing multiple repositories while still allowing frontend and backend development to remain separated.
 
-The repository uses separate branches for feature development, allowing team members to work independently before merging completed changes.
+The repository uses separate branches for feature development, allowing team members to work independently before merging completed changes. Gitea is the authoritative repository for development and review, and approved changes are mirrored to GitHub for deployment. See [git-workflow.md](./git-workflow.md) for the branching and pull request process.
 
 ## Code Quality
 
@@ -119,6 +149,8 @@ Prettier automatically formats code using the project's chosen style rules, incl
 - Semicolons
 - Two-space indentation
 - A maximum line width of 100 characters
+- Trailing commas wherever valid
+- LF line endings
 
 These tools help ensure that code remains consistent and easier for team members to read and maintain.
 
@@ -126,6 +158,6 @@ These tools help ensure that code remains consistent and easier for team members
 
 **Git/Gitea** is used for version control and team collaboration. It allows team members to manage branches, review changes, and merge completed features.
 
-**Node Package Manager (npm)** is used to install project dependencies and run development scripts for both the frontend and backend applications.
+**Node Package Manager (npm)** is used to install project dependencies and run development scripts for both the frontend and backend applications. At the repository root, `concurrently` lets `npm run dev` start the client and server together.
 
 **VS Code** is used as the main development environment because it provides support for JavaScript development, Git integration, extensions, debugging tools, and project management features.

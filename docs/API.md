@@ -90,6 +90,9 @@ All API responses follow a consistent pattern:
 | 47 | GET | `/api/invitations` | Yes |
 | 48 | POST | `/api/invitations/:invitationId/accept` | Yes |
 | 49 | POST | `/api/invitations/:invitationId/decline` | Yes |
+| 50 | POST | `/api/projects/:projectId/ai-progress` | Yes |
+| 51 | POST | `/api/projects/:projectId/ai-progress/speech` | Yes |
+| 52 | GET | `/api/projects/:projectId/learning-videos` | Yes |
 
 ---
 
@@ -1301,6 +1304,86 @@ Triggering endpoints:
 - `PATCH /api/projects/:projectId/archive` (project archived or unarchived)
 
 Each member receives at most one email per project per `COLLABORATOR_EMAIL_THROTTLE_MS` (default 10 minutes); further changes in that window are not emailed. Configure with `BREVO_API_KEY`, `EMAIL_FROM` (a Brevo-verified sender), optional `EMAIL_FROM_NAME`, and `FRONTEND_URL` for the "Open the project" link. Sending is disabled when the key or sender is missing.
+
+---
+
+## 14. External API-Backed Endpoints (Gemini & YouTube)
+
+**Route file:** `server/routes/projectDetails.js`
+**Controller:** `server/controllers/projectDetailsController.js`
+**Auth:** Required (all endpoints)
+
+These endpoints call external providers from the backend. The Gemini and YouTube API keys never reach the frontend. See [External API Integration](external-api/README.md) for the full documentation.
+
+### `POST /api/projects/:projectId/ai-progress`
+
+Generate an AI project-progress insight from the selected project's evidence using Gemini. The backend loads the project data and calculates the evidence before calling Gemini. A project with no usable activity returns a local fallback without calling Gemini.
+
+**Path Params:** `projectId` (UUID)
+
+**Errors:**
+- `503` Gemini API key missing, or Gemini rate limit reached (retryable)
+- `502` unsuccessful, empty, invalid-JSON or unexpected-structure Gemini response
+- `504` analysis timeout
+
+See [Gemini Project Progress](external-api/gemini-project-progress.md).
+
+### `POST /api/projects/:projectId/ai-progress/speech`
+
+Generate speech audio from a structured AI project insight using Gemini text-to-speech.
+
+**Path Params:** `projectId` (UUID)
+
+**Request Body:** the structured AI project insight returned by `ai-progress`.
+
+**Errors:**
+- `503` Gemini API key missing, or provider rate-limited/unavailable (retryable)
+- `502` unsuccessful provider response, or a successful response with no audio
+- `504` speech generation timeout
+
+See [Gemini Text-to-Speech](external-api/gemini-text-to-speech.md).
+
+### `GET /api/projects/:projectId/learning-videos`
+
+Search YouTube for learning videos relevant to the project. The controller first confirms that the project exists and belongs to the caller.
+
+**Path Params:** `projectId` (UUID)
+
+**Query Params:**
+- `q` (optional) -- the search query. If omitted, the project's name is used.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "query": "string",
+    "videos": [
+      {
+        "videoId": "string",
+        "title": "string",
+        "channel": "string",
+        "thumbnail": "url|null",
+        "publishedAt": "timestamp|null",
+        "url": "https://www.youtube.com/watch?v=<videoId>"
+      }
+    ],
+    "provider": "youtube",
+    "cached": false
+  }
+}
+```
+
+Up to 5 videos are returned. Results are cached in server memory for 10 minutes per search term, and `cached` is `true` when a result came from the cache.
+
+**Errors:**
+- `400` no search term (both `q` and the project name are empty)
+- `404` project not found or not accessible
+- `503` `YOUTUBE_API_KEY` is not configured, or YouTube returned `403` (for example quota exceeded) or `429`
+- `502` any other unsuccessful YouTube response
+- `504` the request exceeded `YOUTUBE_TIMEOUT_MS` (default 10 seconds)
+
+See [YouTube API Integration](external-api/youtube-api.md).
 
 ---
 
